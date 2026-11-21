@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
+import { Dialog } from 'household-ui/ui/Dialog.tsx'
 import { FieldError } from 'household-ui/ui/FieldError.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import { Select } from 'household-ui/ui/Select.tsx'
@@ -283,32 +284,53 @@ interface ItemPickerProps {
   readonly onPick: (item: WatchedItem) => void
 }
 
-/** Searches the live Items by name, showing each one's State, and offers each match to link to; lists nothing until something is typed. */
+/**
+ * A dialog that searches the live Items by name, showing each one's State, and offers each match to link to; it lists
+ * nothing until something is typed and closes once an Item is picked.
+ */
 function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
+  const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const needle = query.trim().toLowerCase()
   const matches =
     needle === ''
       ? []
       : items.filter((item) => !item.deleted && item.id !== linked && item.name.toLowerCase().includes(needle))
+  const close = () => {
+    setOpen(false)
+    setQuery('')
+  }
   return (
-    <div role="group" aria-label={`${row} Items`}>
-      <input
-        type="search"
-        aria-label={`${row} Item search`}
-        value={query}
-        onInput={(e) => setQuery(e.currentTarget.value)}
-      />
-      <ul>
-        {matches.map((item) => (
-          <li key={item.id}>
-            <button type="button" onClick={() => onPick(item)}>
-              Link {row} to {item.name} ({item.state})
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <Button variant="tonal" onClick={() => setOpen(true)}>
+        Choose Item for {row}
+      </Button>
+      <Dialog open={open} title={`${row} Item`} onClose={close} closable>
+        <TextField
+          label={`${row} Item search`}
+          type="search"
+          value={query}
+          onInput={(e) => setQuery(e.currentTarget.value)}
+          // The dialog sits inside the Recipe's form, where Enter would otherwise save it.
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.preventDefault()
+          }}
+        />
+        <ul>
+          {matches.map((item) => (
+            <ListRow
+              key={item.id}
+              headline={item.name}
+              supporting={item.state}
+              onActivate={() => {
+                onPick(item)
+                close()
+              }}
+            />
+          ))}
+        </ul>
+      </Dialog>
+    </>
   )
 }
 
