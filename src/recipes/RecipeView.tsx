@@ -1,6 +1,8 @@
 import { useState } from 'preact/hooks'
 import type { core, recipes } from 'data-platform'
+import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import type { ItemsPort } from '../items/items-port.ts'
+import { BackButton } from '../shell/BackButton.tsx'
 import { classifyIngredient, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
 
 export interface RecipeViewProps {
@@ -106,62 +108,64 @@ export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewPro
   const undoable = [...marked.values()].filter((marking) => items.get(marking.itemId)?.state === 'out')
 
   return (
-    <article>
-      <h1>{recipe.title}</h1>
-      <a href={editHref}>Edit</a>
-      {failure !== null && <p role="alert">{failure}</p>}
-      {undoable.map((marking) => (
-        <p role="status" key={marking.itemId}>
-          {marking.ingredientName}'s Item marked out.{' '}
-          <button
-            disabled={inFlight.has(marking.itemId)}
-            onClick={() => setItemState(marking.itemId, marking.previous, () => forget(marking.itemId))}
-          >
-            Undo {marking.ingredientName}
-          </button>
-        </p>
-      ))}
-      {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
-      {recipe.sourceUrl !== undefined && (
-        <p>
-          <a href={recipe.sourceUrl}>Source</a>
-        </p>
-      )}
-      <ul>
-        {recipe.ingredients.map((ingredient, index) => (
-          <IngredientLine
-            key={index}
-            ingredient={ingredient}
-            items={items}
-            busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
-            onActuallyOut={(marking) => setItemState(marking.itemId, 'out', () => remember(marking))}
-          />
+    <TopAppBar title={recipe.title}>
+      <article>
+        <BackButton />
+        <a href={editHref}>Edit</a>
+        {failure !== null && <p role="alert">{failure}</p>}
+        {undoable.map((marking) => (
+          <p role="status" key={marking.itemId}>
+            {marking.ingredientName}'s Item marked out.{' '}
+            <button
+              disabled={inFlight.has(marking.itemId)}
+              onClick={() => setItemState(marking.itemId, marking.previous, () => forget(marking.itemId))}
+            >
+              Undo {marking.ingredientName}
+            </button>
+          </p>
         ))}
-      </ul>
-      {recipe.prepSteps.length > 0 && (
+        {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
+        {recipe.sourceUrl !== undefined && (
+          <p>
+            <a href={recipe.sourceUrl}>Source</a>
+          </p>
+        )}
+        <ul>
+          {recipe.ingredients.map((ingredient, index) => (
+            <IngredientLine
+              key={index}
+              ingredient={ingredient}
+              items={items}
+              busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
+              onActuallyOut={(marking) => setItemState(marking.itemId, 'out', () => remember(marking))}
+            />
+          ))}
+        </ul>
+        {recipe.prepSteps.length > 0 && (
+          <section>
+            <h2>Prep Steps</h2>
+            <ol>
+              {recipe.prepSteps.map((step, index) => (
+                <li key={index}>{step}</li>
+              ))}
+            </ol>
+          </section>
+        )}
         <section>
-          <h2>Prep Steps</h2>
+          <h2>Steps</h2>
           <ol>
-            {recipe.prepSteps.map((step, index) => (
+            {recipe.steps.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
           </ol>
         </section>
-      )}
-      <section>
-        <h2>Steps</h2>
-        <ol>
-          {recipe.steps.map((step, index) => (
-            <li key={index}>{step}</li>
-          ))}
-        </ol>
-      </section>
-      {recipe.notes !== undefined && (
-        <section>
-          <h2>Notes</h2>
-          <p>{recipe.notes}</p>
-        </section>
-      )}
-    </article>
+        {recipe.notes !== undefined && (
+          <section>
+            <h2>Notes</h2>
+            <p>{recipe.notes}</p>
+          </section>
+        )}
+      </article>
+    </TopAppBar>
   )
 }
