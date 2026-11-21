@@ -81,6 +81,12 @@ export function draftOf(recipe: Recipe): RecipeDraft {
   }
 }
 
+/** Whether `draft` holds no edits to `recipe`, the Recipe it was drawn from. */
+export function isClean(draft: RecipeDraft, recipe: Recipe): boolean {
+  const withoutKeys = (value: RecipeDraft) => JSON.stringify(value, (name, v) => (name === 'key' ? undefined : v))
+  return withoutKeys(draft) === withoutKeys(draftOf(recipe))
+}
+
 /** Plain decimal text (no exponent, hex or `Infinity`) that is finite and above zero. */
 function isPositiveDecimal(text: string): boolean {
   return /^\d+(\.\d+)?$/.test(text) && Number.isFinite(Number(text)) && Number(text) > 0

@@ -12,9 +12,9 @@ describe('routes', () => {
     expect(parseRoute(editRecipeHref(asRecipeId('r1')))).toEqual({ screen: 'edit-recipe', id: asRecipeId('r1') })
   })
 
-  it('reads the return URL from the Catalogue back as a Recipe and an Ingredient position', () => {
-    expect(parseRoute(catalogueReturnHref(asRecipeId('a b'), 2))).toEqual({ screen: 'catalogue-return', id: asRecipeId('a b'), ingredient: 2 })
-    for (const hash of ['#/recipes/r1/ingredients', '#/recipes/r1/ingredients/x', '#/recipes/r1/ingredients/-1', '#/recipes/r1/ingredients/1/x']) {
+  it('reads the return URL from the Catalogue back as a Recipe and an Ingredient position and name', () => {
+    expect(parseRoute(catalogueReturnHref(asRecipeId('a b'), 2, 'Sea/salt'))).toEqual({ screen: 'catalogue-return', id: asRecipeId('a b'), ingredientIndex: 2, name: 'Sea/salt' })
+    for (const hash of ['#/recipes/r1/ingredients', '#/recipes/r1/ingredients/x', '#/recipes/r1/ingredients/-1', '#/recipes/r1/ingredients/1', '#/recipes/r1/ingredients/1/x/y', '#/recipes/r1/ingredients/1/%E0%A4%A']) {
       expect(parseRoute(hash)).toEqual({ screen: 'home' })
     }
   })

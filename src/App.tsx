@@ -8,6 +8,7 @@ import { RecipeEditor, type RecipeEditorProps } from './editor/RecipeEditor.tsx'
 import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
 import type { Recipe, RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
+import { linkUnlinkedIngredient } from './recipes/link-ingredient.ts'
 import { editRecipeHref, HOME_HREF, navigate, NEW_RECIPE_HREF, recipeHref, useRoute } from './routes.ts'
 
 export interface AppProps {
@@ -69,9 +70,10 @@ export function App({ recipeStore, itemsPort }: AppProps) {
       case 'catalogue-return':
         return (
           <CatalogueReturnScreen
-            key={`${route.id}/${route.ingredient}`}
+            key={`${route.id}/${route.ingredientIndex}/${route.name}`}
             id={route.id}
-            ingredient={route.ingredient}
+            ingredientIndex={route.ingredientIndex}
+            name={route.name}
             recipeStore={recipeStore}
           />
         )
@@ -211,34 +213,64 @@ function RecipeNotFound() {
 }
 
 /**
- * Where the Catalogue's add-Item hand-off returns to. A returned `itemId` links the Ingredient to that Item
- * and saves the Recipe; without one nothing changes. Either way the user lands on the Recipe's view, and the
- * `itemId` leaves the URL first so that reloading cannot link twice.
+ * Where the Catalogue's add-Item hand-off returns to, for the Ingredient called `name` at `ingredientIndex`.
+ * A returned `itemId` links that Ingredient to the Item and saves the Recipe, provided the line there is still
+ * that Unlinked, non-Assumed Ingredient; without an id nothing changes. The `itemId` leaves the URL once it
+ * has been dealt with, so that reloading cannot link twice, but stays while a failed save could be retried by
+ * reloading; whenever an Item was created but not linked, the user is told which one.
  */
-function CatalogueReturnScreen({ id, ingredient, recipeStore }: { id: RecipeId; ingredient: number; recipeStore: RecipeStore }) {
+function CatalogueReturnScreen({
+  id,
+  ingredientIndex,
+  name,
+  recipeStore,
+}: {
+  id: RecipeId
+  ingredientIndex: number
+  name: string
+  recipeStore: RecipeStore
+}) {
   const { entries, failed } = useRecipeEntries(recipeStore)
-  const [saveFailure, setSaveFailure] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const handled = useRef(false)
   const entry = entries?.find((e) => e.id === id)
 
   useEffect(() => {
-    if (entry === undefined || handled.current) return
+    if (entries === null || handled.current) return
     handled.current = true
-    const itemId = new URLSearchParams(location.search).get('itemId')
-    history.replaceState(null, '', `${location.pathname}${location.hash}`)
-    const target = entry.recipe.ingredients[ingredient]
-    if (itemId === null || itemId === '' || target === undefined) return navigate(recipeHref(id))
-    const { assumed: _assumed, ...rest } = target
-    const ingredients = entry.recipe.ingredients.map((candidate, i) => (i === ingredient ? { ...rest, itemId: core.itemId(itemId) } : candidate))
-    recipeStore
-      .update(id, { ...entry.recipe, ingredients })
-      .then(() => navigate(recipeHref(id)), (error: Error) => setSaveFailure(error.message))
-  }, [entry, id, ingredient, recipeStore])
+    const itemId = new URLSearchParams(location.search).get('itemId') || null
+    const clearItemId = () => history.replaceState(null, '', `${location.pathname}${location.hash}`)
+    if (itemId === null) {
+      clearItemId()
+      return navigate(entry === undefined ? HOME_HREF : recipeHref(id))
+    }
+    const unlinked = (why: string) => {
+      clearItemId()
+      setNotice(`The Catalogue added the Item ${itemId}, but it was not linked: ${why}`)
+    }
+    if (entry === undefined) return unlinked('this Recipe does not exist.')
+    const recipe = linkUnlinkedIngredient(entry.recipe, ingredientIndex, name, core.itemId(itemId))
+    if (recipe === undefined) return unlinked(`the Recipe has changed, and ${name} is no longer an Unlinked Ingredient there.`)
+    recipeStore.update(id, recipe).then(
+      () => {
+        clearItemId()
+        navigate(recipeHref(id))
+      },
+      (error: Error) => setNotice(`The Catalogue added the Item ${itemId}, but it could not be linked: ${error.message}`),
+    )
+  }, [entries, entry, id, ingredientIndex, name, recipeStore])
 
   if (failed) return <LoadFailed />
+  if (notice !== null) {
+    return (
+      <main>
+        <p role="alert">{notice}</p>
+        <a href={entry === undefined ? HOME_HREF : recipeHref(id)}>{entry === undefined ? 'Back to Recipes' : 'Back to the Recipe'}</a>
+      </main>
+    )
+  }
   if (entries === null) return null
   if (entry === undefined) return <RecipeNotFound />
-  if (saveFailure !== null) return <p role="alert">The Item could not be linked: {saveFailure}</p>
   return null
 }
 

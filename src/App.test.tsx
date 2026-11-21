@@ -365,7 +365,7 @@ describe('App returning from the Catalogue', () => {
   it('links the Ingredient to the returned Item, saves the Recipe and shows it', async () => {
     const s = unlinked()
     history.replaceState(null, '', `${location.pathname}?itemId=chives`)
-    location.hash = catalogueReturnHref(r1, 2)
+    location.hash = catalogueReturnHref(r1, 2, 'Chive')
     render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
 
     await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
@@ -373,20 +373,49 @@ describe('App returning from the Catalogue', () => {
     expect(location.search).toBe('')
   })
 
-  it('links an Assumed Ingredient it returns for, dropping the mark', async () => {
+  it.each([
+    ['an Assumed Ingredient', 1, 'Salt'],
+    ['an Ingredient already linked', 0, 'Egg'],
+    ['a line that is no longer called that', 2, 'Parsley'],
+    ['a position the Recipe no longer has', 7, 'Chive'],
+  ])('changes nothing, and says so, when the return is for %s', async (_what, index, name) => {
     const s = unlinked()
-    history.replaceState(null, '', `${location.pathname}?itemId=salt`)
-    location.hash = catalogueReturnHref(r1, 1)
+    const update = vi.spyOn(s, 'update')
+    history.replaceState(null, '', `${location.pathname}?itemId=new-item`)
+    location.hash = catalogueReturnHref(r1, index, name)
     render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
 
-    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
-    expect(saved(s)[1]).toEqual({ name: 'Salt', itemId: 'salt' })
+    expect((await screen.findByRole('alert')).textContent).toContain('new-item')
+    expect(update).not.toHaveBeenCalled()
+    expect(location.search).toBe('')
+  })
+
+  it('clears the returned Item id when the Recipe does not exist, and says which Item was not linked', async () => {
+    history.replaceState(null, '', `${location.pathname}?itemId=new-item`)
+    location.hash = catalogueReturnHref(recipes.recipeId('gone'), 0, 'Chive')
+    render(<App recipeStore={unlinked()} itemsPort={fakeItemsPort([])} />)
+
+    expect((await screen.findByRole('alert')).textContent).toContain('new-item')
+    expect(location.search).toBe('')
+  })
+
+  it('keeps the Item id in the URL and names the Item when the save is refused', async () => {
+    const s = unlinked()
+    vi.spyOn(s, 'update').mockRejectedValue(new Error('offline'))
+    history.replaceState(null, '', `${location.pathname}?itemId=chives`)
+    location.hash = catalogueReturnHref(r1, 2, 'Chive')
+    render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
+
+    const alert = (await screen.findByRole('alert')).textContent
+    expect(alert).toContain('chives')
+    expect(alert).toContain('offline')
+    expect(location.search).toBe('?itemId=chives')
   })
 
   it('changes nothing when it returns without an Item id', async () => {
     const s = unlinked()
     const update = vi.spyOn(s, 'update')
-    location.hash = catalogueReturnHref(r1, 2)
+    location.hash = catalogueReturnHref(r1, 2, 'Chive')
     render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
 
     await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))

@@ -11,11 +11,11 @@ import { TextField } from 'household-ui/ui/TextField.tsx'
 import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { BackButton } from '../shell/BackButton.tsx'
-import { catalogueUrl } from '../gate/AuthGate.tsx'
-import { HOME_HREF, addToCatalogueHref, catalogueReturnHref, recipeHref } from '../routes.ts'
+import { HOME_HREF, addToCatalogueHref, recipeHref } from '../routes.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
   draftOf,
+  isClean,
   emptyDraft,
   emptyIngredient,
   emptyStep,
@@ -137,7 +137,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
                 items={items}
                 position={i + 1}
                 last={i === draft.ingredients.length - 1}
-                catalogueHref={entry ? addToCatalogue(entry, draft.ingredients[i]) : undefined}
+                catalogueHref={entry && isClean(draft, entry.recipe) ? addToCatalogue(entry, draft.ingredients[i]) : undefined}
                 onChange={(fields) =>
                   change({ ingredients: updated(draft.ingredients, i, fields) })
                 }
@@ -270,14 +270,13 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
 
 /**
  * The Catalogue hand-off for an Ingredient of the saved Recipe `entry`, which the return URL names by its
- * position there; absent when the row is not one of the saved Ingredients or has no name to hand over.
+ * position and name there; absent when the row is not one of the saved Ingredients or has no name to hand over.
+ * Following it leaves the editor, so it is only offered while the draft has no unsaved edits to lose.
  */
 function addToCatalogue(entry: RecipeEntry, ingredient: IngredientDraft): string | undefined {
   const index = ingredient.base === null ? -1 : entry.recipe.ingredients.indexOf(ingredient.base)
   const name = ingredient.name.trim()
-  if (index < 0 || name === '') return undefined
-  const returnUrl = new URL(`${location.pathname}${catalogueReturnHref(entry.id, index)}`, location.origin).href
-  return addToCatalogueHref(catalogueUrl(), name, returnUrl)
+  return index < 0 || name === '' ? undefined : addToCatalogueHref(entry.id, index, name)
 }
 
 type LinkStatus =

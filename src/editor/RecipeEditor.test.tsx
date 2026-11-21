@@ -373,7 +373,16 @@ describe('RecipeEditor adding to the Catalogue', () => {
     expect(handOff.pathname).toBe('/home-catalogue/')
     const params = new URLSearchParams(handOff.hash.replace('#/items?', ''))
     expect(params.get('add')).toBe('Sea salt')
-    expect(params.get('return')).toBe(`${location.origin}${location.pathname}#/recipes/r%201/ingredients/1`)
+    expect(params.get('return')).toBe(`${location.origin}${location.pathname}#/recipes/r%201/ingredients/1/Sea%20salt`)
+  })
+
+  it('stops offering it once the draft has unsaved edits, which following it would lose', () => {
+    const entry = edited([{ name: 'Sea salt' }])
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.getByRole('link', { name: 'Add Ingredient 1 to Catalogue' })).toBeTruthy()
+
+    fireEvent.input(field('Title'), { target: { value: 'Y' } })
+    expect(screen.queryByRole('link', { name: /to Catalogue$/ })).toBeNull()
   })
 
   it('does not offer it for an Assumed Ingredient', () => {
