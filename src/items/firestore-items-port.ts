@@ -13,19 +13,16 @@ const { ITEMS_COLLECTION, itemId, itemSchema, stateHistoryCollectionPath } = cor
 
 export function firestoreItemsPort(db: Firestore): ItemsPort {
   /** The State of each Item as the latest watch delivered it, local writes included. */
-  const watchedStates = new Map<string, core.State>()
-  /** Whether the latest watch snapshot came from the local cache because the server is unreachable. */
-  let offline = false
+  const watchedStates = new Map<core.ItemId, core.State>()
+  /** The `onError` of every live watch; a refused State write is reported to each. */
+  const watchErrors = new Set<(error: unknown) => void>()
 
   return {
     watchItems(onItems, onError) {
-      let delivered = false
-      const stop = onSnapshot(
+      watchErrors.add(onError)
+      const unsubscribe = onSnapshot(
         collection(db, ITEMS_COLLECTION),
-        { includeMetadataChanges: true },
         (snapshot) => {
-          offline = snapshot.metadata.fromCache
-          if (delivered && snapshot.docChanges().length === 0) return
           let items: WatchedItem[]
           try {
             items = snapshot.docs.map((doc) => {
@@ -37,13 +34,17 @@ export function firestoreItemsPort(db: Firestore): ItemsPort {
             onError(error)
             return
           }
-          delivered = true
           watchedStates.clear()
           for (const item of items) watchedStates.set(item.id, item.state)
           onItems(items)
         },
         onError,
       )
+      const stop = () => {
+        unsubscribe()
+        watchErrors.delete(onError)
+        if (watchErrors.size === 0) watchedStates.clear()
+      }
       return stop
     },
 
@@ -51,19 +52,14 @@ export function firestoreItemsPort(db: Firestore): ItemsPort {
       const current = watchedStates.get(id)
       if (current === undefined) throw new Error(`No Item ${id} to set the State of`)
       if (current === state) return
-      const itemRef = doc(db, ITEMS_COLLECTION, id)
       const batch = writeBatch(db)
-      batch.update(itemRef, { state })
+      batch.update(doc(db, ITEMS_COLLECTION, id), { state })
       batch.set(doc(collection(db, stateHistoryCollectionPath(id))), { state, at: serverTimestamp() })
 
       // A batch commit settles only once the server acknowledges it, which offline may be never. The
-      // write is queued and already in the watched Items, so the caller need not wait for it.
-      const committed = batch.commit()
-      if (offline) {
-        committed.catch(() => {})
-        return
-      }
-      await committed
+      // write is queued and already in the watched Items, so the caller does not wait for it; a
+      // refusal is reported to the live watches' `onError` instead.
+      batch.commit().catch((error: unknown) => watchErrors.forEach((report) => report(error)))
     },
   }
 }
