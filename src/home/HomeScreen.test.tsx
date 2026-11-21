@@ -41,16 +41,30 @@ describe('HomeScreen', () => {
       'Other Recipes',
     ])
     expect(section('Makeable').getByText('Bread')).toBeInTheDocument()
-    expect(section('Almost makeable').getByText(/Omelette/)).toHaveTextContent('Missing: eggs')
+    expect(section('Almost makeable').getByRole('listitem')).toHaveTextContent('Missing: eggs')
     expect(section('Other Recipes').getByText('Zucchini')).toBeInTheDocument()
   })
 
   it('moves a Recipe between sections live when an Item changes State', async () => {
     const port = itemsPort()
     render(<HomeScreen recipeStore={store()} itemsPort={port} />)
-    expect(section('Almost makeable').getByText(/Omelette/)).toBeInTheDocument()
+    expect(section('Almost makeable').getByRole('link', { name: 'Omelette' })).toBeInTheDocument()
     await act(() => port.setItemState(core.itemId('eggs'), 'enough'))
-    expect(section('Makeable').getByText('Omelette')).toBeInTheDocument()
-    expect(section('Almost makeable').queryByText(/Omelette/)).toBeNull()
+    expect(section('Makeable').getByRole('link', { name: 'Omelette' })).toBeInTheDocument()
+    expect(section('Almost makeable').queryByRole('link', { name: 'Omelette' })).toBeNull()
+  })
+
+  it('says so in each empty section and links to creating a Recipe', () => {
+    render(<HomeScreen recipeStore={fakeRecipeStore()} itemsPort={fakeItemsPort([])} />)
+    expect(section('Makeable').getByText(/nothing is makeable/i)).toBeInTheDocument()
+    expect(section('Almost makeable').getByText(/no recipe is only/i)).toBeInTheDocument()
+    expect(section('Other Recipes').getByText('No other Recipes.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'New Recipe' })).toHaveAttribute('href', '#/recipes/new')
+  })
+
+  it('links each Recipe to its view', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    expect(screen.getByRole('link', { name: 'Bread' })).toHaveAttribute('href', '#/recipes/3')
+    expect(screen.getByRole('link', { name: 'Omelette' })).toHaveAttribute('href', '#/recipes/2')
   })
 })

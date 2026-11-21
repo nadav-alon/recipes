@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import type { ItemsPort } from '../items/items-port.ts'
 import type { ItemsById } from '../recipes/makeability.ts'
-import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
+import type { RecipeEntry, RecipeId, RecipeStore } from '../recipes/recipe-store.ts'
 import { homeSections, type ClassifiedEntry } from './home-sections.ts'
 
 export interface HomeScreenProps {
@@ -36,21 +36,42 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   return (
     <main>
       <h1>Recipes</h1>
-      <Section title="Makeable" list={sections.makeable} />
-      <Section title="Almost makeable" list={sections.almostMakeable} showMissing />
-      <Section title="Other Recipes" list={sections.other} />
+      <a href={NEW_RECIPE_HREF}>New Recipe</a>
+      <Section title="Makeable" list={sections.makeable} empty="Nothing is makeable from what is at home right now." />
+      <Section
+        title="Almost makeable"
+        list={sections.almostMakeable}
+        empty="No Recipe is only one or two Ingredients short."
+        showMissing
+      />
+      <Section title="Other Recipes" list={sections.other} empty="No other Recipes." />
     </main>
   )
 }
 
-function Section({ title, list, showMissing = false }: { title: string; list: ClassifiedEntry[]; showMissing?: boolean }) {
+/** Where creating a Recipe lives. */
+export const NEW_RECIPE_HREF = '#/recipes/new'
+
+/** Where a Recipe's view lives. */
+export const recipeHref = (id: RecipeId) => `#/recipes/${id}`
+
+interface SectionProps {
+  title: string
+  list: ClassifiedEntry[]
+  /** What the section says when `list` is empty. */
+  empty: string
+  showMissing?: boolean
+}
+
+function Section({ title, list, empty, showMissing = false }: SectionProps) {
   return (
     <section aria-labelledby={`home-${title.replace(/ /g, "-")}`}>
       <h2 id={`home-${title.replace(/ /g, "-")}`}>{title}</h2>
+      {list.length === 0 && <p>{empty}</p>}
       <ul>
         {list.map(({ entry, classification }) => (
           <li key={entry.id}>
-            {entry.recipe.title}
+            <a href={recipeHref(entry.id)}>{entry.recipe.title}</a>
             {showMissing && (
               <span>
                 {' '}
