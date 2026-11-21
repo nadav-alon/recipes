@@ -7,8 +7,12 @@ import { fakeRecipeStore } from './recipes/fake-recipe-store.ts'
 import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, recipeHref } from './routes.ts'
 
 const r1 = recipes.recipeId('r1')
+const r2 = recipes.recipeId('r2')
 const store = () =>
-  fakeRecipeStore([{ id: r1, recipe: { title: 'Omelette', ingredients: [], prepSteps: [], steps: ['Whisk'] } }])
+  fakeRecipeStore([
+    { id: r1, recipe: { title: 'Omelette', ingredients: [], prepSteps: [], steps: ['Whisk'] } },
+    { id: r2, recipe: { title: 'Pancakes', ingredients: [], prepSteps: [], steps: ['Flip'] } },
+  ])
 
 afterEach(() => {
   location.hash = ''
@@ -34,6 +38,17 @@ describe('App', () => {
       fireEvent(window, new HashChangeEvent('hashchange'))
     })
     expect(screen.getByRole('heading', { name: 'Omelette' })).toBeInTheDocument()
+  })
+
+  it('edits the Recipe the URL names when it moves from one Recipe\'s editor to another\'s', async () => {
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    expect(screen.getByLabelText('Title')).toHaveValue('Omelette')
+    await act(() => {
+      location.hash = editRecipeHref(r2)
+      fireEvent(window, new HashChangeEvent('hashchange'))
+    })
+    expect(screen.getByLabelText('Title')).toHaveValue('Pancakes')
   })
 
   it('says so when the Recipe at the URL does not exist', () => {

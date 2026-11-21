@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import type { ItemsPort } from './items/items-port.ts'
+import { useItemsById } from './items/use-items-by-id.ts'
 import { RecipeEditor } from './editor/RecipeEditor.tsx'
 import { HomeScreen } from './home/HomeScreen.tsx'
-import type { ItemsById } from './recipes/makeability.ts'
 import { RecipeView } from './recipes/RecipeView.tsx'
-import type { RecipeEntry, RecipeStore } from './recipes/recipe-store.ts'
+import type { RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
 import { editRecipeHref, HOME_HREF, navigate, recipeHref, useRoute } from './routes.ts'
 
 export interface AppProps {
@@ -12,69 +12,65 @@ export interface AppProps {
   itemsPort: ItemsPort
 }
 
-/** The screen the current URL names. */
+/**
+ * The screen the current URL names. Screens showing a Recipe are keyed by its id, so a URL that
+ * moves from one Recipe to another remounts them rather than carrying the first Recipe's state over.
+ */
 export function App({ recipeStore, itemsPort }: AppProps) {
   const route = useRoute()
   switch (route.screen) {
+    case 'home':
+      return <HomeScreen recipeStore={recipeStore} itemsPort={itemsPort} />
     case 'recipe':
-      return <RecipeScreen id={route.id} recipeStore={recipeStore} itemsPort={itemsPort} />
+      return <RecipeScreen key={route.id} id={route.id} recipeStore={recipeStore} itemsPort={itemsPort} />
     case 'edit-recipe':
-      return <EditScreen id={route.id} recipeStore={recipeStore} />
+      return <EditScreen key={route.id} id={route.id} recipeStore={recipeStore} />
     case 'new-recipe':
       return <NewRecipeScreen recipeStore={recipeStore} />
-    default:
-      return <HomeScreen recipeStore={recipeStore} itemsPort={itemsPort} />
   }
 }
 
-function RecipeScreen({ id, recipeStore, itemsPort }: AppProps & { id: RecipeEntry['id'] }) {
+/** The Recipes as the store has them, `null` until they have arrived, and whether watching them failed. */
+function useRecipeEntries(recipeStore: RecipeStore) {
   const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
-  const [items, setItems] = useState<ItemsById | null>(null)
   const [failed, setFailed] = useState(false)
-
   useEffect(() => recipeStore.watch(setEntries, () => setFailed(true)), [recipeStore])
-  useEffect(
-    () =>
-      itemsPort.watchItems(
-        (watched) => setItems(new Map(watched.filter((i) => !i.deleted).map((i) => [i.id, { state: i.state }]))),
-        () => setFailed(true),
-      ),
-    [itemsPort],
-  )
+  return { entries, failed, fail: () => setFailed(true) }
+}
 
-  if (failed) return <p role="alert">The Recipe could not be loaded.</p>
+function LoadFailed() {
+  return <p role="alert">The Recipe could not be loaded.</p>
+}
+
+function RecipeNotFound() {
+  return (
+    <main>
+      <p role="alert">This Recipe does not exist.</p>
+      <a href={HOME_HREF}>Back to Recipes</a>
+    </main>
+  )
+}
+
+function RecipeScreen({ id, recipeStore, itemsPort }: AppProps & { id: RecipeId }) {
+  const { entries, failed, fail } = useRecipeEntries(recipeStore)
+  const items = useItemsById(itemsPort, fail)
+
+  if (failed) return <LoadFailed />
   if (entries === null || items === null) return null
   const entry = entries.find((e) => e.id === id)
-  if (entry === undefined) {
-    return (
-      <main>
-        <p role="alert">This Recipe does not exist.</p>
-        <a href={HOME_HREF}>Back to Recipes</a>
-      </main>
-    )
-  }
+  if (entry === undefined) return <RecipeNotFound />
   return <RecipeView recipe={entry.recipe} items={items} itemsPort={itemsPort} editHref={editRecipeHref(id)} />
 }
 
 /** Edits the Recipe, keeping it open once found so a Soft delete's Undo outlives the Recipe leaving the watch. */
-function EditScreen({ id, recipeStore }: { id: RecipeEntry['id']; recipeStore: RecipeStore }) {
-  const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
-  const [failed, setFailed] = useState(false)
+function EditScreen({ id, recipeStore }: { id: RecipeId; recipeStore: RecipeStore }) {
+  const { entries, failed } = useRecipeEntries(recipeStore)
   const opened = useRef<RecipeEntry | null>(null)
 
-  useEffect(() => recipeStore.watch(setEntries, () => setFailed(true)), [recipeStore])
-
-  if (failed) return <p role="alert">The Recipe could not be loaded.</p>
+  if (failed) return <LoadFailed />
   if (entries === null) return null
   opened.current ??= entries.find((e) => e.id === id) ?? null
-  if (opened.current === null) {
-    return (
-      <main>
-        <p role="alert">This Recipe does not exist.</p>
-        <a href={HOME_HREF}>Back to Recipes</a>
-      </main>
-    )
-  }
+  if (opened.current === null) return <RecipeNotFound />
   return (
     <RecipeEditor
       store={recipeStore}
