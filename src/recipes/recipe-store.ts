@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteField, doc, onSnapshot, serverTimestamp, updateDoc, type Firestore } from 'firebase/firestore'
+import { collection, deleteField, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Firestore } from 'firebase/firestore'
 import { recipes } from 'data-platform'
 
 export type Recipe = recipes.Recipe
@@ -38,7 +38,10 @@ export interface RecipeStore {
    */
   watch(onChange: (entries: readonly RecipeEntry[]) => void, onError?: (error: Error) => void): () => void
 
-  /** Saves a new Recipe and resolves with its id. Rejects with `InvalidRecipeError` before any write. */
+  /**
+   * Saves a new Recipe and resolves with its client-generated id as soon as the write is applied
+   * locally, without waiting for the server. Rejects with `InvalidRecipeError` before any write.
+   */
   create(recipe: Recipe): Promise<RecipeId>
 
   /**
@@ -103,7 +106,11 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
     },
 
     async create(recipe) {
-      const ref = await addDoc(recipesCollection, validatedFields(recipe))
+      const ref = doc(recipesCollection)
+      const write = setDoc(ref, validatedFields(recipe))
+      // The id is generated here, so it is known once the local write is applied; a write the server
+      // later refuses is rolled back out of the cache and the Recipe leaves `watch`.
+      write.catch(() => {})
       return recipes.recipeId(ref.id)
     },
 

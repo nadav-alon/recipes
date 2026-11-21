@@ -81,6 +81,14 @@ describe('firestoreRecipeStore', () => {
       expect((await current()).map((e) => [e.id, e.recipe.title])).toEqual([[id, 'Pancakes']])
     })
 
+    it('resolves with the id while offline, and the Recipe is watched at once', async () => {
+      await disableNetwork(alice)
+
+      const id = await store.create(pancakes)
+
+      expect((await current()).map((e) => [e.id, e.recipe.title])).toEqual([[id, 'Pancakes']])
+    })
+
     it('refuses an invalid Recipe without a write', async () => {
       // The rules only look at the first Ingredient, so only the schema check catches the second.
       const invalid = { ...pancakes, ingredients: [...pancakes.ingredients, { name: '' }] }

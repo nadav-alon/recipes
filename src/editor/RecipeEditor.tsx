@@ -24,7 +24,7 @@ export interface RecipeEditorProps {
   readonly entry?: RecipeEntry
   /** Called once a save has been handed to the store; offline it does not wait for the server. */
   readonly onSaved?: () => void
-  /** Called with the new Recipe's id once the store has acknowledged creating it; never called when editing. */
+  /** Called with the new Recipe's id once the store has applied creating it, offline too; never called when editing. */
   readonly onCreated?: (id: RecipeId) => void
   /**
    * Called once the Recipe is Soft deleted and the Undo offer has ended unused (dismissed or timed out), so a
