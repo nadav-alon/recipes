@@ -49,7 +49,7 @@ export interface RecipeStore {
 }
 
 /** Checks `recipe` against data-platform's schema and returns it without `undefined` fields, which Firestore refuses. */
-function validated(recipe: Recipe): Recipe {
+export function validatedRecipe(recipe: Recipe): Recipe {
   const result = recipes.recipeSchema.safeParse(recipe)
   if (!result.success) {
     throw new InvalidRecipeError(result.error.issues.map((i) => `${i.path.join('.') || 'recipe'}: ${i.message}`))
@@ -90,13 +90,13 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
     },
 
     async create(recipe) {
-      const { deletedAt: _ignored, ...live } = validated(recipe)
+      const { deletedAt: _ignored, ...live } = validatedRecipe(recipe)
       const ref = await addDoc(recipesCollection, live)
       return recipes.recipeId(ref.id)
     },
 
     async update(id, recipe) {
-      const { deletedAt: _ignored, ...live } = validated(recipe)
+      const { deletedAt: _ignored, ...live } = validatedRecipe(recipe)
       const removed = Object.fromEntries(OPTIONAL_FIELDS.filter((f) => !(f in live)).map((f) => [f, deleteField()]))
       await updateDoc(doc(recipesCollection, id), { ...live, ...removed })
     },
