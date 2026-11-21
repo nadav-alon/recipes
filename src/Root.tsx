@@ -1,3 +1,4 @@
+import type { Firestore } from 'firebase/firestore'
 import { useMemo, useState } from 'preact/hooks'
 import { initFirebase, saveFirebaseWebConfig, type FirebaseWebConfig } from 'data-platform/client'
 import { AuthGate } from './gate/AuthGate.tsx'
@@ -6,6 +7,8 @@ import { localConfig } from './gate/local.ts'
 import { PlatformGuard } from './gate/PlatformGuard.tsx'
 import { SetupScreen } from './gate/SetupScreen.tsx'
 import { App } from './App.tsx'
+import { firestoreItemsPort } from './items/firestore-items-port.ts'
+import { firestoreRecipeStore } from './recipes/recipe-store.ts'
 
 type RootState = Pick<ConfigResolution, 'config' | 'error' | 'proposed'> & { local: boolean }
 
@@ -74,7 +77,14 @@ function Connected({ config, local }: { config: FirebaseWebConfig; local: boolea
   return (
     <AuthGate client={client}>
       <PlatformGuard db={client.db} />
-      <App />
+      <SignedIn db={client.db} />
     </AuthGate>
   )
+}
+
+/** The app once signed in; the stores are built here so nothing touches Firestore before the gate opens. */
+function SignedIn({ db }: { db: Firestore }) {
+  const recipeStore = useMemo(() => firestoreRecipeStore(db), [db])
+  const itemsPort = useMemo(() => firestoreItemsPort(db), [db])
+  return <App recipeStore={recipeStore} itemsPort={itemsPort} />
 }
