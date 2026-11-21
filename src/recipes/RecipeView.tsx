@@ -62,17 +62,15 @@ function StepList({ steps }: { steps: readonly string[] }) {
 }
 
 function IngredientLine({
-  recipeId,
-  index,
   ingredient,
+  catalogueHref,
   items,
   busy,
   onActuallyOut,
 }: {
-  recipeId: RecipeId
-  /** Where the Ingredient is in the Recipe, from 0. */
-  index: number
   ingredient: recipes.Ingredient
+  /** The Catalogue hand-off for an Unlinked Ingredient; absent when it has no name to hand over. */
+  catalogueHref?: string
   items: ItemsById
   busy: boolean
   onActuallyOut: (marking: MarkedOut) => void
@@ -95,8 +93,8 @@ function IngredientLine({
           >
             Actually out
           </Button>
-        ) : status.kind === 'missing' && status.reason === 'unlinked' ? (
-          <a href={addToCatalogueHref(recipeId, index, ingredient.name.trim())} aria-label={`Add ${ingredient.name} to Catalogue`}>
+        ) : status.kind === 'missing' && status.reason === 'unlinked' && catalogueHref !== undefined ? (
+          <a href={catalogueHref} aria-label={`Add ${ingredient.name.trim()} to Catalogue`}>
             Add to Catalogue
           </a>
         ) : undefined
@@ -170,9 +168,8 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
           {recipe.ingredients.map((ingredient, index) => (
             <IngredientLine
               key={index}
-              recipeId={recipeId}
-              index={index}
               ingredient={ingredient}
+              catalogueHref={ingredient.name.trim() === '' ? undefined : addToCatalogueHref(recipeId, index, ingredient.name.trim())}
               items={items}
               busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
               onActuallyOut={(marking) => setItemState(marking.itemId, 'out', () => remember(marking))}
