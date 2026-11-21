@@ -40,15 +40,46 @@ function IngredientLine({ ingredient, items }: { ingredient: recipes.Ingredient;
   )
 }
 
-export function RecipeView({ recipe, items }: RecipeViewProps) {
+export function RecipeView({ recipe, items, editHref }: RecipeViewProps) {
   return (
     <article>
       <h1>{recipe.title}</h1>
+      <a href={editHref}>Edit</a>
+      {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
+      {recipe.sourceUrl !== undefined && (
+        <p>
+          <a href={recipe.sourceUrl}>Source</a>
+        </p>
+      )}
       <ul>
         {recipe.ingredients.map((ingredient, index) => (
           <IngredientLine key={index} ingredient={ingredient} items={items} />
         ))}
       </ul>
+      {recipe.prepSteps.length > 0 && (
+        <section>
+          <h2>Prep Steps</h2>
+          <ol>
+            {recipe.prepSteps.map((step, index) => (
+              <li key={index}>{step}</li>
+            ))}
+          </ol>
+        </section>
+      )}
+      <section>
+        <h2>Steps</h2>
+        <ol>
+          {recipe.steps.map((step, index) => (
+            <li key={index}>{step}</li>
+          ))}
+        </ol>
+      </section>
+      {recipe.notes !== undefined && (
+        <section>
+          <h2>Notes</h2>
+          <p>{recipe.notes}</p>
+        </section>
+      )}
     </article>
   )
 }

@@ -71,3 +71,50 @@ describe('RecipeView ingredients', () => {
     expect(line('Water')).toHaveTextContent('Assumed')
   })
 })
+
+describe('RecipeView sections', () => {
+  it('shows Prep Steps as their own section before the Steps', () => {
+    render(
+      <RecipeView
+        recipe={recipe({ prepSteps: ['Sift the flour'], steps: ['Whisk', 'Fry'] })}
+        items={items}
+        editHref="#/edit"
+      />,
+    )
+    const prep = screen.getByRole('heading', { name: 'Prep Steps' })
+    const steps = screen.getByRole('heading', { name: 'Steps' })
+    expect(prep.compareDocumentPosition(steps) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText('Sift the flour')).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem').map((el) => el.textContent)).toEqual(['Sift the flour', 'Whisk', 'Fry'])
+  })
+
+  it('leaves out the Prep Steps section when there are none', () => {
+    render(<RecipeView recipe={recipe({ steps: ['Fry'] })} items={items} editHref="#/edit" />)
+    expect(screen.queryByRole('heading', { name: 'Prep Steps' })).toBeNull()
+  })
+
+  it('shows Servings, the source link and notes when present', () => {
+    render(
+      <RecipeView
+        recipe={recipe({ servings: 4, sourceUrl: 'https://example.com/p', notes: 'Rest the batter' })}
+        items={items}
+        editHref="#/edit"
+      />,
+    )
+    expect(screen.getByText(/Servings: 4/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Source' })).toHaveAttribute('href', 'https://example.com/p')
+    expect(screen.getByText('Rest the batter')).toBeInTheDocument()
+  })
+
+  it('leaves out Servings, the source link and notes when absent', () => {
+    render(<RecipeView recipe={recipe()} items={items} editHref="#/edit" />)
+    expect(screen.queryByText(/Servings/)).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Source' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Notes' })).toBeNull()
+  })
+
+  it('links to the editor', () => {
+    render(<RecipeView recipe={recipe()} items={items} editHref="#/recipes/r1/edit" />)
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '#/recipes/r1/edit')
+  })
+})
