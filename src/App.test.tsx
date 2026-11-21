@@ -1,10 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/preact'
-import { afterEach, describe, expect, it } from 'vitest'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { recipes } from 'data-platform'
 import { App } from './App.tsx'
 import { fakeItemsPort } from './items/fake-items-port.ts'
 import { fakeRecipeStore } from './recipes/fake-recipe-store.ts'
-import { editRecipeHref, recipeHref } from './routes.ts'
+import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, recipeHref } from './routes.ts'
 
 const r1 = recipes.recipeId('r1')
 const store = () =>
@@ -40,5 +40,46 @@ describe('App', () => {
     location.hash = recipeHref(recipes.recipeId('nope'))
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('alert')).toHaveTextContent('This Recipe does not exist.')
+  })
+
+  it('opens the editor empty at the new-Recipe URL, and shows the Recipe once it is saved', async () => {
+    location.hash = NEW_RECIPE_HREF
+    render(<App recipeStore={fakeRecipeStore()} itemsPort={fakeItemsPort([])} />)
+    expect(screen.getByRole('heading', { name: 'New Recipe' })).toBeInTheDocument()
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(await screen.findByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
+  })
+
+  it('opens the editor on the Recipe at its edit URL, and saving returns to its view', async () => {
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    expect(screen.getByLabelText('Title')).toHaveValue('Omelette')
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Frittata' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(location.hash).toBe(recipeHref(r1))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(await screen.findByRole('heading', { name: 'Frittata' })).toBeInTheDocument()
+  })
+
+  it('returns to Home once the Undo offer for a deleted Recipe ends', async () => {
+    vi.useFakeTimers()
+    try {
+      location.hash = editRecipeHref(r1)
+      render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+      await act(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+      })
+      expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+      expect(location.hash).toBe(editRecipeHref(r1))
+      await act(() => {
+        vi.advanceTimersByTime(9000)
+      })
+      expect(location.hash).toBe(HOME_HREF)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
