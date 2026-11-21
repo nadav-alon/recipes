@@ -22,11 +22,13 @@ export interface RecipeEditorProps {
   readonly store: RecipeStore
   /** The Recipe to edit; absent when creating a new one. */
   readonly entry?: RecipeEntry
+  /** The unsaved new Recipe the form opens on when creating; ignored when editing. */
+  readonly initial?: Recipe
   /** Called once a save has been handed to the store; offline it does not wait for the server. */
   readonly onSaved?: () => void
   /**
-   * Called when the store rejects an edit that `onSaved` has already reported, with the Recipe that was
-   * not saved, so a parent that has left the editor can keep the edit. Not called when creating.
+   * Called when the store rejects a save that `onSaved` or `onCreated` has already reported, with the Recipe
+   * that was not saved, so a parent that has left the editor can keep it.
    */
   readonly onSaveFailed?: (recipe: Recipe, error: Error) => void
   /** Called with the new Recipe's id once the store has applied creating it, offline too; never called when editing. */
@@ -39,8 +41,8 @@ export interface RecipeEditorProps {
 }
 
 /** The form that creates a Recipe, or edits `entry`. */
-export function RecipeEditor({ store, entry, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
-  const [draft, setDraft] = useState<RecipeDraft>(() => (entry ? draftOf(entry.recipe) : emptyDraft()))
+export function RecipeEditor({ store, entry, initial, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
+  const [draft, setDraft] = useState<RecipeDraft>(() => (entry ? draftOf(entry.recipe) : initial ? draftOf(initial) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
   const [deletion, setDeletion] = useState<'none' | 'undoable' | 'final'>('none')
@@ -61,11 +63,12 @@ export function RecipeEditor({ store, entry, onSaved, onSaveFailed, onCreated, o
     setBlockers(found)
     if (found.length > 0) return
     setFailure(null)
-    const write = entry ? store.update(entry.id, recipe) : store.create(recipe).then((id) => onCreated?.(id))
-    write.catch((error: Error) => {
-      if (entry) onSaveFailed?.(recipe, error)
+    const refused = (error: Error) => {
+      onSaveFailed?.(recipe, error)
       setFailure(error.message)
-    })
+    }
+    const write = entry ? store.update(entry.id, recipe) : store.create(recipe, refused).then((id) => onCreated?.(id))
+    write.catch(entry ? refused : (error: Error) => setFailure(error.message))
     onSaved?.()
   }
 
