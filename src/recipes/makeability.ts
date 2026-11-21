@@ -6,7 +6,7 @@ export type ItemView = Pick<core.Item, 'state' | 'deletedAt'>
 export type ItemsById = ReadonlyMap<core.ItemId, ItemView>
 
 /** Orders titles the same on every device. */
-const titleOrder = new Intl.Collator('en')
+export const titleOrder = new Intl.Collator('en')
 
 export type MissingReason = 'unlinked' | 'item out' | 'item soft-deleted'
 
@@ -42,11 +42,8 @@ export interface RecipeMakeability {
   makeability: Makeability
   /** How many Ingredients are Missing. */
   missing: number
-}
-
-export interface RankedRecipe {
-  recipe: recipes.Recipe
-  classification: RecipeMakeability
+  /** The Missing Ingredients, in the Recipe's order, each with why it is Missing. */
+  missingIngredients: { ingredient: recipes.Ingredient; reason: MissingReason }[]
 }
 
 /** The most Missing Ingredients a Recipe can have and still be Almost makeable. */
@@ -54,25 +51,12 @@ const ALMOST_MAKEABLE_MAX_MISSING = 2
 
 export function classifyRecipe(recipe: recipes.Recipe, items: ItemsById): RecipeMakeability {
   const statuses = recipe.ingredients.map((ingredient) => classifyIngredient(ingredient, items))
-  const missing = statuses.filter((status) => status.kind === 'missing').length
+  const missingIngredients = recipe.ingredients.flatMap((ingredient, i) => {
+    const status = statuses[i]
+    return status?.kind === 'missing' ? [{ ingredient, reason: status.reason }] : []
+  })
+  const missing = missingIngredients.length
   const makeability =
     missing === 0 ? 'makeable' : missing <= ALMOST_MAKEABLE_MAX_MISSING ? 'almost makeable' : 'neither'
-  return { ingredients: statuses, makeability, missing }
-}
-
-/**
- * The Almost makeable Recipes among `all`, fewest Missing first, then by title. Recipes that are
- * Makeable or neither are left out.
- */
-export function rankAlmostMakeable(
-  all: readonly recipes.Recipe[],
-  items: ItemsById,
-): RankedRecipe[] {
-  return all
-    .map((recipe) => ({ recipe, classification: classifyRecipe(recipe, items) }))
-    .filter(({ classification }) => classification.makeability === 'almost makeable')
-    .sort(
-      (a, b) =>
-        a.classification.missing - b.classification.missing || titleOrder.compare(a.recipe.title, b.recipe.title),
-    )
+  return { ingredients: statuses, makeability, missing, missingIngredients }
 }
