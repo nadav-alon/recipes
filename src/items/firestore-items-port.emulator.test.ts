@@ -84,17 +84,21 @@ describe('watchItems', () => {
     expect(await second).toEqual([{ id: flour, name: 'Flour', state: 'out', deleted: true }])
   })
 
-  it('reports a malformed Item through onError and delivers nothing', async () => {
-    await seedItem('flour', { name: 'Flour', state: 'bogus' })
+  it('skips and logs an invalid Item, still delivering the valid ones', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    await seedItem('salt', { name: 'Salt', state: 'bogus' })
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
     const port = portAs(alice)
-    const onItems = vi.fn()
+    const onError = vi.fn()
 
-    const error = await new Promise<unknown>((resolve) => {
-      stops.push(port.watchItems(onItems, resolve))
+    const items = await new Promise<readonly WatchedItem[]>((resolve) => {
+      stops.push(port.watchItems(resolve, onError))
     })
 
-    expect(error).toBeDefined()
-    expect(onItems).not.toHaveBeenCalled()
+    expect(items).toEqual([{ id: flour, name: 'Flour', state: 'enough', deleted: false }])
+    expect(onError).not.toHaveBeenCalled()
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining('salt'), expect.anything())
+    logged.mockRestore()
   })
 })
 
