@@ -132,6 +132,22 @@ describe('RecipeEditor validation', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it('blocks a Recipe the schema refuses, says why and does not report it saved', () => {
+    const odd = {
+      id: recipes.recipeId('odd'),
+      recipe: { title: 'Odd', ingredients: [{ name: 'Salt', assumed: false }], prepSteps: [], steps: [] },
+    } as unknown as RecipeEntry
+    const store = fakeRecipeStore([odd])
+    const update = vi.spyOn(store, 'update')
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} entry={odd} onSaved={onSaved} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('ingredients.0.assumed')
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(update).not.toHaveBeenCalled()
+  })
 })
 
 describe('RecipeEditor editing', () => {

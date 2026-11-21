@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'preact/hooks'
-import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
+import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeStore } from '../recipes/recipe-store.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
   draftOf,
@@ -37,11 +37,12 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
 
   const save = (event: Event) => {
     event.preventDefault()
+    const recipe = recipeOf(draft, entry?.recipe)
     const found = problems(draft)
+    if (found.length === 0) found.push(...schemaProblems(recipe))
     setBlockers(found)
     if (found.length > 0) return
     setFailure(null)
-    const recipe = recipeOf(draft, entry?.recipe)
     const write = entry ? store.update(entry.id, recipe) : store.create(recipe)
     write.catch((error: Error) => setFailure(error.message))
     onSaved?.()
@@ -220,4 +221,15 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
       </button>
     </fieldset>
   )
+}
+
+/** What the store's schema would refuse about `recipe`, found before anything is written. */
+function schemaProblems(recipe: Recipe): string[] {
+  try {
+    validatedRecipe(recipe)
+    return []
+  } catch (error) {
+    if (error instanceof InvalidRecipeError) return [...error.issues]
+    throw error
+  }
 }
