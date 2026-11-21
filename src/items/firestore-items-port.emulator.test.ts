@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import { FirebaseError } from 'firebase/app'
-import { Timestamp } from 'firebase/firestore'
+import { disableNetwork, enableNetwork, waitForPendingWrites, Timestamp, type Firestore } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 import { core } from 'data-platform'
 import { firestoreItemsPort } from './firestore-items-port.ts'
@@ -52,6 +52,23 @@ async function seedItem(id: string, data: Record<string, unknown>) {
 
 /** The port over `uid`'s emulator connection; the emulator's compat Firestore is the modular one at runtime, only typed apart. */
 const portAs = (uid: string) => firestoreItemsPort(env.authenticatedContext(uid).firestore() as never)
+
+/** A port over `uid`'s connection that has already received the Catalogue's Items, as the app's watch does. */
+async function watchingPortAs(
+  uid: string,
+  { db, onItems = () => {} }: { db?: Firestore; onItems?: (items: readonly WatchedItem[]) => void } = {},
+) {
+  const port = db ? firestoreItemsPort(db) : portAs(uid)
+  await new Promise<void>((resolve, reject) => {
+    stops.push(
+      port.watchItems((items) => {
+        onItems(items)
+        resolve()
+      }, reject),
+    )
+  })
+  return port
+}
 
 describe('watchItems', () => {
   it('delivers live and soft-deleted Items with their State, marking the soft-deleted', async () => {
@@ -111,9 +128,10 @@ describe('setItemState', () => {
   it('writes the new State and appends a State history entry stamped with the server time', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     const db = env.authenticatedContext(alice).firestore()
-    const port = portAs(alice)
+    const port = await watchingPortAs(alice, { db: db as never })
 
     await port.setItemState(flour, 'out')
+    await waitForPendingWrites(db as never)
 
     const item = await db.doc(`${ITEMS_COLLECTION}/flour`).get()
     expect(item.data()).toMatchObject({ name: 'Flour', state: 'out' })
@@ -122,11 +140,35 @@ describe('setItemState', () => {
   })
 })
 
+describe('setItemState offline', () => {
+  it('resolves with the network disabled, shows the write in the watch at once and sends it once back online', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    const db = env.authenticatedContext(alice).firestore()
+    const snapshots: Array<readonly WatchedItem[]> = []
+    const port = await watchingPortAs(alice, { db: db as never, onItems: (items) => snapshots.push(items) })
+    await disableNetwork(db as never)
+
+    await port.setItemState(flour, 'out')
+    await vi.waitFor(() => expect(snapshots.at(-1)).toEqual([{ id: flour, name: 'Flour', state: 'out', deleted: false }]))
+    await port.setItemState(flour, 'enough')
+    await vi.waitFor(() => expect(snapshots.at(-1)).toEqual([{ id: flour, name: 'Flour', state: 'enough', deleted: false }]))
+
+    await enableNetwork(db as never)
+    await waitForPendingWrites(db as never)
+    const server = env.authenticatedContext(alice).firestore()
+    const item = await server.doc(`${ITEMS_COLLECTION}/flour`).get()
+    expect(item.data()).toMatchObject({ state: 'enough' })
+    const history = await server.collection(core.stateHistoryCollectionPath(flour)).get()
+    expect(history.docs.map((entry) => entry.data().state).sort()).toEqual(['enough', 'out'])
+    expect(history.docs.every((entry) => entry.data().at instanceof Timestamp)).toBe(true)
+  })
+})
+
 describe('setItemState to the State the Item already has', () => {
   it('writes nothing', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     const db = env.authenticatedContext(alice).firestore()
-    const port = portAs(alice)
+    const port = await watchingPortAs(alice)
 
     const before = await db.doc(`${ITEMS_COLLECTION}/flour`).get()
 
@@ -139,19 +181,30 @@ describe('setItemState to the State the Item already has', () => {
   })
 })
 
-describe('a rules refusal', () => {
-  it('surfaces from setItemState as an error', async () => {
-    await seedItem('flour', { name: 'Flour', state: 'enough' })
-    const port = portAs('mallory')
-
-    await expect(port.setItemState(flour, 'out')).rejects.toSatisfy(isRulesRefusal)
-  })
-
-  it('surfaces from setItemState when the read is allowed and the commit is denied', async () => {
-    await seedItem('flour', { name: 'Flour', state: 'enough' })
+describe('setItemState for an Item that is not among the watched Items', () => {
+  it('rejects', async () => {
     const port = portAs(alice)
 
-    await expect(port.setItemState(flour, 'bogus' as core.State)).rejects.toSatisfy(isRulesRefusal)
+    await expect(port.setItemState(flour, 'out')).rejects.toThrow('No Item flour')
+  })
+})
+
+describe('a rules refusal', () => {
+  it('reaches the watch through onError when the queued write is denied, the Member having been removed', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    const port = portAs(alice)
+    const errors: unknown[] = []
+    await new Promise<void>((resolve) => {
+      stops.push(port.watchItems(() => resolve(), (error) => errors.push(error)))
+    })
+
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(memberDocPath(alice)).delete()
+    })
+
+    await port.setItemState(flour, 'out')
+
+    await vi.waitFor(() => expect(errors.some(isRulesRefusal)).toBe(true))
   })
 
   it('surfaces from watchItems through onError', async () => {
