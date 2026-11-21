@@ -14,11 +14,13 @@ const item = (id: string, name: string, state: WatchedItem['state'], deleted = f
   deleted,
 })
 
-const CATALOGUE = [item('milk', 'Milk', 'running low'), item('oat-milk', 'Oat milk', 'enough'), item('flour', 'Flour', 'out')]
+const CATALOGUE = [item('milk', 'Milk', 'running low'), item('oat-milk', 'Oat milk', 'enough'), item('flour', 'Flour', 'out'), item('beef', 'Beef', 'enough')]
 
 function itemsPort(items: readonly WatchedItem[] = CATALOGUE) {
   return fakeItemsPort(items)
 }
+
+const field = (name: string) => screen.getByLabelText(name)
 
 function stored(store: ReturnType<typeof fakeRecipeStore>): RecipeEntry[] {
   let entries: readonly RecipeEntry[] = []
@@ -63,8 +65,6 @@ describe('RecipeEditor creating', () => {
 })
 
 describe('RecipeEditor Ingredients', () => {
-  const field = (name: string) => screen.getByLabelText(name)
-
   it('adds Ingredients with a quantity, a unit from the fixed set and a prep note', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
@@ -292,8 +292,6 @@ describe('RecipeEditor deleting', () => {
 })
 
 describe('RecipeEditor linking an Ingredient to an Item', () => {
-  const field = (name: string) => screen.getByLabelText(name)
-
   it('searches live Items by name, shows each State, and saves the link', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
@@ -308,7 +306,7 @@ describe('RecipeEditor linking an Ingredient to an Item', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
     fireEvent.input(field('Ingredient 1 name'), { target: { value: 'Milk' } })
 
-    expect(screen.getAllByRole('button', { name: /^Link Ingredient 1 to / })).toHaveLength(3)
+    expect(screen.queryAllByRole('button', { name: /^Link Ingredient 1 to / })).toHaveLength(0)
     fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'MILK' } })
     expect(screen.getAllByRole('button', { name: /^Link Ingredient 1 to / }).map((b) => b.textContent)).toEqual([
       'Link Ingredient 1 to Milk (running low)',
@@ -324,8 +322,19 @@ describe('RecipeEditor linking an Ingredient to an Item', () => {
   })
 })
 
+const entryOf = (id: string): RecipeEntry => ({
+  id: recipes.recipeId('x'),
+  recipe: { title: 'X', ingredients: [{ name: 'Beef', itemId: core.itemId(id) }], prepSteps: [], steps: [] },
+})
+
 describe('RecipeEditor unlinking and marking Assumed', () => {
-  const beef = { name: 'Beef', itemId: core.itemId('milk'), quantity: 500, unit: 'g' as const }
+  it('does not offer an Ingredient the Item it is already linked to', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} entry={entryOf('beef')} />)
+    fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'b' } })
+    expect(screen.queryByRole('button', { name: /^Link Ingredient 1 to Beef/ })).toBeNull()
+  })
+
+  const beef = { name: 'Beef', itemId: core.itemId('beef'), quantity: 500, unit: 'g' as const }
   const entry: RecipeEntry = {
     id: recipes.recipeId('stew'),
     recipe: { title: 'Stew', ingredients: [beef, { name: 'Water', assumed: true as const }], prepSteps: [], steps: [] },
@@ -364,6 +373,7 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     const store = fakeRecipeStore([entry])
     const onSaved = vi.fn()
     render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.input(field('Ingredient 2 Item search'), { target: { value: 'flour' } })
     fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 2 to Flour (out)' }))
     expect((screen.getByLabelText('Ingredient 2 assumed') as HTMLInputElement).checked).toBe(false)
 
@@ -388,6 +398,7 @@ describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
     expect(screen.getByText(says)).toBeTruthy()
     expect(screen.queryByRole('button', { name: /Old milk/ })).toBeNull()
 
+    fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'milk' } })
     fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 1 to Milk (running low)' }))
     expect(screen.queryByText(says)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))

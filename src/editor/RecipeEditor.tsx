@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import type { core } from 'data-platform'
 import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { Snackbar } from './Snackbar.tsx'
@@ -17,6 +18,7 @@ import {
   updated,
   without,
   type IngredientDraft,
+  type IngredientLink,
   type IngredientUnit,
   type RecipeDraft,
   type StepDraft,
@@ -184,7 +186,7 @@ interface IngredientRowProps {
 
 function IngredientRow({ ingredient, items, position, last, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
-  const link = linkStatus(ingredient.itemId, items)
+  const link = linkStatus(ingredient.link, items)
   return (
     <div role="group" aria-label={row}>
       <input aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
@@ -223,8 +225,8 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
           Linked to {link.item.name} ({link.item.state})
         </p>
       )}
-      {ingredient.itemId !== null && (
-        <button type="button" onClick={() => onChange(UNLINKED)}>
+      {ingredient.link.kind === 'linked' && (
+        <button type="button" onClick={() => onChange({ link: UNLINKED })}>
           Unlink {row}
         </button>
       )}
@@ -232,12 +234,12 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
         <input
           type="checkbox"
           aria-label={`${row} assumed`}
-          checked={ingredient.assumed}
-          onChange={(e) => onChange(e.currentTarget.checked ? ASSUMED : UNLINKED)}
+          checked={ingredient.link.kind === 'assumed'}
+          onChange={(e) => onChange({ link: e.currentTarget.checked ? ASSUMED : UNLINKED })}
         />
         Assumed
       </label>
-      <ItemPicker row={row} items={items ?? []} onPick={(item) => onChange(linkedTo(item.id))} />
+      <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
   )
@@ -251,10 +253,10 @@ type LinkStatus =
   | { readonly kind: 'unchecked' }
 
 /** What an Ingredient's link to `itemId` amounts to, given the Items the Catalogue has (null until they arrive). */
-function linkStatus(itemId: IngredientDraft['itemId'], items: readonly WatchedItem[] | null): LinkStatus {
-  if (itemId === null) return { kind: 'none' }
+function linkStatus(link: IngredientLink, items: readonly WatchedItem[] | null): LinkStatus {
+  if (link.kind !== 'linked') return { kind: 'none' }
   if (items === null) return { kind: 'unchecked' }
-  const item = items.find((candidate) => candidate.id === itemId)
+  const item = items.find((candidate) => candidate.id === link.itemId)
   if (item === undefined) return { kind: 'soft-deleted' }
   return item.deleted ? { kind: 'soft-deleted', item } : { kind: 'live', item }
 }
@@ -263,14 +265,19 @@ interface ItemPickerProps {
   /** The Ingredient's name, as in "Ingredient 2". */
   readonly row: string
   readonly items: readonly WatchedItem[]
+  /** The Item the Ingredient is already linked to, which is not offered again. */
+  readonly linked: core.ItemId | null
   readonly onPick: (item: WatchedItem) => void
 }
 
-/** Searches the live Items by name, showing each one's State, and offers each to link to. */
-function ItemPicker({ row, items, onPick }: ItemPickerProps) {
+/** Searches the live Items by name, showing each one's State, and offers each match to link to; lists nothing until something is typed. */
+function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
   const [query, setQuery] = useState('')
   const needle = query.trim().toLowerCase()
-  const matches = items.filter((item) => !item.deleted && item.name.toLowerCase().includes(needle))
+  const matches =
+    needle === ''
+      ? []
+      : items.filter((item) => !item.deleted && item.id !== linked && item.name.toLowerCase().includes(needle))
   return (
     <div role="group" aria-label={`${row} Items`}>
       <input
