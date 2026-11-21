@@ -1,6 +1,7 @@
 import type { Firestore } from 'firebase/firestore'
 import { useMemo, useState } from 'preact/hooks'
 import { initFirebase, saveFirebaseWebConfig, type FirebaseWebConfig } from 'data-platform/client'
+import { localKit } from 'data-platform/local'
 import { AuthGate } from './gate/AuthGate.tsx'
 import { resolveConfig, type ConfigResolution } from './gate/config.ts'
 import { emulatorConfig } from './gate/emulator.ts'
@@ -75,7 +76,7 @@ export function Root() {
 }
 
 function Connected({ config, emulator }: { config: FirebaseWebConfig; emulator: boolean }) {
-  const client = useMemo(() => initFirebase(config, { local: emulator }), [config, emulator])
+  const client = useMemo(() => initFirebase(config, { local: emulator ? localKit : undefined }), [config, emulator])
   return (
     <AuthGate client={client}>
       <PlatformGuard db={client.db} />
