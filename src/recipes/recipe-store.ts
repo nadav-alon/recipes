@@ -24,11 +24,17 @@ export class InvalidRecipeError extends Error {
 /**
  * The single port the screens use for Recipes. Only live Recipes are ever listed: a Soft-deleted
  * Recipe disappears from `watch` and comes back through `restore`.
+ *
+ * Writes resolve when the server acknowledges them. Offline, a write is applied to the local cache
+ * at once (`watch` shows it) but its promise stays pending until the network returns, so a screen
+ * must not block navigation on awaiting it.
  */
 export interface RecipeStore {
   /**
    * Calls `onChange` with every live Recipe now and after each change, served from the cache while
-   * offline. An empty list means there are none. Returns the function that stops watching.
+   * offline. An empty list means there are none. `onError` is called when the watch fails, for
+   * example when the rules deny the read because the user is not a Member; the watch has then ended.
+   * Returns the function that stops watching.
    */
   watch(onChange: (entries: readonly RecipeEntry[]) => void, onError?: (error: Error) => void): () => void
 
@@ -36,7 +42,7 @@ export interface RecipeStore {
   create(recipe: Recipe): Promise<RecipeId>
 
   /**
-   * Replaces the Recipe stored under `id`; optional fields `recipe` lacks are removed. Whether the
+   * Replaces the Recipe stored under `id`; fields the schema knows that `recipe` lacks are removed. Whether the
    * Recipe is soft-deleted is left as it was. Rejects with `InvalidRecipeError` before any write.
    */
   update(id: RecipeId, recipe: Recipe): Promise<void>
@@ -57,6 +63,12 @@ export function validatedRecipe(recipe: Recipe): Recipe {
   return withoutUndefined(result.data)
 }
 
+/** What a write carries: `recipe` checked against the schema, without `deletedAt`, which only softDelete and restore change. */
+export function validatedFields(recipe: Recipe): Omit<Recipe, 'deletedAt'> {
+  const { deletedAt: _ignored, ...fields } = validatedRecipe(recipe)
+  return fields
+}
+
 function withoutUndefined<T>(value: T): T {
   if (Array.isArray(value)) return value.map(withoutUndefined) as T
   if (value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
@@ -69,7 +81,8 @@ function withoutUndefined<T>(value: T): T {
   return value
 }
 
-const OPTIONAL_FIELDS = ['servings', 'sourceUrl', 'notes'] as const
+/** Every field the schema knows, bar `deletedAt`; `update` removes those a Recipe lacks. */
+const SCHEMA_FIELDS = Object.keys(recipes.recipeSchema.shape).filter((f) => f !== 'deletedAt')
 
 export function firestoreRecipeStore(db: Firestore): RecipeStore {
   const recipesCollection = collection(db, recipes.RECIPES_COLLECTION)
@@ -90,15 +103,14 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
     },
 
     async create(recipe) {
-      const { deletedAt: _ignored, ...live } = validatedRecipe(recipe)
-      const ref = await addDoc(recipesCollection, live)
+      const ref = await addDoc(recipesCollection, validatedFields(recipe))
       return recipes.recipeId(ref.id)
     },
 
     async update(id, recipe) {
-      const { deletedAt: _ignored, ...live } = validatedRecipe(recipe)
-      const removed = Object.fromEntries(OPTIONAL_FIELDS.filter((f) => !(f in live)).map((f) => [f, deleteField()]))
-      await updateDoc(doc(recipesCollection, id), { ...live, ...removed })
+      const fields = validatedFields(recipe)
+      const removed = Object.fromEntries(SCHEMA_FIELDS.filter((f) => !(f in fields)).map((f) => [f, deleteField()]))
+      await updateDoc(doc(recipesCollection, id), { ...fields, ...removed })
     },
 
     async softDelete(id) {
