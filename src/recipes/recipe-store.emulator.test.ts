@@ -105,7 +105,10 @@ describe('firestoreRecipeStore', () => {
     it('refuses an invalid Recipe without a write', async () => {
       const id = await store.create(pancakes)
 
-      await expect(store.update(id, { ...pancakes, title: '' })).rejects.toBeInstanceOf(InvalidRecipeError)
+      // An invalid second Ingredient is caught only by the client-side schema check, not by the rules.
+      const invalid = { ...pancakes, ingredients: [...pancakes.ingredients, { name: 'Salt', assumed: true as const, itemId: core.itemId('salt') }] }
+
+      await expect(store.update(id, invalid)).rejects.toBeInstanceOf(InvalidRecipeError)
 
       expect((await current())[0]?.recipe.title).toBe('Pancakes')
     })
