@@ -2,8 +2,11 @@ import { useEffect, useState } from 'preact/hooks'
 import type { ItemsPort } from '../items/items-port.ts'
 import { useItemsById } from '../items/use-items-by-id.ts'
 import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
-import { NEW_RECIPE_HREF, recipeHref } from '../routes.ts'
+import { navigate, NEW_RECIPE_HREF, recipeHref } from '../routes.ts'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { Fab } from 'household-ui/ui/Fab.tsx'
+import { ListRow } from 'household-ui/ui/ListRow.tsx'
+import Add from '~icons/material-symbols/add'
 import { homeSections, type ClassifiedEntry } from './home-sections.ts'
 
 export interface HomeScreenProps {
@@ -35,7 +38,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   return (
     <TopAppBar title="Recipes">
       <main>
-        <a href={NEW_RECIPE_HREF}>New Recipe</a>
+        <Fab symbol={Add} label="New Recipe" onClick={() => navigate(NEW_RECIPE_HREF)} />
         <Section title="Makeable" list={sections.makeable} empty="Nothing is makeable from what is at home right now." />
         <Section
           title="Almost makeable"
@@ -65,22 +68,21 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
       {list.length === 0 && <p>{empty}</p>}
       <ul>
         {list.map(({ entry, classification }) => (
-          <li key={entry.id}>
-            <a href={recipeHref(entry.id)}>{entry.recipe.title}</a>
-            {showMissing && (
-              <span>
-                {' '}
-                Missing:{' '}
-                {classification.missingIngredients
-                  .map(({ ingredient, reason }) =>
-                    reason === 'item soft-deleted' ? `${ingredient.name} (Item deleted)` : ingredient.name,
-                  )
-                  .join(', ')}
-              </span>
-            )}
-          </li>
+          <ListRow
+            key={entry.id}
+            headline={entry.recipe.title}
+            supporting={showMissing ? `Missing: ${missingNames(classification)}` : undefined}
+            href={recipeHref(entry.id)}
+            onFollow={() => navigate(recipeHref(entry.id))}
+          />
         ))}
       </ul>
     </section>
   )
+}
+
+function missingNames({ missingIngredients }: ClassifiedEntry['classification']): string {
+  return missingIngredients
+    .map(({ ingredient, reason }) => (reason === 'item soft-deleted' ? `${ingredient.name} (Item deleted)` : ingredient.name))
+    .join(', ')
 }

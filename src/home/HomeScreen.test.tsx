@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/preact'
+import { act, fireEvent, render, screen, within } from '@testing-library/preact'
 import { describe, expect, it } from 'vitest'
 import { core, recipes } from 'data-platform'
 import { fakeItemsPort } from '../items/fake-items-port.ts'
@@ -56,10 +56,10 @@ describe('HomeScreen', () => {
   it('moves a Recipe between sections live when an Item changes State', async () => {
     const port = itemsPort()
     render(<HomeScreen recipeStore={store()} itemsPort={port} />)
-    expect(section('Almost makeable').getByRole('link', { name: 'Omelette' })).toBeInTheDocument()
+    expect(section('Almost makeable').getByRole('link', { name: /Omelette/ })).toBeInTheDocument()
     await act(() => port.setItemState(core.itemId('eggs'), 'enough'))
     expect(section('Makeable').getByRole('link', { name: 'Omelette' })).toBeInTheDocument()
-    expect(section('Almost makeable').queryByRole('link', { name: 'Omelette' })).toBeNull()
+    expect(section('Almost makeable').queryByRole('link', { name: /Omelette/ })).toBeNull()
   })
 
   it('says so in each empty section and links to creating a Recipe', () => {
@@ -67,13 +67,25 @@ describe('HomeScreen', () => {
     expect(section('Makeable').getByText(/nothing is makeable/i)).toBeInTheDocument()
     expect(section('Almost makeable').getByText(/no recipe is only/i)).toBeInTheDocument()
     expect(section('Other Recipes').getByText('No other Recipes.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'New Recipe' })).toHaveAttribute('href', '#/recipes/new')
+    expect(screen.getByRole('button', { name: 'New Recipe' })).toBeInTheDocument()
+  })
+
+  it('opens the new Recipe editor from the New Recipe button', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'New Recipe' }))
+    expect(location.hash).toBe('#/recipes/new')
+  })
+
+  it('follows a Recipe row to its view without leaving the page', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('link', { name: 'Bread' }))
+    expect(location.hash).toBe('#/recipes/3')
   })
 
   it('links each Recipe to its view', () => {
     render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
     expect(screen.getByRole('link', { name: 'Bread' })).toHaveAttribute('href', '#/recipes/3')
-    expect(screen.getByRole('link', { name: 'Omelette' })).toHaveAttribute('href', '#/recipes/2')
+    expect(screen.getByRole('link', { name: /Omelette/ })).toHaveAttribute('href', '#/recipes/2')
   })
 
   it('replaces the whole screen with a load error when the Recipe watch fails after it rendered', async () => {
@@ -84,7 +96,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
     expect(screen.queryByRole('main')).toBeNull()
     expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'New Recipe' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'New Recipe' })).toBeNull()
   })
 
   it('replaces the whole screen with the same load error when the Items watch fails after it rendered', async () => {
@@ -95,7 +107,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
     expect(screen.queryByRole('main')).toBeNull()
     expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'New Recipe' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'New Recipe' })).toBeNull()
   })
 
   it('shows the load error, not a blank page, when the Recipe watch fails before delivering anything', () => {
