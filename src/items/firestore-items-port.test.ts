@@ -73,3 +73,16 @@ describe('setItemState', () => {
     expect(history.docs.map((entry) => entry.data())).toEqual([{ state: 'out', at: expect.any(Timestamp) }])
   })
 })
+
+describe('setItemState to the State the Item already has', () => {
+  it('writes nothing', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    const db = env.authenticatedContext(alice).firestore()
+    const port = firestoreItemsPort(db as never)
+
+    await port.setItemState(flour, 'enough')
+
+    const history = await db.collection(core.stateHistoryCollectionPath(flour)).get()
+    expect(history.empty).toBe(true)
+  })
+})

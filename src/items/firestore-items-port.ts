@@ -32,6 +32,7 @@ export function firestoreItemsPort(db: Firestore): ItemsPort {
       const itemRef = doc(db, ITEMS_COLLECTION, id)
       const snapshot = await getDoc(itemRef)
       if (!snapshot.exists()) throw new Error(`No Item ${id} to set the State of`)
+      if (snapshot.data().state === state) return
       const batch = writeBatch(db)
       batch.update(itemRef, { state })
       batch.set(doc(collection(db, stateHistoryCollectionPath(id))), { state, at: serverTimestamp() })
