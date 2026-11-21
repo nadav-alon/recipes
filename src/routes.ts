@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { recipes } from 'data-platform'
 import type { RecipeId } from './recipes/recipe-store.ts'
+import { catalogueUrl } from './catalogue-url.ts'
 
 /**
  * The app's screens, each with its own URL. Routes live in the hash as `#/...`, so the real query
@@ -12,6 +13,11 @@ export type Route =
   | { readonly screen: 'new-recipe' }
   | { readonly screen: 'recipe'; readonly id: RecipeId }
   | { readonly screen: 'edit-recipe'; readonly id: RecipeId }
+  /**
+   * Where the Catalogue sends the user back to after adding an Item for one of a Recipe's Ingredients: the
+   * Ingredient is the line at `ingredientIndex` (from 0) that was called `name` when the Item was asked for.
+   */
+  | { readonly screen: 'catalogue-return'; readonly id: RecipeId; readonly ingredientIndex: number; readonly name: string }
 
 /** Where the Home screen lives. */
 export const HOME_HREF = '#/'
@@ -25,19 +31,55 @@ export const recipeHref = (id: RecipeId) => `#/recipes/${encodeURIComponent(id)}
 /** Where a Recipe's editor lives. */
 export const editRecipeHref = (id: RecipeId) => `${recipeHref(id)}/edit`
 
+/** Where the Catalogue returns to for the Ingredient called `name` at `ingredientIndex` (from 0) of a Recipe. */
+export const catalogueReturnHref = (id: RecipeId, ingredientIndex: number, name: string) =>
+  `${recipeHref(id)}/ingredients/${ingredientIndex}/${encodeURIComponent(name)}`
+
+/**
+ * The Catalogue's add-Item hand-off for the Ingredient called `name` at `ingredientIndex` of the Recipe `id`:
+ * it opens the add-Item dialog with that name and, when done, returns to this app's `catalogue-return` route
+ * for that Ingredient with the new Item's id as an `itemId` query parameter.
+ */
+export function addToCatalogueHref(id: RecipeId, ingredientIndex: number, name: string): string {
+  const returnUrl = new URL(`${location.pathname}${catalogueReturnHref(id, ingredientIndex, name)}`, location.origin).href
+  return `${catalogueUrl()}#/items?${new URLSearchParams({ add: name, return: returnUrl })}`
+}
+
 /** The screen a URL hash names; any hash that names none is the Home screen. */
 export function parseRoute(hash: string): Route {
-  const [root, id, action, ...rest] = hash.replace(/^#\/?/, '').split('/')
-  if (root !== 'recipes' || !id || rest.length > 0) return { screen: 'home' }
+  const [root, id, action, position, encodedName, ...rest] = hash.replace(/^#\/?/, '').split('/')
+  if (root !== 'recipes' || !id) return { screen: 'home' }
+  if (action === 'ingredients') {
+    const ingredientIndex = Number(position)
+    if (!/^\d+$/.test(position ?? '') || !encodedName || rest.length > 0 || !Number.isSafeInteger(ingredientIndex)) return { screen: 'home' }
+    const recipeId = decodeId(id)
+    const name = decodeText(encodedName)
+    return recipeId === undefined || name === undefined ? { screen: 'home' } : { screen: 'catalogue-return', id: recipeId, ingredientIndex, name }
+  }
+  if (position !== undefined) return { screen: 'home' }
   if (action === undefined && id === 'new') return { screen: 'new-recipe' }
   if (action !== undefined && action !== 'edit') return { screen: 'home' }
-  let decoded: string
+  const recipeId = decodeId(id)
+  if (recipeId === undefined) return { screen: 'home' }
+  return { screen: action === undefined ? 'recipe' : 'edit-recipe', id: recipeId }
+}
+
+function decodeText(encoded: string): string | undefined {
   try {
-    decoded = decodeURIComponent(id)
+    return decodeURIComponent(encoded)
   } catch {
-    return { screen: 'home' }
+    return undefined
   }
-  return { screen: action === undefined ? 'recipe' : 'edit-recipe', id: recipes.recipeId(decoded) }
+}
+
+function decodeId(encoded: string): RecipeId | undefined {
+  const text = decodeText(encoded)
+  if (text === undefined) return undefined
+  try {
+    return recipes.recipeId(text)
+  } catch {
+    return undefined
+  }
 }
 
 /** The current route, following the hash as links, Back and Forward change it. */

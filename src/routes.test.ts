@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { recipes } from 'data-platform'
-import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, parseRoute, recipeHref } from './routes.ts'
+import { catalogueReturnHref, editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, parseRoute, recipeHref } from './routes.ts'
 
 const asRecipeId = recipes.recipeId
 
@@ -10,6 +10,13 @@ describe('routes', () => {
     expect(parseRoute(NEW_RECIPE_HREF)).toEqual({ screen: 'new-recipe' })
     expect(parseRoute(recipeHref(asRecipeId('r1')))).toEqual({ screen: 'recipe', id: asRecipeId('r1') })
     expect(parseRoute(editRecipeHref(asRecipeId('r1')))).toEqual({ screen: 'edit-recipe', id: asRecipeId('r1') })
+  })
+
+  it('reads the return URL from the Catalogue back as a Recipe and an Ingredient position and name', () => {
+    expect(parseRoute(catalogueReturnHref(asRecipeId('a b'), 2, 'Sea/salt'))).toEqual({ screen: 'catalogue-return', id: asRecipeId('a b'), ingredientIndex: 2, name: 'Sea/salt' })
+    for (const hash of ['#/recipes/r1/ingredients', '#/recipes/r1/ingredients/x', '#/recipes/r1/ingredients/-1', '#/recipes/r1/ingredients/1', '#/recipes/r1/ingredients/1/x/y', '#/recipes/r1/ingredients/1/%E0%A4%A']) {
+      expect(parseRoute(hash)).toEqual({ screen: 'home' })
+    }
   })
 
   it('reads an id back as it was written', () => {

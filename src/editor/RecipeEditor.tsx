@@ -11,10 +11,11 @@ import { TextField } from 'household-ui/ui/TextField.tsx'
 import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { BackButton } from '../shell/BackButton.tsx'
-import { HOME_HREF, recipeHref } from '../routes.ts'
+import { HOME_HREF, addToCatalogueHref, recipeHref } from '../routes.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
   draftOf,
+  isClean,
   emptyDraft,
   emptyIngredient,
   emptyStep,
@@ -136,6 +137,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
                 items={items}
                 position={i + 1}
                 last={i === draft.ingredients.length - 1}
+                catalogueHref={entry && isClean(draft, entry.recipe) ? addToCatalogue(entry, draft.ingredients[i]) : undefined}
                 onChange={(fields) =>
                   change({ ingredients: updated(draft.ingredients, i, fields) })
                 }
@@ -189,12 +191,14 @@ interface IngredientRowProps {
   readonly items: readonly WatchedItem[] | null
   readonly position: number
   readonly last: boolean
+  /** Where the Catalogue's add-Item hand-off for this Ingredient is; absent when it cannot be offered. */
+  readonly catalogueHref?: string
   readonly onChange: (fields: Partial<IngredientDraft>) => void
   readonly onMove: (by: -1 | 1) => void
   readonly onRemove: () => void
 }
 
-function IngredientRow({ ingredient, items, position, last, onChange, onMove, onRemove }: IngredientRowProps) {
+function IngredientRow({ ingredient, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
   const link = linkStatus(ingredient.link, items)
   return (
@@ -240,6 +244,11 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
           Unlink {row}
         </Button>
       )}
+      {ingredient.link.kind === 'unlinked' && catalogueHref !== undefined && (
+        <a href={catalogueHref} aria-label={`Add ${row} to Catalogue`}>
+          Add to Catalogue
+        </a>
+      )}
       <ul>
         <ListRow
           headline="Assumed"
@@ -257,6 +266,17 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
   )
+}
+
+/**
+ * The Catalogue hand-off for an Ingredient of the saved Recipe `entry`, which the return URL names by its
+ * position and name there; absent when the row is not one of the saved Ingredients or has no name to hand over.
+ * Following it leaves the editor, so it is only offered while the draft has no unsaved edits to lose.
+ */
+function addToCatalogue(entry: RecipeEntry, ingredient: IngredientDraft): string | undefined {
+  const index = ingredient.base === null ? -1 : entry.recipe.ingredients.indexOf(ingredient.base)
+  const name = ingredient.name.trim()
+  return index < 0 || name === '' ? undefined : addToCatalogueHref(entry.id, index, name)
 }
 
 type LinkStatus =

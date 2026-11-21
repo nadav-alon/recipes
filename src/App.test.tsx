@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/preact'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { recipes } from 'data-platform'
+import { core, recipes } from 'data-platform'
 import { App } from './App.tsx'
 import { fakeItemsPort } from './items/fake-items-port.ts'
 import { fakeRecipeStore } from './recipes/fake-recipe-store.ts'
-import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, recipeHref } from './routes.ts'
+import type { RecipeEntry } from './recipes/recipe-store.ts'
+import { catalogueReturnHref, editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, recipeHref } from './routes.ts'
 
 const r1 = recipes.recipeId('r1')
 const r2 = recipes.recipeId('r2')
@@ -16,6 +17,7 @@ const store = () =>
 
 afterEach(() => {
   location.hash = ''
+  history.replaceState(null, '', location.pathname)
 })
 
 describe('App', () => {
@@ -343,5 +345,81 @@ describe('App', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('App returning from the Catalogue', () => {
+  const unlinked = () =>
+    fakeRecipeStore([
+      {
+        id: r1,
+        recipe: { title: 'Omelette', ingredients: [{ name: 'Egg', itemId: core.itemId('egg') }, { name: 'Salt', assumed: true }, { name: 'Chive' }], prepSteps: [], steps: ['Whisk'] },
+      },
+    ])
+  const saved = (s: ReturnType<typeof fakeRecipeStore>) => {
+    let entries: readonly RecipeEntry[] = []
+    s.watch((e) => (entries = e))()
+    return entries[0].recipe.ingredients
+  }
+
+  it('links the Ingredient to the returned Item, saves the Recipe and shows it', async () => {
+    const s = unlinked()
+    history.replaceState(null, '', `${location.pathname}?itemId=chives`)
+    location.hash = catalogueReturnHref(r1, 2, 'Chive')
+    render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
+
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    expect(saved(s)).toEqual([{ name: 'Egg', itemId: 'egg' }, { name: 'Salt', assumed: true }, { name: 'Chive', itemId: 'chives' }])
+    expect(location.search).toBe('')
+  })
+
+  it.each([
+    ['an Assumed Ingredient', 1, 'Salt'],
+    ['an Ingredient already linked', 0, 'Egg'],
+    ['a line that is no longer called that', 2, 'Parsley'],
+    ['a position the Recipe no longer has', 7, 'Chive'],
+  ])('changes nothing, and says so, when the return is for %s', async (_what, index, name) => {
+    const s = unlinked()
+    const update = vi.spyOn(s, 'update')
+    history.replaceState(null, '', `${location.pathname}?itemId=new-item`)
+    location.hash = catalogueReturnHref(r1, index, name)
+    render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
+
+    expect((await screen.findByRole('alert')).textContent).toContain('new-item')
+    expect(update).not.toHaveBeenCalled()
+    expect(location.search).toBe('')
+  })
+
+  it('clears the returned Item id when the Recipe does not exist, and says which Item was not linked', async () => {
+    history.replaceState(null, '', `${location.pathname}?itemId=new-item`)
+    location.hash = catalogueReturnHref(recipes.recipeId('gone'), 0, 'Chive')
+    render(<App recipeStore={unlinked()} itemsPort={fakeItemsPort([])} />)
+
+    expect((await screen.findByRole('alert')).textContent).toContain('new-item')
+    expect(location.search).toBe('')
+  })
+
+  it('keeps the Item id in the URL and names the Item when the save is refused', async () => {
+    const s = unlinked()
+    vi.spyOn(s, 'update').mockRejectedValue(new Error('offline'))
+    history.replaceState(null, '', `${location.pathname}?itemId=chives`)
+    location.hash = catalogueReturnHref(r1, 2, 'Chive')
+    render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
+
+    const alert = (await screen.findByRole('alert')).textContent
+    expect(alert).toContain('chives')
+    expect(alert).toContain('offline')
+    expect(location.search).toBe('?itemId=chives')
+  })
+
+  it('changes nothing when it returns without an Item id', async () => {
+    const s = unlinked()
+    const update = vi.spyOn(s, 'update')
+    location.hash = catalogueReturnHref(r1, 2, 'Chive')
+    render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
+
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    expect(update).not.toHaveBeenCalled()
+    expect(saved(s)[2]).toEqual({ name: 'Chive' })
   })
 })
