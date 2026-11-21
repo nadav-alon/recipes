@@ -1,5 +1,6 @@
-import { act, cleanup, render, screen, within } from '@testing-library/preact'
+import { act, render, screen, within } from '@testing-library/preact'
 import { fireEvent } from '@testing-library/preact'
+import { useEffect, useState } from 'preact/hooks'
 import { describe, expect, it } from 'vitest'
 import type { core, recipes } from 'data-platform'
 import { fakeItemsPort, type FakeItemsPort } from '../items/fake-items-port.ts'
@@ -41,9 +42,9 @@ describe('RecipeView ingredients', () => {
     expect(within(line('Flour')).queryByText(/missing|running low|assumed/i)).toBeNull()
   })
 
-  it('flags an Unlinked Ingredient as Missing and unlinked', () => {
+  it('flags an Unlinked Ingredient as Missing', () => {
     render(<RecipeView recipe={recipe({ ingredients: [{ name: 'Salt' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
-    expect(line('Salt')).toHaveTextContent('Missing: not linked to an Item')
+    expect(line('Salt')).toHaveTextContent('Missing: Unlinked')
   })
 
   it('flags an Ingredient whose Item is out as Missing', () => {
@@ -126,67 +127,133 @@ describe('RecipeView sections', () => {
 })
 
 describe('RecipeView actually out', () => {
-  const watched = (state: core.State, itemId = 'flour'): WatchedItem => ({
+  const watched = (state: core.State, itemId = 'flour', deleted = false): WatchedItem => ({
     id: id(itemId),
     name: itemId,
     state,
-    deleted: false,
+    deleted,
   })
 
-  function renderWith(port: FakeItemsPort, ingredient: recipes.Ingredient) {
-    let current: ItemsById = new Map()
-    port.watchItems(
-      (list) => {
-        current = new Map(list.map((item) => [item.id, { state: item.state }]))
-      },
-      () => {},
+  /** Renders the view over the port's live Items, so it re-renders when a State changes. */
+  function Live({ port, ingredients }: { port: FakeItemsPort; ingredients: recipes.Ingredient[] }) {
+    const [current, setCurrent] = useState<ItemsById>(new Map())
+    useEffect(
+      () =>
+        port.watchItems(
+          (list) =>
+            setCurrent(
+              new Map(list.map((item) => [item.id, { state: item.state, ...(item.deleted ? { deletedAt: { seconds: 1, nanoseconds: 0 } } : {}) }])),
+            ),
+          () => {},
+        ),
+      [port],
     )
-    return render(
-      <RecipeView recipe={recipe({ ingredients: [ingredient] })} items={current} itemsPort={port} editHref="#/edit" />,
-    )
+    return <RecipeView recipe={recipe({ ingredients })} items={current} itemsPort={port} editHref="#/edit" />
   }
+
+  const renderWith = (port: FakeItemsPort, ...ingredients: recipes.Ingredient[]) =>
+    render(<Live port={port} ingredients={ingredients} />)
+
+  const flour: recipes.Ingredient = { name: 'Flour', itemId: id('flour') }
+  const actuallyOut = (name = 'Flour') => within(line(name)).getByRole('button', { name: 'Actually out' })
 
   it('offers "actually out" on a Linked Ingredient whose Item is not out, and sets it out', async () => {
     const port = fakeItemsPort([watched('enough')])
-    renderWith(port, { name: 'Flour', itemId: id('flour') })
-    await click(within(line('Flour')).getByRole('button', { name: 'Actually out' }))
+    renderWith(port, flour)
+    await click(actuallyOut())
     expect(port.stateHistory(id('flour'))).toEqual(['out'])
   })
 
+  it('flags the Ingredient Missing and drops the button once the Item is out', async () => {
+    renderWith(fakeItemsPort([watched('enough')]), flour)
+    await click(actuallyOut())
+    expect(line('Flour')).toHaveTextContent('Missing: out')
+    expect(within(line('Flour')).queryByRole('button', { name: 'Actually out' })).toBeNull()
+  })
+
   it('offers it on a running low Item too', () => {
-    renderWith(fakeItemsPort([watched('running low')]), { name: 'Flour', itemId: id('flour') })
-    expect(within(line('Flour')).getByRole('button', { name: 'Actually out' })).toBeInTheDocument()
+    renderWith(fakeItemsPort([watched('running low')]), flour)
+    expect(actuallyOut()).toBeInTheDocument()
   })
 
   it('does not offer it when the Item is already out', () => {
-    renderWith(fakeItemsPort([watched('out')]), { name: 'Flour', itemId: id('flour') })
+    renderWith(fakeItemsPort([watched('out')]), flour)
     expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
   })
 
-  it('does not offer it on an Unlinked or Assumed Ingredient', () => {
+  it('does not offer it on an Unlinked Ingredient', () => {
     renderWith(fakeItemsPort([]), { name: 'Salt' })
     expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
-    cleanup()
+  })
+
+  it('does not offer it on an Assumed Ingredient', () => {
     renderWith(fakeItemsPort([]), { name: 'Water', assumed: true })
+    expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
+  })
+
+  it('does not offer it when the Item is soft-deleted', () => {
+    renderWith(fakeItemsPort([watched('enough', 'flour', true)]), flour)
+    expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
+  })
+
+  it('does not offer it when the Item id is not among the Items', () => {
+    renderWith(fakeItemsPort([watched('enough', 'other')]), flour)
     expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
   })
 
   it('restores the previous State on Undo', async () => {
     const port = fakeItemsPort([watched('running low')])
-    renderWith(port, { name: 'Flour', itemId: id('flour') })
-    await click(screen.getByRole('button', { name: 'Actually out' }))
-    await click(screen.getByRole('button', { name: 'Undo' }))
+    renderWith(port, flour)
+    await click(actuallyOut())
+    expect(screen.getByRole('status')).toHaveTextContent("Flour's Item marked out.")
+    await click(screen.getByRole('button', { name: 'Undo Flour' }))
     expect(port.stateHistory(id('flour'))).toEqual(['out', 'running low'])
-    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Undo/ })).toBeNull()
+  })
+
+  it('keeps an Undo for each Item marked out', async () => {
+    const port = fakeItemsPort([watched('enough'), watched('running low', 'milk')])
+    renderWith(port, flour, { name: 'Milk', itemId: id('milk') })
+    await click(actuallyOut('Flour'))
+    await click(actuallyOut('Milk'))
+    await click(screen.getByRole('button', { name: 'Undo Flour' }))
+    expect(port.stateHistory(id('flour'))).toEqual(['out', 'enough'])
+    await click(screen.getByRole('button', { name: 'Undo Milk' }))
+    expect(port.stateHistory(id('milk'))).toEqual(['out', 'running low'])
+  })
+
+  it('drops Undo, and leaves a newer State alone, once the Item is no longer out', async () => {
+    const port = fakeItemsPort([watched('enough')])
+    renderWith(port, flour)
+    await click(actuallyOut())
+    await act(async () => {
+      await port.setItemState(id('flour'), 'enough')
+    })
+    expect(screen.queryByRole('button', { name: /Undo/ })).toBeNull()
+    expect(port.stateHistory(id('flour'))).toEqual(['out', 'enough'])
+  })
+
+  it('ignores a second click while the write is pending', async () => {
+    const port = fakeItemsPort([watched('enough')])
+    const calls: core.State[] = []
+    port.setItemState = (_id, state) => {
+      calls.push(state)
+      return new Promise(() => {})
+    }
+    renderWith(port, flour)
+    await click(actuallyOut())
+    expect(actuallyOut()).toBeDisabled()
+    await click(actuallyOut())
+    expect(calls).toEqual(['out'])
   })
 
   it('reports a refused write', async () => {
     const port = fakeItemsPort([watched('enough')])
     port.setItemState = () => Promise.reject(new Error('denied'))
-    renderWith(port, { name: 'Flour', itemId: id('flour') })
-    await click(screen.getByRole('button', { name: 'Actually out' }))
+    renderWith(port, flour)
+    await click(actuallyOut())
     expect(await screen.findByRole('alert')).toHaveTextContent('denied')
-    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Undo/ })).toBeNull()
   })
 })
 

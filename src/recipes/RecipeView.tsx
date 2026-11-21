@@ -14,13 +14,14 @@ export interface RecipeViewProps {
 
 /** What "actually out" changed, so Undo can put the Item back. */
 interface MarkedOut {
-  ingredient: string
+  /** The name of the Ingredient that was marked; the Item is what became `out`. */
+  ingredientName: string
   itemId: core.ItemId
   previous: core.State
 }
 
 const MISSING_REASON: Record<MissingReason, string> = {
-  unlinked: 'not linked to an Item',
+  unlinked: 'Unlinked',
   'item out': 'out',
   'item soft-deleted': 'deleted in the Catalogue',
 }
@@ -39,11 +40,13 @@ function flag(status: IngredientStatus): string | null {
 function IngredientLine({
   ingredient,
   items,
+  busy,
   onActuallyOut,
 }: {
   ingredient: recipes.Ingredient
   items: ItemsById
-  onActuallyOut: (ingredient: recipes.Ingredient, itemId: core.ItemId, previous: core.State) => void
+  busy: boolean
+  onActuallyOut: (marking: MarkedOut) => void
 }) {
   const status = classifyIngredient(ingredient, items)
   const flagged = flag(status)
@@ -58,34 +61,66 @@ function IngredientLine({
       {ingredient.prepNote !== undefined && <span>, {ingredient.prepNote}</span>}
       {flagged !== null && <strong> {flagged}</strong>}
       {status.kind === 'at home' && ingredient.itemId !== undefined && item !== undefined && (
-        <button onClick={() => onActuallyOut(ingredient, ingredient.itemId!, item.state)}>Actually out</button>
+        <button
+          disabled={busy}
+          onClick={() => onActuallyOut({ ingredientName: ingredient.name, itemId: ingredient.itemId!, previous: item.state })}
+        >
+          Actually out
+        </button>
       )}
     </li>
   )
 }
 
 export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewProps) {
-  const [marked, setMarked] = useState<MarkedOut | null>(null)
+  const [marked, setMarked] = useState<ReadonlyMap<core.ItemId, MarkedOut>>(new Map())
+  const [inFlight, setInFlight] = useState<ReadonlySet<core.ItemId>>(new Set())
   const [failure, setFailure] = useState<string | null>(null)
 
-  const write = (itemId: core.ItemId, state: core.State, then: () => void) => {
+  const setItemState = (itemId: core.ItemId, state: core.State, then: () => void) => {
+    if (inFlight.has(itemId)) return
     setFailure(null)
-    itemsPort.setItemState(itemId, state).then(then, (error: unknown) => {
-      setFailure(error instanceof Error ? error.message : String(error))
-    })
+    setInFlight((current) => new Set(current).add(itemId))
+    itemsPort
+      .setItemState(itemId, state)
+      .then(then, (error: unknown) => {
+        setFailure(error instanceof Error ? error.message : String(error))
+      })
+      .finally(() =>
+        setInFlight((current) => {
+          const next = new Set(current)
+          next.delete(itemId)
+          return next
+        }),
+      )
   }
+
+  const remember = (marking: MarkedOut) => setMarked((current) => new Map(current).set(marking.itemId, marking))
+  const forget = (itemId: core.ItemId) =>
+    setMarked((current) => {
+      const next = new Map(current)
+      next.delete(itemId)
+      return next
+    })
+  // Undo only restores while the Item is still the `out` this view set; a newer State is left alone.
+  const undoable = [...marked.values()].filter((marking) => items.get(marking.itemId)?.state === 'out')
 
   return (
     <article>
       <h1>{recipe.title}</h1>
       <a href={editHref}>Edit</a>
       {failure !== null && <p role="alert">{failure}</p>}
-      {marked !== null && (
-        <p role="status">
-          {marked.ingredient} marked out.{' '}
-          <button onClick={() => write(marked.itemId, marked.previous, () => setMarked(null))}>Undo</button>
+      {undoable.map((marking) => (
+        <p role="status" key={marking.itemId}>
+          {marking.ingredientName}'s Item marked out.{' '}
+          <button
+            disabled={inFlight.has(marking.itemId)}
+            onClick={() => setItemState(marking.itemId, marking.previous, () => forget(marking.itemId))}
+          >
+            Undo {marking.ingredientName}
+          </button>
         </p>
-      )}
+      ))}
       {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
       {recipe.sourceUrl !== undefined && (
         <p>
@@ -98,9 +133,8 @@ export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewPro
             key={index}
             ingredient={ingredient}
             items={items}
-            onActuallyOut={(marking, itemId, previous) =>
-              write(itemId, 'out', () => setMarked({ ingredient: marking.name, itemId, previous }))
-            }
+            busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
+            onActuallyOut={(marking) => setItemState(marking.itemId, 'out', () => remember(marking))}
           />
         ))}
       </ul>
