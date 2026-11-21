@@ -8,8 +8,7 @@ export type ItemsById = ReadonlyMap<string, ItemState>
 export type MissingReason = 'unlinked' | 'item out' | 'item soft-deleted'
 
 export type IngredientStatus =
-  | { kind: 'at home' }
-  | { kind: 'at home', runningLow: true }
+  | { kind: 'at home', runningLow: boolean }
   | { kind: 'assumed' }
   | { kind: 'missing', reason: MissingReason }
 
@@ -29,7 +28,7 @@ export function classifyIngredient(
   }
   if (item.state === 'out') return { kind: 'missing', reason: 'item out' }
   if (item.state === 'running low') return { kind: 'at home', runningLow: true }
-  return { kind: 'at home' }
+  return { kind: 'at home', runningLow: false }
 }
 
 export type Makeability = 'makeable' | 'almost makeable' | 'neither'

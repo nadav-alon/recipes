@@ -18,7 +18,7 @@ const items: ItemsById = new Map([
 
 describe('classifyIngredient', () => {
   it('is at home for an Item that is enough', () => {
-    expect(classifyIngredient(ingredient({ itemId: id('flour') }), items)).toEqual({ kind: 'at home' })
+    expect(classifyIngredient(ingredient({ itemId: id('flour') }), items)).toEqual({ kind: 'at home', runningLow: false })
   })
 
   it('is at home and running low for an Item that is running low', () => {
@@ -101,7 +101,7 @@ describe('classifyRecipe', () => {
   it('carries each Ingredient status in the Recipe order', () => {
     expect(classifyRecipe(recipe(lack, have), items).ingredients).toEqual([
       { kind: 'missing', reason: 'item out' },
-      { kind: 'at home' },
+      { kind: 'at home', runningLow: false },
     ])
   })
 })
