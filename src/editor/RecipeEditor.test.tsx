@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/preact'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/preact'
 import { describe, expect, it, vi } from 'vitest'
 import { core, recipes } from 'data-platform'
 import { fakeItemsPort } from '../items/fake-items-port.ts'
@@ -27,6 +27,25 @@ function stored(store: ReturnType<typeof fakeRecipeStore>): RecipeEntry[] {
   store.watch((e) => (entries = e))()
   return [...entries]
 }
+
+describe('RecipeEditor top app bar', () => {
+  it('titles the bar New Recipe when creating, with a back arrow', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    const bar = within(screen.getByRole('banner'))
+    expect(bar.getByRole('heading', { name: 'New Recipe' })).toBeInTheDocument()
+    expect(bar.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+  })
+
+  it('titles the bar Edit Recipe when editing, with a back arrow', () => {
+    const store = fakeRecipeStore([
+      { id: recipes.recipeId('r1'), recipe: { title: 'Pancakes', ingredients: [], prepSteps: [], steps: [] } },
+    ])
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={stored(store)[0]} />)
+    const bar = within(screen.getByRole('banner'))
+    expect(bar.getByRole('heading', { name: 'Edit Recipe' })).toBeInTheDocument()
+    expect(bar.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+  })
+})
 
 describe('RecipeEditor creating', () => {
   it('reports the new Recipe\'s id once the store has created it', async () => {
