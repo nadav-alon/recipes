@@ -187,7 +187,7 @@ function LoadFailed() {
 function RecipeNotFound() {
   return (
     <TopAppBar title="Recipe not found">
-      <BackButton />
+      <BackButton fallback={HOME_HREF} />
       <main>
         <p role="alert">This Recipe does not exist.</p>
         <a href={HOME_HREF}>Back to Recipes</a>

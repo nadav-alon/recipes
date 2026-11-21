@@ -4,6 +4,7 @@ import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { BackButton } from '../shell/BackButton.tsx'
+import { HOME_HREF, recipeHref } from '../routes.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
   draftOf,
@@ -103,7 +104,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
     <>
       <TopAppBar title={entry ? 'Edit Recipe' : 'New Recipe'}>
         <form onSubmit={save}>
-          <BackButton />
+          <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
           <label>
             Title
             <input value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />

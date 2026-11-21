@@ -51,6 +51,15 @@ export function useRoute(): Route {
   return parseRoute(hash)
 }
 
+/** Whether the app has routed since it opened, so the previous history entry is one of its own screens. */
+let routed = false
+addEventListener('hashchange', () => {
+  routed = true
+})
+
+/** Whether Back would return to an earlier screen of this app, rather than leave it (a deep link, a shared URL, a fresh launch). */
+export const canGoBack = () => routed
+
 /** Goes to `href`, adding a history entry. */
 export function navigate(href: string): void {
   location.hash = href

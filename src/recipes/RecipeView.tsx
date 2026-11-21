@@ -3,6 +3,7 @@ import type { core, recipes } from 'data-platform'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import type { ItemsPort } from '../items/items-port.ts'
 import { BackButton } from '../shell/BackButton.tsx'
+import { HOME_HREF } from '../routes.ts'
 import { classifyIngredient, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
 
 export interface RecipeViewProps {
@@ -110,7 +111,7 @@ export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewPro
   return (
     <TopAppBar title={recipe.title}>
       <article>
-        <BackButton />
+        <BackButton fallback={HOME_HREF} />
         <a href={editHref}>Edit</a>
         {failure !== null && <p role="alert">{failure}</p>}
         {undoable.map((marking) => (
