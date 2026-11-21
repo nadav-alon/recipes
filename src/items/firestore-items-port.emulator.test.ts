@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import { FirebaseError } from 'firebase/app'
-import { Timestamp } from 'firebase/firestore'
+import { disableNetwork, Timestamp } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 import { core } from 'data-platform'
 import { firestoreItemsPort } from './firestore-items-port.ts'
@@ -48,6 +48,15 @@ async function seedItem(id: string, data: Record<string, unknown>) {
 
 /** The port over `uid`'s emulator connection; the emulator's compat Firestore is the modular one at runtime, only typed apart. */
 const portAs = (uid: string) => firestoreItemsPort(env.authenticatedContext(uid).firestore() as never)
+
+/** A port over `uid`'s connection that has already received the Catalogue's Items, as the app's watch does. */
+async function watchingPortAs(uid: string) {
+  const port = portAs(uid)
+  await new Promise<void>((resolve, reject) => {
+    stops.push(port.watchItems(() => resolve(), reject))
+  })
+  return port
+}
 
 describe('watchItems', () => {
   it('delivers live and soft-deleted Items with their State, marking the soft-deleted', async () => {
@@ -102,7 +111,7 @@ describe('setItemState', () => {
   it('writes the new State and appends a State history entry stamped with the server time', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     const db = env.authenticatedContext(alice).firestore()
-    const port = portAs(alice)
+    const port = await watchingPortAs(alice)
 
     await port.setItemState(flour, 'out')
 
@@ -113,11 +122,37 @@ describe('setItemState', () => {
   })
 })
 
+describe('setItemState offline', () => {
+  it('resolves with the network disabled, queues the write and shows it in the watch at once', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    const db = env.authenticatedContext(alice).firestore()
+    const port = firestoreItemsPort(db as never)
+    const snapshots: Array<readonly WatchedItem[]> = []
+    await new Promise<void>((resolve, reject) => {
+      stops.push(
+        port.watchItems((items) => {
+          snapshots.push(items)
+          resolve()
+        }, reject),
+      )
+    })
+    await disableNetwork(db as never)
+    await vi.waitFor(() => expect(snapshots.length).toBeGreaterThan(0))
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    await port.setItemState(flour, 'out')
+    await vi.waitFor(() => expect(snapshots.at(-1)).toEqual([{ id: flour, name: 'Flour', state: 'out', deleted: false }]))
+
+    await port.setItemState(flour, 'enough')
+    await vi.waitFor(() => expect(snapshots.at(-1)).toEqual([{ id: flour, name: 'Flour', state: 'enough', deleted: false }]))
+  })
+})
+
 describe('setItemState to the State the Item already has', () => {
   it('writes nothing', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     const db = env.authenticatedContext(alice).firestore()
-    const port = portAs(alice)
+    const port = await watchingPortAs(alice)
 
     const before = await db.doc(`${ITEMS_COLLECTION}/flour`).get()
 
@@ -131,16 +166,17 @@ describe('setItemState to the State the Item already has', () => {
 })
 
 describe('a rules refusal', () => {
-  it('surfaces from setItemState as an error', async () => {
+  it('leaves a signed-in non-Member with no watched Item to set the State of', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     const port = portAs('mallory')
+    await new Promise((resolve) => stops.push(port.watchItems(() => resolve(undefined), () => resolve(undefined))))
 
-    await expect(port.setItemState(flour, 'out')).rejects.toSatisfy(isRulesRefusal)
+    await expect(port.setItemState(flour, 'out')).rejects.toThrow('No Item flour')
   })
 
-  it('surfaces from setItemState when the read is allowed and the commit is denied', async () => {
+  it('surfaces from setItemState when the commit is denied', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
-    const port = portAs(alice)
+    const port = await watchingPortAs(alice)
 
     await expect(port.setItemState(flour, 'bogus' as core.State)).rejects.toSatisfy(isRulesRefusal)
   })
