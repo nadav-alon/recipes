@@ -10,7 +10,7 @@
     "dev:local": "vite --mode local",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "firebase emulators:exec --only firestore --project demo-recipes \"vitest run\"",
+    "test": "firebase emulators:exec --only firestore --project demo-recipes \"vitest run --no-file-parallelism\"",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run --exclude '**/*.emulator.test.ts' --exclude '**/node_modules/**'"
   },
