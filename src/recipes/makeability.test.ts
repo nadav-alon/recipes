@@ -105,3 +105,18 @@ describe('classifyRecipe', () => {
     ])
   })
 })
+
+describe('classifyRecipe missingIngredients', () => {
+  it('lists the Missing Ingredients in Recipe order with their reasons', () => {
+    const lack = ingredient({ itemId: id('eggs'), name: 'eggs' })
+    const unlinked = ingredient({ name: 'saffron' })
+    const gone = ingredient({ itemId: id('gone'), name: 'flour' })
+    const have = ingredient({ itemId: id('flour') })
+    const result = classifyRecipe(recipe(lack, have, unlinked, gone), items)
+    expect(result.missingIngredients).toEqual([
+      { ingredient: lack, reason: 'item out' },
+      { ingredient: unlinked, reason: 'unlinked' },
+      { ingredient: gone, reason: 'item soft-deleted' },
+    ])
+  })
+})

@@ -64,9 +64,10 @@ interface SectionProps {
 }
 
 function Section({ title, list, empty, showMissing = false }: SectionProps) {
+  const headingId = `home-${title.replace(/ /g, '-')}`
   return (
-    <section aria-labelledby={`home-${title.replace(/ /g, "-")}`}>
-      <h2 id={`home-${title.replace(/ /g, "-")}`}>{title}</h2>
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId}>{title}</h2>
       {list.length === 0 && <p>{empty}</p>}
       <ul>
         {list.map(({ entry, classification }) => (
@@ -76,9 +77,10 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
               <span>
                 {' '}
                 Missing:{' '}
-                {entry.recipe.ingredients
-                  .filter((_, i) => classification.ingredients[i]?.kind === 'missing')
-                  .map((ingredient) => ingredient.name)
+                {classification.missingIngredients
+                  .map(({ ingredient, reason }) =>
+                    reason === 'item soft-deleted' ? `${ingredient.name} (Item deleted)` : ingredient.name,
+                  )
                   .join(', ')}
               </span>
             )}
