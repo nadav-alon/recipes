@@ -10,6 +10,8 @@ import {
   problems,
   recipeOf,
   UNITS,
+  updated,
+  without,
   type IngredientDraft,
   type IngredientUnit,
   type RecipeDraft,
@@ -92,10 +94,10 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
               position={i + 1}
               last={i === draft.ingredients.length - 1}
               onChange={(fields) =>
-                change({ ingredients: draft.ingredients.map((row, j) => (j === i ? { ...row, ...fields } : row)) })
+                change({ ingredients: updated(draft.ingredients, i, fields) })
               }
               onMove={(by) => change({ ingredients: moved(draft.ingredients, i, i + by) })}
-              onRemove={() => change({ ingredients: draft.ingredients.filter((_, j) => j !== i) })}
+              onRemove={() => change({ ingredients: without(draft.ingredients, i) })}
             />
           ))}
           <button type="button" onClick={() => change({ ingredients: [...draft.ingredients, emptyIngredient()] })}>
@@ -174,15 +176,7 @@ function IngredientRow({ ingredient, position, last, onChange, onMove, onRemove 
         value={ingredient.prepNote}
         onInput={(e) => onChange({ prepNote: e.currentTarget.value })}
       />
-      <button type="button" disabled={position === 1} onClick={() => onMove(-1)}>
-        Move {row} up
-      </button>
-      <button type="button" disabled={last} onClick={() => onMove(1)}>
-        Move {row} down
-      </button>
-      <button type="button" onClick={onRemove}>
-        Remove {row}
-      </button>
+      <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
   )
 }
@@ -209,18 +203,16 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
               value={step.text}
               onInput={(e) => {
                 const text = e.currentTarget.value
-                onChange(steps.map((s, j) => (j === i ? { ...s, text } : s)))
+                onChange(updated(steps, i, { text }))
               }}
             />
-            <button type="button" disabled={i === 0} onClick={() => onChange(moved(steps, i, i - 1))}>
-              Move {row} up
-            </button>
-            <button type="button" disabled={i === steps.length - 1} onClick={() => onChange(moved(steps, i, i + 1))}>
-              Move {row} down
-            </button>
-            <button type="button" onClick={() => onChange(steps.filter((_, j) => j !== i))}>
-              Remove {row}
-            </button>
+            <RowControls
+              label={row}
+              first={i === 0}
+              last={i === steps.length - 1}
+              onMove={(by) => onChange(moved(steps, i, i + by))}
+              onRemove={() => onChange(without(steps, i))}
+            />
           </div>
         )
       })}
@@ -240,4 +232,30 @@ function schemaProblems(recipe: Recipe): string[] {
     if (error instanceof InvalidRecipeError) return [...error.issues]
     throw error
   }
+}
+
+interface RowControlsProps {
+  /** The row's name, as in "Step 2". */
+  readonly label: string
+  readonly first: boolean
+  readonly last: boolean
+  readonly onMove: (by: -1 | 1) => void
+  readonly onRemove: () => void
+}
+
+/** Move up, Move down and Remove for one row of an ordered list. */
+function RowControls({ label, first, last, onMove, onRemove }: RowControlsProps) {
+  return (
+    <>
+      <button type="button" disabled={first} onClick={() => onMove(-1)}>
+        Move {label} up
+      </button>
+      <button type="button" disabled={last} onClick={() => onMove(1)}>
+        Move {label} down
+      </button>
+      <button type="button" onClick={onRemove}>
+        Remove {label}
+      </button>
+    </>
+  )
 }

@@ -148,3 +148,13 @@ export function moved<T>(list: readonly T[], from: number, to: number): T[] {
   next.splice(to, 0, row)
   return next
 }
+
+/** `list` with the row at `index` merged with `fields`. */
+export function updated<T>(list: readonly T[], index: number, fields: Partial<T>): T[] {
+  return list.map((row, i) => (i === index ? { ...row, ...fields } : row))
+}
+
+/** `list` without the row at `index`. */
+export function without<T>(list: readonly T[], index: number): T[] {
+  return list.filter((_, i) => i !== index)
+}
