@@ -17,16 +17,16 @@ export function firestoreItemsPort(db: Firestore): ItemsPort {
       const stop = onSnapshot(
         collection(db, ITEMS_COLLECTION),
         (snapshot) => {
-          let items: WatchedItem[]
-          try {
-            items = snapshot.docs.map((doc) => {
-              const item = itemSchema.parse(doc.data())
-              return { id: itemId(doc.id), name: item.name, state: item.state, deleted: item.deletedAt !== undefined }
-            })
-          } catch (error) {
-            stop()
-            onError(error)
-            return
+          const items: WatchedItem[] = []
+          for (const doc of snapshot.docs) {
+            const parsed = itemSchema.safeParse(doc.data())
+            if (!parsed.success) {
+              const reasons = parsed.error.issues.map((i) => `${i.path.join('.') || 'item'}: ${i.message}`).join('; ')
+              console.warn(`Skipping invalid Item ${doc.id}: ${reasons}`)
+              continue
+            }
+            const item = parsed.data
+            items.push({ id: itemId(doc.id), name: item.name, state: item.state, deleted: item.deletedAt !== undefined })
           }
           onItems(items)
         },

@@ -16,8 +16,9 @@ export type Unsubscribe = () => void
  */
 export interface ItemsPort {
   /**
-   * Calls `onItems` with every Item, live and soft-deleted, now and on each change. An empty list
-   * means the Catalogue has no Items. A failed watch calls `onError` and ends it.
+   * Calls `onItems` with every Item that passes `itemSchema`, live and soft-deleted, now and on each
+   * change. An Item document that fails `itemSchema` is skipped and logged, so an empty list means the
+   * Catalogue has no valid Items. `onError` is only for a failed read, which ends the watch.
    */
   watchItems(onItems: (items: readonly WatchedItem[]) => void, onError: (error: unknown) => void): Unsubscribe
 
