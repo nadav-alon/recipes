@@ -70,6 +70,7 @@ describe('App', () => {
     location.hash = recipeHref(recipes.recipeId('nope'))
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('alert')).toHaveTextContent('This Recipe does not exist.')
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
   })
 
   it('opens the editor empty at the new-Recipe URL, and shows the Recipe once it is saved', async () => {

@@ -7,6 +7,7 @@ import {
   type AuthUser,
   type FirebaseClient,
 } from 'data-platform/client'
+import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 
 /** The Catalogue shares this origin; it is where a Household is claimed and joined. */
 const DEFAULT_CATALOGUE_URL = '/home-catalogue/'
@@ -80,48 +81,52 @@ export function AuthGate({ client, children }: AuthGateProps) {
 
     case 'signed-out':
       return (
-        <main>
-          <h1>Sign in</h1>
-          <button onClick={() => void auth.signIn()}>Sign in with Google</button>
-        </main>
+        <TopAppBar title="Sign in">
+          <main>
+            <button onClick={() => void auth.signIn()}>Sign in with Google</button>
+          </main>
+        </TopAppBar>
       )
 
     case 'unclaimed':
       return (
-        <main>
-          <h1>Household not claimed</h1>
-          <p>No one has claimed this Household yet. Claim it through the Catalogue.</p>
-          <CatalogueLink />
-          <SignOutButton onClick={() => void auth.signOut()} />
-        </main>
+        <TopAppBar title="Household not claimed">
+          <main>
+            <p>No one has claimed this Household yet. Claim it through the Catalogue.</p>
+            <CatalogueLink />
+            <SignOutButton onClick={() => void auth.signOut()} />
+          </main>
+        </TopAppBar>
       )
 
     case 'non-member':
       return (
-        <main>
-          <h1>Not a Member</h1>
-          <p>Signed in as {state.user.email}, who is not a Member of this Household.</p>
-          <p>Join through the Catalogue, then come back.</p>
-          <CatalogueLink />
-          <SignOutButton onClick={() => void auth.signOut()} />
-        </main>
+        <TopAppBar title="Not a Member">
+          <main>
+            <p>Signed in as {state.user.email}, who is not a Member of this Household.</p>
+            <p>Join through the Catalogue, then come back.</p>
+            <CatalogueLink />
+            <SignOutButton onClick={() => void auth.signOut()} />
+          </main>
+        </TopAppBar>
       )
 
     case 'unreachable':
       return (
-        <main>
-          <h1>Couldn't reach your Household</h1>
-          <p>Check your connection and try again.</p>
-          <button
-            onClick={() => {
-              setState({ status: 'checking' })
-              void resolveMembership(state.user)
-            }}
-          >
-            Retry
-          </button>
-          <SignOutButton onClick={() => void auth.signOut()} />
-        </main>
+        <TopAppBar title={"Couldn't reach your Household"}>
+          <main>
+            <p>Check your connection and try again.</p>
+            <button
+              onClick={() => {
+                setState({ status: 'checking' })
+                void resolveMembership(state.user)
+              }}
+            >
+              Retry
+            </button>
+            <SignOutButton onClick={() => void auth.signOut()} />
+          </main>
+        </TopAppBar>
       )
 
     case 'member':

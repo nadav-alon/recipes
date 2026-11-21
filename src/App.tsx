@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
+import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import type { ItemsPort } from './items/items-port.ts'
 import { useItemsById } from './items/use-items-by-id.ts'
+import { BackButton } from './shell/BackButton.tsx'
 import { RecipeEditor, type RecipeEditorProps } from './editor/RecipeEditor.tsx'
 import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
@@ -184,10 +186,13 @@ function LoadFailed() {
 
 function RecipeNotFound() {
   return (
-    <main>
-      <p role="alert">This Recipe does not exist.</p>
-      <a href={HOME_HREF}>Back to Recipes</a>
-    </main>
+    <TopAppBar title="Recipe not found">
+      <BackButton />
+      <main>
+        <p role="alert">This Recipe does not exist.</p>
+        <a href={HOME_HREF}>Back to Recipes</a>
+      </main>
+    </TopAppBar>
   )
 }
 

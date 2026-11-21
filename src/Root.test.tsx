@@ -24,7 +24,7 @@ afterEach(() => vi.unstubAllEnvs())
 describe('Root', () => {
   it('shows the setup screen when no config is stored', () => {
     render(<Root />)
-    expect(screen.getByRole('heading', { name: 'Set up' })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('heading', { name: 'Set up' }))
     expect(mocks.initFirebase).not.toHaveBeenCalled()
   })
 
