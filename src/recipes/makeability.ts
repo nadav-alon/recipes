@@ -6,7 +6,7 @@ export type ItemView = Pick<core.Item, 'state' | 'deletedAt'>
 export type ItemsById = ReadonlyMap<core.ItemId, ItemView>
 
 /** Orders titles the same on every device. */
-const titleOrder = new Intl.Collator('en')
+export const titleOrder = new Intl.Collator('en')
 
 export type MissingReason = 'unlinked' | 'item out' | 'item soft-deleted'
 
