@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { core } from 'data-platform'
 import { startEmulator, type Emulator } from '../test/emulator.ts'
-import { firestoreRecipeStore, type RecipeEntry, type RecipeStore } from './recipe-store.ts'
+import { firestoreRecipeStore, InvalidRecipeError, type Recipe, type RecipeEntry, type RecipeStore } from './recipe-store.ts'
 
-const pancakes = { title: 'Pancakes', ingredients: [{ name: 'Flour', itemId: 'flour' }], prepSteps: [], steps: ['Fry'] }
+const pancakes: Recipe = { title: 'Pancakes', ingredients: [{ name: 'Flour', itemId: core.itemId('flour') }], prepSteps: [], steps: ['Fry'] }
 
 describe('firestoreRecipeStore', () => {
   let emulator: Emulator
@@ -54,5 +55,44 @@ describe('firestoreRecipeStore', () => {
       await new Promise((r) => setTimeout(r, 200))
       expect(onChange.mock.calls).toHaveLength(calls)
     })
+  })
+})
+
+describe('firestoreRecipeStore create', () => {
+  let emulator: Emulator
+  let store: RecipeStore
+
+  beforeAll(async () => {
+    emulator = await startEmulator()
+  })
+  afterAll(() => emulator.close())
+  beforeEach(async () => {
+    await emulator.reset(['alice'])
+    store = firestoreRecipeStore(emulator.client('alice'))
+  })
+
+  const stored = async () => {
+    const entries = await new Promise<readonly RecipeEntry[]>((resolve) => {
+      const stop = store.watch((e) => {
+        stop()
+        resolve(e)
+      })
+    })
+    return entries
+  }
+
+  it('saves a valid Recipe and resolves with the id it is watched under', async () => {
+    const id = await store.create(pancakes)
+
+    expect((await stored()).map((e) => [e.id, e.recipe.title])).toEqual([[id, 'Pancakes']])
+  })
+
+  it('refuses an invalid Recipe without a write', async () => {
+    // The rules only look at the first Ingredient, so only the schema check catches the second.
+    const invalid = { ...pancakes, ingredients: [...pancakes.ingredients, { name: '' }] }
+
+    await expect(store.create(invalid)).rejects.toBeInstanceOf(InvalidRecipeError)
+
+    expect(await stored()).toEqual([])
   })
 })
