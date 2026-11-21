@@ -423,3 +423,24 @@ describe('App returning from the Catalogue', () => {
     expect(saved(s)[2]).toEqual({ name: 'Chive' })
   })
 })
+
+describe('App Add to Catalogue from the Recipe view', () => {
+  it('hands off from the view and the returned Item links the Ingredient', async () => {
+    const s = fakeRecipeStore([{ id: r1, recipe: { title: 'Omelette', ingredients: [{ name: 'Chive' }], prepSteps: [], steps: ['Whisk'] } }])
+    location.hash = recipeHref(r1)
+    render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
+
+    const link = await screen.findByRole('link', { name: 'Add Chive to Catalogue' })
+    const handOff = new URL(link.getAttribute('href')!, location.origin)
+    const back = new URL(new URLSearchParams(handOff.hash.split('?')[1]).get('return')!)
+    expect(handOff.pathname).toBe('/home-catalogue/')
+    expect(back.hash).toBe(catalogueReturnHref(r1, 0, 'Chive'))
+
+    history.replaceState(null, '', `${location.pathname}?itemId=chives`)
+    location.hash = back.hash
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    let entries: readonly RecipeEntry[] = []
+    s.watch((e) => (entries = e))()
+    expect(entries[0].recipe.ingredients).toEqual([{ name: 'Chive', itemId: 'chives' }])
+  })
+})

@@ -5,10 +5,13 @@ import { Button } from 'household-ui/ui/Button.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import type { ItemsPort } from '../items/items-port.ts'
 import { BackButton } from '../shell/BackButton.tsx'
-import { HOME_HREF, navigate } from '../routes.ts'
+import { HOME_HREF, addToCatalogueHref, navigate } from '../routes.ts'
+import type { RecipeId } from './recipe-store.ts'
 import { classifyIngredient, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
 
 export interface RecipeViewProps {
+  /** The Recipe's id, which the Catalogue's return URL names. */
+  recipeId: RecipeId
   recipe: recipes.Recipe
   items: ItemsById
   /** Where "actually out" writes an Item's State. */
@@ -59,11 +62,16 @@ function StepList({ steps }: { steps: readonly string[] }) {
 }
 
 function IngredientLine({
+  recipeId,
+  index,
   ingredient,
   items,
   busy,
   onActuallyOut,
 }: {
+  recipeId: RecipeId
+  /** Where the Ingredient is in the Recipe, from 0. */
+  index: number
   ingredient: recipes.Ingredient
   items: ItemsById
   busy: boolean
@@ -87,13 +95,17 @@ function IngredientLine({
           >
             Actually out
           </Button>
+        ) : status.kind === 'missing' && status.reason === 'unlinked' ? (
+          <a href={addToCatalogueHref(recipeId, index, ingredient.name.trim())} aria-label={`Add ${ingredient.name} to Catalogue`}>
+            Add to Catalogue
+          </a>
         ) : undefined
       }
     />
   )
 }
 
-export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewProps) {
+export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: RecipeViewProps) {
   const [marked, setMarked] = useState<ReadonlyMap<core.ItemId, MarkedOut>>(new Map())
   const [inFlight, setInFlight] = useState<ReadonlySet<core.ItemId>>(new Set())
   const [failure, setFailure] = useState<string | null>(null)
@@ -158,6 +170,8 @@ export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewPro
           {recipe.ingredients.map((ingredient, index) => (
             <IngredientLine
               key={index}
+              recipeId={recipeId}
+              index={index}
               ingredient={ingredient}
               items={items}
               busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
