@@ -11,6 +11,7 @@ vi.mock('data-platform/client', async (importOriginal) => ({
   authClient: () => ({ onAuthChange: () => () => {}, signIn: vi.fn(), signOut: vi.fn() }),
 }))
 
+import { localKit } from 'data-platform/local'
 import { Root } from './Root.tsx'
 
 beforeEach(() => {
@@ -39,7 +40,7 @@ describe('Root', () => {
     }
     localStorage.setItem('data-platform:firebase-config', JSON.stringify(config))
     render(<Root />)
-    expect(mocks.initFirebase).toHaveBeenCalledWith(config, { local: false })
+    expect(mocks.initFirebase).toHaveBeenCalledWith(config, { local: undefined })
     expect(screen.queryByRole('heading', { name: 'Set up' })).toBeNull()
   })
 
@@ -49,7 +50,7 @@ describe('Root', () => {
     expect(screen.queryByRole('heading', { name: 'Set up' })).toBeNull()
     expect(mocks.initFirebase).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'demo-data-platform-local' }),
-      { local: true },
+      { local: localKit },
     )
   })
 })
@@ -104,7 +105,7 @@ describe('Root and #config= links', () => {
     expect(JSON.parse(localStorage.getItem('data-platform:firebase-config')!).projectId).toBe('other')
     expect(mocks.initFirebase).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'other' }),
-      { local: false },
+      { local: undefined },
     )
   })
 
@@ -113,6 +114,6 @@ describe('Root and #config= links', () => {
     history.replaceState(null, '', `/${hashFor({ ...stored, projectId: 'other' })}`)
     render(<Root />)
     fireEvent.click(screen.getByRole('button', { name: 'Keep the current Household' }))
-    expect(mocks.initFirebase).toHaveBeenCalledWith(stored, { local: false })
+    expect(mocks.initFirebase).toHaveBeenCalledWith(stored, { local: undefined })
   })
 })

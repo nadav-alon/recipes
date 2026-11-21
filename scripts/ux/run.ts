@@ -8,15 +8,15 @@ import { EMULATOR_MODE } from '../../src/gate/emulator.ts'
 import { parseScenario } from './args.ts'
 import { uxFixtures } from './fixtures.ts'
 
-// The three constants below restate data-platform v0.14.0's internals, which `data-platform/local`
+// The three constants below restate data-platform v0.15.2's internals, which `data-platform/local`
 // does not export (the ports, the ready line it logs, the layout of its `dist/`). Recheck them when
 // bumping data-platform; exporting them from the kit is the durable fix.
-/** The kit's Firestore emulator (`FIRESTORE_EMULATOR_PORT` in data-platform v0.14.0). */
+/** The kit's Firestore emulator (`FIRESTORE_EMULATOR_PORT` in data-platform v0.15.2). */
 const FIRESTORE_EMULATOR = '127.0.0.1:8090'
-/** What the local kit prints once the scenario is seeded and its Auth users exist (data-platform v0.14.0). */
+/** What the local kit prints once the scenario is seeded and its Auth users exist (data-platform v0.15.2). */
 const SEEDED = /Seeded scenario/
 
-/** The kit's launcher, `dist/local/bin.js` in data-platform v0.14.0. */
+/** The kit's launcher, `dist/local/bin.js` in data-platform v0.15.2. */
 const KIT_BIN = createRequire(import.meta.url).resolve('data-platform/local').replace(/index\.js$/, 'bin.js')
 
 /** Writes the ux fixtures into the local Firestore emulator, bypassing the rules as the kit does. */
