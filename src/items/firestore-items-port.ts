@@ -21,7 +21,8 @@ export function firestoreItemsPort(db: Firestore): ItemsPort {
           for (const doc of snapshot.docs) {
             const parsed = itemSchema.safeParse(doc.data())
             if (!parsed.success) {
-              console.error(`Skipping invalid Item ${doc.id}:`, parsed.error)
+              const reasons = parsed.error.issues.map((i) => `${i.path.join('.') || 'item'}: ${i.message}`).join('; ')
+              console.warn(`Skipping invalid Item ${doc.id}: ${reasons}`)
               continue
             }
             const item = parsed.data

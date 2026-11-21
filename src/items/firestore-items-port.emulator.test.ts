@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import { FirebaseError } from 'firebase/app'
 import { Timestamp } from 'firebase/firestore'
@@ -29,6 +29,10 @@ beforeAll(async () => {
 afterAll(async () => {
   stops.forEach((stop) => stop())
   await env.cleanup()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 beforeEach(async () => {
@@ -87,18 +91,19 @@ describe('watchItems', () => {
   it('skips and logs an invalid Item, still delivering the valid ones', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     await seedItem('salt', { name: 'Salt', state: 'bogus' })
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await seedItem('sugar', { name: 'Sugar', state: 'out' })
+    const logged = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const port = portAs(alice)
-    const onError = vi.fn()
 
-    const items = await new Promise<readonly WatchedItem[]>((resolve) => {
-      stops.push(port.watchItems(resolve, onError))
+    const items = await new Promise<readonly WatchedItem[]>((resolve, reject) => {
+      stops.push(port.watchItems(resolve, reject))
     })
 
-    expect(items).toEqual([{ id: flour, name: 'Flour', state: 'enough', deleted: false }])
-    expect(onError).not.toHaveBeenCalled()
-    expect(logged).toHaveBeenCalledWith(expect.stringContaining('salt'), expect.anything())
-    logged.mockRestore()
+    expect([...items].sort((a, b) => a.id.localeCompare(b.id))).toEqual([
+      { id: flour, name: 'Flour', state: 'enough', deleted: false },
+      { id: itemId('sugar'), name: 'Sugar', state: 'out', deleted: false },
+    ])
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining('salt'))
   })
 })
 
