@@ -43,6 +43,20 @@ describe('fakeItemsPort', () => {
     expect(port.stateHistory(flour.id)).toEqual([])
   })
 
+  it('reports a failed watch to onError and stops calling the watcher', async () => {
+    const port = fakeItemsPort([flour])
+    const seen: Array<readonly WatchedItem[]> = []
+    const errors: unknown[] = []
+    port.watchItems((items) => seen.push(items), (error) => errors.push(error))
+    const error = new Error('permission-denied')
+
+    port.failWatches(error)
+    await port.setItemState(flour.id, 'out')
+
+    expect(errors).toEqual([error])
+    expect(seen).toHaveLength(1)
+  })
+
   it('rejects an Item it does not have', async () => {
     const port = fakeItemsPort([])
 

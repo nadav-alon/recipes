@@ -18,18 +18,21 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
   const [items, setItems] = useState<ItemsById | null>(null)
 
-  useEffect(() => recipeStore.watch(setEntries), [recipeStore])
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => recipeStore.watch(setEntries, () => setFailed(true)), [recipeStore])
   useEffect(
     () =>
       itemsPort.watchItems(
         (watched) =>
           // An Item the Catalogue has soft-deleted is left out: a link to an absent id counts as soft-deleted.
           setItems(new Map(watched.filter((i) => !i.deleted).map((i) => [i.id, { state: i.state }]))),
-        () => {},
+        () => setFailed(true),
       ),
     [itemsPort],
   )
 
+  if (failed) return <p role="alert">The Recipes could not be loaded.</p>
   if (entries === null || items === null) return null
   const sections = homeSections(entries, items)
 
