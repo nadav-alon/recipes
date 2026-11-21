@@ -61,13 +61,11 @@ export function RecipeEditor({ store, entry, onSaved, onSaveFailed, onCreated, o
     setBlockers(found)
     if (found.length > 0) return
     setFailure(null)
-    const write = entry
-      ? store.update(entry.id, recipe).catch((error: Error) => {
-          onSaveFailed?.(recipe, error)
-          throw error
-        })
-      : store.create(recipe).then((id) => onCreated?.(id))
-    write.catch((error: Error) => setFailure(error.message))
+    const write = entry ? store.update(entry.id, recipe) : store.create(recipe).then((id) => onCreated?.(id))
+    write.catch((error: Error) => {
+      if (entry) onSaveFailed?.(recipe, error)
+      setFailure(error.message)
+    })
     onSaved?.()
   }
 

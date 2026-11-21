@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { ItemsPort } from './items/items-port.ts'
 import { useItemsById } from './items/use-items-by-id.ts'
-import { RecipeEditor } from './editor/RecipeEditor.tsx'
+import { RecipeEditor, type RecipeEditorProps } from './editor/RecipeEditor.tsx'
 import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
 import type { Recipe, RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
@@ -19,17 +19,6 @@ export interface AppProps {
 export function App({ recipeStore, itemsPort }: AppProps) {
   const route = useRoute()
   const [unsaved, setUnsaved] = useState<UnsavedEdit | null>(null)
-  const notice = unsaved !== null && !(route.screen === 'edit-recipe' && route.id === unsaved.id) && (
-    <div role="alert">
-      <p>
-        Your edit to {unsaved.recipe.title} was not saved: {unsaved.message}
-      </p>
-      <a href={editRecipeHref(unsaved.id)}>Back to the editor</a>
-      <button type="button" onClick={() => setUnsaved(null)}>
-        Dismiss
-      </button>
-    </div>
-  )
 
   const screen = (() => {
     switch (route.screen) {
@@ -45,7 +34,7 @@ export function App({ recipeStore, itemsPort }: AppProps) {
             id={id}
             recipeStore={recipeStore}
             unsaved={unsaved?.id === id ? unsaved.recipe : null}
-            onSaved={() => setUnsaved((u) => (u?.id === id ? null : u))}
+            onUnsavedCleared={() => setUnsaved((u) => (u?.id === id ? null : u))}
             onSaveFailed={(recipe, error) => setUnsaved({ id, recipe, message: error.message })}
           />
         )
@@ -57,7 +46,9 @@ export function App({ recipeStore, itemsPort }: AppProps) {
 
   return (
     <>
-      {notice}
+      {unsaved !== null && !(route.screen === 'edit-recipe' && route.id === unsaved.id) && (
+        <UnsavedEditNotice unsaved={unsaved} onDismiss={() => setUnsaved(null)} />
+      )}
       {screen}
     </>
   )
@@ -68,6 +59,21 @@ interface UnsavedEdit {
   readonly id: RecipeId
   readonly recipe: Recipe
   readonly message: string
+}
+
+/** Tells the user an edit was rejected after the editor had gone, with the way back to the editor holding it. */
+function UnsavedEditNotice({ unsaved, onDismiss }: { unsaved: UnsavedEdit; onDismiss: () => void }) {
+  return (
+    <div role="alert">
+      <p>
+        Your edit to {unsaved.recipe.title} was not saved: {unsaved.message}
+      </p>
+      <a href={editRecipeHref(unsaved.id)}>Back to the editor</a>
+      <button type="button" onClick={onDismiss}>
+        Dismiss
+      </button>
+    </div>
+  )
 }
 
 /** The Recipes as the store has them, `null` until they have arrived, and whether watching them failed. */
@@ -107,15 +113,16 @@ function EditScreen({
   id,
   recipeStore,
   unsaved,
-  onSaved,
+  onUnsavedCleared,
   onSaveFailed,
 }: {
   id: RecipeId
   recipeStore: RecipeStore
   /** An edit of this Recipe the store rejected; the editor opens on it rather than on the stored Recipe. */
   unsaved: Recipe | null
-  onSaved: () => void
-  onSaveFailed: (recipe: Recipe, error: Error) => void
+  /** Called when the editor hands the save to the store, so any edit held for this Recipe can be forgotten. */
+  onUnsavedCleared: () => void
+  onSaveFailed: NonNullable<RecipeEditorProps['onSaveFailed']>
 }) {
   const { entries, failed } = useRecipeEntries(recipeStore)
   const opened = useRef<RecipeEntry | null>(null)
@@ -129,7 +136,7 @@ function EditScreen({
       store={recipeStore}
       entry={opened.current}
       onSaved={() => {
-        onSaved()
+        onUnsavedCleared()
         navigate(recipeHref(id))
       }}
       onSaveFailed={onSaveFailed}
