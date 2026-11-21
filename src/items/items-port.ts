@@ -20,4 +20,10 @@ export interface ItemsPort {
    * means the Catalogue has no Items. A failed watch calls `onError` and ends it.
    */
   watchItems(onItems: (items: readonly WatchedItem[]) => void, onError: (error: unknown) => void): Unsubscribe
+
+  /**
+   * Sets an Item's State and appends a State history entry stamped with the server time, in one
+   * batch. Rejects if the Item does not exist or the write is refused.
+   */
+  setItemState(id: core.ItemId, state: core.State): Promise<void>
 }

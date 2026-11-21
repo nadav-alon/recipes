@@ -58,3 +58,18 @@ describe('watchItems', () => {
     ])
   })
 })
+
+describe('setItemState', () => {
+  it('writes the new State and appends a State history entry stamped with the server time', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    const db = env.authenticatedContext(alice).firestore()
+    const port = firestoreItemsPort(db as never)
+
+    await port.setItemState(flour, 'out')
+
+    const item = await db.doc(`${ITEMS_COLLECTION}/flour`).get()
+    expect(item.data()).toMatchObject({ name: 'Flour', state: 'out' })
+    const history = await db.collection(core.stateHistoryCollectionPath(flour)).get()
+    expect(history.docs.map((entry) => entry.data())).toEqual([{ state: 'out', at: expect.any(Timestamp) }])
+  })
+})
