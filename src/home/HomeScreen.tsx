@@ -3,6 +3,7 @@ import type { ItemsPort } from '../items/items-port.ts'
 import { useItemsById } from '../items/use-items-by-id.ts'
 import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
 import { NEW_RECIPE_HREF, recipeHref } from '../routes.ts'
+import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { homeSections, type ClassifiedEntry } from './home-sections.ts'
 
 export interface HomeScreenProps {
@@ -27,18 +28,19 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   const sections = homeSections(entries, items)
 
   return (
-    <main>
-      <h1>Recipes</h1>
-      <a href={NEW_RECIPE_HREF}>New Recipe</a>
-      <Section title="Makeable" list={sections.makeable} empty="Nothing is makeable from what is at home right now." />
-      <Section
-        title="Almost makeable"
-        list={sections.almostMakeable}
-        empty="No Recipe is only one or two Ingredients short."
-        showMissing
-      />
-      <Section title="Other Recipes" list={sections.other} empty="No other Recipes." />
-    </main>
+    <TopAppBar title="Recipes">
+      <main>
+        <a href={NEW_RECIPE_HREF}>New Recipe</a>
+        <Section title="Makeable" list={sections.makeable} empty="Nothing is makeable from what is at home right now." />
+        <Section
+          title="Almost makeable"
+          list={sections.almostMakeable}
+          empty="No Recipe is only one or two Ingredients short."
+          showMissing
+        />
+        <Section title="Other Recipes" list={sections.other} empty="No other Recipes." />
+      </main>
+    </TopAppBar>
   )
 }
 

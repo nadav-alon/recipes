@@ -34,6 +34,13 @@ describe('HomeScreen', () => {
       entry('3', 'Bread', [{ name: 'flour', item: 'flour' }]),
     ])
 
+  it('has a top app bar titled Recipes and no back arrow', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    const bar = within(screen.getByRole('banner'))
+    expect(bar.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
+    expect(bar.queryByRole('button')).toBeNull()
+  })
+
   it('shows Makeable, then Almost makeable with what is Missing, then every other Recipe', () => {
     render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
