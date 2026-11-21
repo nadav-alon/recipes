@@ -53,7 +53,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
   const [deletion, setDeletion] = useState<'none' | 'undoable' | 'final'>('none')
-  const [items, setItems] = useState<readonly WatchedItem[]>([])
+  const [items, setItems] = useState<readonly WatchedItem[] | null>(null)
   const [itemsFailed, setItemsFailed] = useState(false)
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const onDeletedRef = useRef(onDeleted)
@@ -173,7 +173,8 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
 
 interface IngredientRowProps {
   readonly ingredient: IngredientDraft
-  readonly items: readonly WatchedItem[]
+  /** Every Item the Catalogue has, or null until they have arrived. */
+  readonly items: readonly WatchedItem[] | null
   readonly position: number
   readonly last: boolean
   readonly onChange: (fields: Partial<IngredientDraft>) => void
@@ -183,7 +184,9 @@ interface IngredientRowProps {
 
 function IngredientRow({ ingredient, items, position, last, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
-  const linked = ingredient.itemId === null ? undefined : items.find((item) => item.id === ingredient.itemId)
+  const linked = ingredient.itemId === null ? undefined : items?.find((item) => item.id === ingredient.itemId)
+  // An id the Catalogue no longer lists counts as soft-deleted, as it does for makeability.
+  const linkGone = items !== null && ingredient.itemId !== null && (linked === undefined || linked.deleted)
   return (
     <div role="group" aria-label={row}>
       <input aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
@@ -210,7 +213,12 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
         value={ingredient.prepNote}
         onInput={(e) => onChange({ prepNote: e.currentTarget.value })}
       />
-      {linked && (
+      {linkGone && (
+        <p>
+          {row} is linked to an Item the Catalogue has deleted. Pick another Item to relink it.
+        </p>
+      )}
+      {linked && !linked.deleted && (
         <p>
           Linked to {linked.name} ({linked.state})
         </p>
@@ -229,7 +237,7 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
         />
         Assumed
       </label>
-      <ItemPicker row={row} items={items} onPick={(item) => onChange(linkedTo(item.id))} />
+      <ItemPicker row={row} items={items ?? []} onPick={(item) => onChange(linkedTo(item.id))} />
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
   )

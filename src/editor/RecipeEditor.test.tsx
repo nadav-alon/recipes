@@ -370,3 +370,44 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     expect((await save(store, onSaved))[1]).toEqual({ name: 'Water', itemId: 'flour' })
   })
 })
+
+describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
+  const entryLinkedTo = (id: string): RecipeEntry => ({
+    id: recipes.recipeId('porridge'),
+    recipe: { title: 'Porridge', ingredients: [{ name: 'Milk', itemId: core.itemId(id) }], prepSteps: [], steps: [] },
+  })
+  const says = /Ingredient 1 is linked to an Item the Catalogue has deleted/
+
+  it.each([
+    ['soft-deleted', [...CATALOGUE, item('old', 'Old milk', 'enough', true)]],
+    ['no longer listed', CATALOGUE],
+  ])('says so for an Item that is %s, and relinking replaces the link', async (_, items) => {
+    const store = fakeRecipeStore([entryLinkedTo('old')])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort(items)} entry={entryLinkedTo('old')} onSaved={onSaved} />)
+    expect(screen.getByText(says)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Old milk/ })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 1 to Milk (running low)' }))
+    expect(screen.queryByText(says)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(stored(store)[0].recipe.ingredients).toEqual([{ name: 'Milk', itemId: 'milk' }])
+  })
+
+  it('does not say so for a live Item, nor before the Items have arrived', () => {
+    const { unmount } = render(
+      <RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} entry={entryLinkedTo('milk')} />,
+    )
+    expect(screen.queryByText(says)).toBeNull()
+    unmount()
+    render(
+      <RecipeEditor
+        store={fakeRecipeStore()}
+        itemsPort={{ watchItems: () => () => {}, setItemState: async () => {} }}
+        entry={entryLinkedTo('old')}
+      />,
+    )
+    expect(screen.queryByText(says)).toBeNull()
+  })
+})
