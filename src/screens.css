@@ -39,3 +39,19 @@ textarea {
   box-sizing: border-box;
   max-width: 100%;
 }
+
+/* Numbers the Steps and Prep Steps from a counter, so the order shows without adding text to a row. */
+.step-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.step-list > li::before {
+  counter-increment: step;
+  content: counter(step) '.';
+  flex: none;
+  min-width: 1.5rem;
+  color: var(--md-sys-color-on-surface-variant);
+}

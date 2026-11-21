@@ -42,6 +42,22 @@ function flag(status: IngredientStatus): string | null {
   }
 }
 
+/** The parts that are present, joined for a row's text. */
+function joinParts(parts: ReadonlyArray<string | number | null | undefined>, separator: string): string {
+  return parts.filter((part) => part !== undefined && part !== null && part !== '').join(separator)
+}
+
+/** Steps in order; the numbers come from a CSS counter (screens.css), so a row's text stays the step alone. */
+function StepList({ steps }: { steps: readonly string[] }) {
+  return (
+    <ol class="step-list">
+      {steps.map((step, index) => (
+        <ListRow key={index} headline={step} />
+      ))}
+    </ol>
+  )
+}
+
 function IngredientLine({
   ingredient,
   items,
@@ -56,13 +72,11 @@ function IngredientLine({
   const status = classifyIngredient(ingredient, items)
   const flagged = flag(status)
   const item = ingredient.itemId === undefined ? undefined : items.get(ingredient.itemId)
-  const amount = [ingredient.quantity, ingredient.quantity === undefined ? undefined : ingredient.unit]
-    .filter((part) => part !== undefined)
-    .join(' ')
+  const amount = joinParts([ingredient.quantity, ingredient.quantity === undefined ? undefined : ingredient.unit], ' ')
   return (
     <ListRow
       headline={ingredient.name}
-      supporting={[amount, ingredient.prepNote, flagged].filter((part) => part !== undefined && part !== null && part !== '').join(', ') || undefined}
+      supporting={joinParts([amount, ingredient.prepNote, flagged], ', ') || undefined}
       muted={status.kind === 'missing'}
       trailing={
         status.kind === 'at home' && ingredient.itemId !== undefined && item !== undefined ? (
@@ -154,20 +168,12 @@ export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewPro
         {recipe.prepSteps.length > 0 && (
           <section>
             <h2>Prep Steps</h2>
-            <ol>
-              {recipe.prepSteps.map((step, index) => (
-                <ListRow key={index} headline={step} />
-              ))}
-            </ol>
+            <StepList steps={recipe.prepSteps} />
           </section>
         )}
         <section>
           <h2>Steps</h2>
-          <ol>
-            {recipe.steps.map((step, index) => (
-              <ListRow key={index} headline={step} />
-            ))}
-          </ol>
+          <StepList steps={recipe.steps} />
         </section>
         {recipe.notes !== undefined && (
           <section>
