@@ -1,0 +1,41 @@
+/* Layout shared by the screens, written for a 360px phone first: one centred column that never outgrows the viewport. */
+main,
+article,
+form {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-4);
+  width: 100%;
+  max-width: var(--shell-content-width);
+  min-width: 0;
+  margin: 0 auto;
+  padding: var(--md-sys-spacing-4);
+  overflow-wrap: anywhere;
+}
+
+/* Room under the last row for the floating New Recipe button. */
+main {
+  padding-bottom: 6rem;
+}
+
+/* A fieldset's default minimum width is its content's, which would push a long field past the viewport. */
+fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-4);
+  min-width: 0;
+  margin: 0;
+  padding: var(--md-sys-spacing-4);
+}
+
+h2 {
+  margin: 0;
+}
+
+input,
+select,
+textarea {
+  box-sizing: border-box;
+  max-width: 100%;
+}
