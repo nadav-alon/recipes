@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { core, recipes } from 'data-platform'
-import { classifyIngredient, type ItemsById } from './makeability.ts'
+import { classifyIngredient, classifyRecipe, type ItemsById } from './makeability.ts'
 
 const id = (value: string) => value as core.ItemId
 
@@ -57,5 +57,51 @@ describe('classifyIngredient', () => {
       kind: 'missing',
       reason: 'item soft-deleted',
     })
+  })
+})
+
+function recipe(...ingredients: recipes.Ingredient[]): recipes.Recipe {
+  return { title: 'Dish', ingredients, prepSteps: [], steps: [] }
+}
+
+describe('classifyRecipe', () => {
+  const have = ingredient({ itemId: id('flour') })
+  const lack = ingredient({ itemId: id('eggs') })
+
+  it('is Makeable with no Missing Ingredient, counting running low and Assumed as not Missing', () => {
+    const result = classifyRecipe(
+      recipe(have, ingredient({ itemId: id('milk') }), ingredient({ assumed: true })),
+      items,
+    )
+    expect(result.makeability).toBe('makeable')
+    expect(result.missing).toBe(0)
+  })
+
+  it('is Makeable with no Ingredients', () => {
+    expect(classifyRecipe(recipe(), items).makeability).toBe('makeable')
+  })
+
+  it('is Almost makeable with one or two Missing', () => {
+    expect(classifyRecipe(recipe(have, lack), items)).toMatchObject({
+      makeability: 'almost makeable',
+      missing: 1,
+    })
+    expect(classifyRecipe(recipe(have, lack, ingredient()), items)).toMatchObject({
+      makeability: 'almost makeable',
+      missing: 2,
+    })
+  })
+
+  it('is neither with three or more Missing', () => {
+    expect(
+      classifyRecipe(recipe(lack, ingredient(), ingredient({ itemId: id('gone') })), items),
+    ).toMatchObject({ makeability: 'neither', missing: 3 })
+  })
+
+  it('carries each Ingredient status in the Recipe order', () => {
+    expect(classifyRecipe(recipe(lack, have), items).ingredients).toEqual([
+      { kind: 'missing', reason: 'item out' },
+      { kind: 'at home' },
+    ])
   })
 })

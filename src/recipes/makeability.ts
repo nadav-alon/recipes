@@ -31,3 +31,24 @@ export function classifyIngredient(
   if (item.state === 'running low') return { kind: 'at home', runningLow: true }
   return { kind: 'at home' }
 }
+
+export type Makeability = 'makeable' | 'almost makeable' | 'neither'
+
+export interface RecipeMakeability {
+  /** One status per Ingredient, in the Recipe's order. */
+  ingredients: IngredientStatus[]
+  makeability: Makeability
+  /** How many Ingredients are Missing. */
+  missing: number
+}
+
+/** The most Missing Ingredients a Recipe can have and still be Almost makeable. */
+const ALMOST_MAKEABLE_MAX_MISSING = 2
+
+export function classifyRecipe(recipe: recipes.Recipe, items: ItemsById): RecipeMakeability {
+  const statuses = recipe.ingredients.map((ingredient) => classifyIngredient(ingredient, items))
+  const missing = statuses.filter((status) => status.kind === 'missing').length
+  const makeability =
+    missing === 0 ? 'makeable' : missing <= ALMOST_MAKEABLE_MAX_MISSING ? 'almost makeable' : 'neither'
+  return { ingredients: statuses, makeability, missing }
+}
