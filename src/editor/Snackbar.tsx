@@ -1,20 +1,21 @@
 import { useEffect } from 'preact/hooks'
 
+const LINGER_MS = 8000
+
 export interface SnackbarProps {
   readonly message: string
   readonly actionLabel: string
   readonly onAction: () => void
-  /** Called when the snackbar goes away unused, after `lingerMs` or on dismissal. */
+  /** Called when the snackbar goes away unused, after eight seconds or on dismissal. */
   readonly onDismiss: () => void
-  readonly lingerMs?: number
 }
 
 /** A transient message with one action, announced politely and dismissed on its own. */
-export function Snackbar({ message, actionLabel, onAction, onDismiss, lingerMs = 8000 }: SnackbarProps) {
+export function Snackbar({ message, actionLabel, onAction, onDismiss }: SnackbarProps) {
   useEffect(() => {
-    const timer = setTimeout(onDismiss, lingerMs)
+    const timer = setTimeout(onDismiss, LINGER_MS)
     return () => clearTimeout(timer)
-  }, [lingerMs, onDismiss])
+  }, [onDismiss])
 
   return (
     <div role="status">
