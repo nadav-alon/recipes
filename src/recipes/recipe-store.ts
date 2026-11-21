@@ -1,4 +1,4 @@
-import { addDoc, collection, onSnapshot, type Firestore } from 'firebase/firestore'
+import { addDoc, collection, deleteField, doc, onSnapshot, updateDoc, type Firestore } from 'firebase/firestore'
 import { recipes } from 'data-platform'
 
 export type Recipe = recipes.Recipe
@@ -34,6 +34,12 @@ export interface RecipeStore {
 
   /** Saves a new Recipe and resolves with its id. Rejects with `InvalidRecipeError` before any write. */
   create(recipe: Recipe): Promise<RecipeId>
+
+  /**
+   * Replaces the Recipe stored under `id`; optional fields `recipe` lacks are removed. Whether the
+   * Recipe is soft-deleted is left as it was. Rejects with `InvalidRecipeError` before any write.
+   */
+  update(id: RecipeId, recipe: Recipe): Promise<void>
 }
 
 /** Checks `recipe` against data-platform's schema and returns it without `undefined` fields, which Firestore refuses. */
@@ -57,6 +63,8 @@ function withoutUndefined<T>(value: T): T {
   return value
 }
 
+const OPTIONAL_FIELDS = ['servings', 'sourceUrl', 'notes'] as const
+
 export function firestoreRecipeStore(db: Firestore): RecipeStore {
   const recipesCollection = collection(db, recipes.RECIPES_COLLECTION)
   return {
@@ -79,6 +87,12 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
       const { deletedAt: _ignored, ...live } = validated(recipe)
       const ref = await addDoc(recipesCollection, live)
       return recipes.recipeId(ref.id)
+    },
+
+    async update(id, recipe) {
+      const { deletedAt: _ignored, ...live } = validated(recipe)
+      const removed = Object.fromEntries(OPTIONAL_FIELDS.filter((f) => !(f in live)).map((f) => [f, deleteField()]))
+      await updateDoc(doc(recipesCollection, id), { ...live, ...removed })
     },
   }
 }

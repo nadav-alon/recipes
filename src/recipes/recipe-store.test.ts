@@ -4,7 +4,12 @@ import { core } from 'data-platform'
 import { startEmulator, type Emulator } from '../test/emulator.ts'
 import { firestoreRecipeStore, InvalidRecipeError, type Recipe, type RecipeEntry, type RecipeStore } from './recipe-store.ts'
 
-const pancakes: Recipe = { title: 'Pancakes', ingredients: [{ name: 'Flour', itemId: core.itemId('flour') }], prepSteps: [], steps: ['Fry'] }
+const pancakes: Recipe = {
+  title: 'Pancakes',
+  ingredients: [{ name: 'Flour', itemId: core.itemId('flour') }],
+  prepSteps: [],
+  steps: ['Fry'],
+}
 
 describe('firestoreRecipeStore', () => {
   let emulator: Emulator
@@ -19,7 +24,7 @@ describe('firestoreRecipeStore', () => {
     store = firestoreRecipeStore(emulator.client('alice'))
   })
 
-  const nextEntries = (): Promise<readonly RecipeEntry[]> =>
+  const current = (): Promise<readonly RecipeEntry[]> =>
     new Promise((resolve) => {
       const stop = store.watch((entries) => {
         stop()
@@ -32,13 +37,13 @@ describe('firestoreRecipeStore', () => {
       await emulator.seed('recipes/pancakes', pancakes)
       await emulator.seed('recipes/old', { ...pancakes, title: 'Old', deletedAt: { seconds: 1, nanoseconds: 0 } })
 
-      const entries = await nextEntries()
+      const entries = await current()
 
       expect(entries.map((e) => [e.id, e.recipe.title])).toEqual([['pancakes', 'Pancakes']])
     })
 
     it('reports an empty list when there are no Recipes', async () => {
-      expect(await nextEntries()).toEqual([])
+      expect(await current()).toEqual([])
     })
 
     it('calls again when a Recipe appears, until stopped', async () => {
@@ -56,43 +61,41 @@ describe('firestoreRecipeStore', () => {
       expect(onChange.mock.calls).toHaveLength(calls)
     })
   })
-})
 
-describe('firestoreRecipeStore create', () => {
-  let emulator: Emulator
-  let store: RecipeStore
+  describe('create', () => {
+    it('saves a valid Recipe and resolves with the id it is watched under', async () => {
+      const id = await store.create(pancakes)
 
-  beforeAll(async () => {
-    emulator = await startEmulator()
-  })
-  afterAll(() => emulator.close())
-  beforeEach(async () => {
-    await emulator.reset(['alice'])
-    store = firestoreRecipeStore(emulator.client('alice'))
-  })
-
-  const stored = async () => {
-    const entries = await new Promise<readonly RecipeEntry[]>((resolve) => {
-      const stop = store.watch((e) => {
-        stop()
-        resolve(e)
-      })
+      expect((await current()).map((e) => [e.id, e.recipe.title])).toEqual([[id, 'Pancakes']])
     })
-    return entries
-  }
 
-  it('saves a valid Recipe and resolves with the id it is watched under', async () => {
-    const id = await store.create(pancakes)
+    it('refuses an invalid Recipe without a write', async () => {
+      // The rules only look at the first Ingredient, so only the schema check catches the second.
+      const invalid = { ...pancakes, ingredients: [...pancakes.ingredients, { name: '' }] }
 
-    expect((await stored()).map((e) => [e.id, e.recipe.title])).toEqual([[id, 'Pancakes']])
+      await expect(store.create(invalid)).rejects.toBeInstanceOf(InvalidRecipeError)
+
+      expect(await current()).toEqual([])
+    })
   })
 
-  it('refuses an invalid Recipe without a write', async () => {
-    // The rules only look at the first Ingredient, so only the schema check catches the second.
-    const invalid = { ...pancakes, ingredients: [...pancakes.ingredients, { name: '' }] }
+  describe('update', () => {
+    it('replaces the Recipe under the same id, dropping optional fields it no longer has', async () => {
+      const id = await store.create({ ...pancakes, servings: 4, notes: 'Good' })
 
-    await expect(store.create(invalid)).rejects.toBeInstanceOf(InvalidRecipeError)
+      await store.update(id, { ...pancakes, title: 'Thick pancakes' })
 
-    expect(await stored()).toEqual([])
+      const [entry] = await current()
+      expect(entry?.id).toBe(id)
+      expect(entry?.recipe).toEqual({ ...pancakes, title: 'Thick pancakes' })
+    })
+
+    it('refuses an invalid Recipe without a write', async () => {
+      const id = await store.create(pancakes)
+
+      await expect(store.update(id, { ...pancakes, title: '' })).rejects.toBeInstanceOf(InvalidRecipeError)
+
+      expect((await current())[0]?.recipe.title).toBe('Pancakes')
+    })
   })
 })
