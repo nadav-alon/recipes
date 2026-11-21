@@ -100,3 +100,35 @@ describe.each([
     expect(stored(store)[0].recipe[key]).toEqual(['Simmer', 'Chop', 'Brown well'])
   })
 })
+
+describe('RecipeEditor validation', () => {
+  it('blocks saving a Recipe with no title and says why', () => {
+    const store = fakeRecipeStore()
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Give the Recipe a title.')
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(stored(store)).toEqual([])
+  })
+
+  it('blocks a unit without a quantity, then saves once it is fixed', async () => {
+    const store = fakeRecipeStore()
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Soup' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    fireEvent.input(screen.getByLabelText('Ingredient 1 name'), { target: { value: 'Salt' } })
+    fireEvent.change(screen.getByLabelText('Ingredient 1 unit'), { target: { value: 'g' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Ingredient 1: a unit needs a quantity.')
+    expect(onSaved).not.toHaveBeenCalled()
+
+    fireEvent.input(screen.getByLabelText('Ingredient 1 quantity'), { target: { value: '5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})

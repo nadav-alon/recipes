@@ -6,6 +6,7 @@ import {
   emptyIngredient,
   emptyStep,
   moved,
+  problems,
   recipeOf,
   UNITS,
   type IngredientDraft,
@@ -26,10 +27,15 @@ export interface RecipeEditorProps {
 export function RecipeEditor({ store, entry, onSaved }: RecipeEditorProps) {
   const [draft, setDraft] = useState<RecipeDraft>(() => (entry ? draftOf(entry.recipe) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
+  const [blockers, setBlockers] = useState<string[]>([])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
   const save = (event: Event) => {
     event.preventDefault()
+    const found = problems(draft)
+    setBlockers(found)
+    if (found.length > 0) return
+    setFailure(null)
     const recipe = recipeOf(draft, entry?.recipe)
     const write = entry ? store.update(entry.id, recipe) : store.create(recipe)
     write.catch((error: Error) => setFailure(error.message))
@@ -76,6 +82,16 @@ export function RecipeEditor({ store, entry, onSaved }: RecipeEditorProps) {
       </fieldset>
       <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
       <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
+      {blockers.length > 0 && (
+        <div role="alert">
+          <p>This Recipe cannot be saved yet:</p>
+          <ul>
+            {blockers.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {failure !== null && <p role="alert">{failure}</p>}
       <button type="submit">Save</button>
     </form>
