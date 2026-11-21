@@ -1,11 +1,22 @@
-import type { recipes } from 'data-platform'
+import { useState } from 'preact/hooks'
+import type { core, recipes } from 'data-platform'
+import type { ItemsPort } from '../items/items-port.ts'
 import { classifyIngredient, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
 
 export interface RecipeViewProps {
   recipe: recipes.Recipe
   items: ItemsById
+  /** Where "actually out" writes an Item's State. */
+  itemsPort: ItemsPort
   /** Where the link to the Recipe's editor points. */
   editHref: string
+}
+
+/** What "actually out" changed, so Undo can put the Item back. */
+interface MarkedOut {
+  ingredient: string
+  itemId: core.ItemId
+  previous: core.State
 }
 
 const MISSING_REASON: Record<MissingReason, string> = {
@@ -25,8 +36,18 @@ function flag(status: IngredientStatus): string | null {
   }
 }
 
-function IngredientLine({ ingredient, items }: { ingredient: recipes.Ingredient; items: ItemsById }) {
-  const flagged = flag(classifyIngredient(ingredient, items))
+function IngredientLine({
+  ingredient,
+  items,
+  onActuallyOut,
+}: {
+  ingredient: recipes.Ingredient
+  items: ItemsById
+  onActuallyOut: (ingredient: recipes.Ingredient, itemId: core.ItemId, previous: core.State) => void
+}) {
+  const status = classifyIngredient(ingredient, items)
+  const flagged = flag(status)
+  const item = ingredient.itemId === undefined ? undefined : items.get(ingredient.itemId)
   const amount = [ingredient.quantity, ingredient.quantity === undefined ? undefined : ingredient.unit]
     .filter((part) => part !== undefined)
     .join(' ')
@@ -36,15 +57,35 @@ function IngredientLine({ ingredient, items }: { ingredient: recipes.Ingredient;
       <span>{ingredient.name}</span>
       {ingredient.prepNote !== undefined && <span>, {ingredient.prepNote}</span>}
       {flagged !== null && <strong> {flagged}</strong>}
+      {status.kind === 'at home' && ingredient.itemId !== undefined && item !== undefined && (
+        <button onClick={() => onActuallyOut(ingredient, ingredient.itemId!, item.state)}>Actually out</button>
+      )}
     </li>
   )
 }
 
-export function RecipeView({ recipe, items, editHref }: RecipeViewProps) {
+export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewProps) {
+  const [marked, setMarked] = useState<MarkedOut | null>(null)
+  const [failure, setFailure] = useState<string | null>(null)
+
+  const write = (itemId: core.ItemId, state: core.State, then: () => void) => {
+    setFailure(null)
+    itemsPort.setItemState(itemId, state).then(then, (error: unknown) => {
+      setFailure(error instanceof Error ? error.message : String(error))
+    })
+  }
+
   return (
     <article>
       <h1>{recipe.title}</h1>
       <a href={editHref}>Edit</a>
+      {failure !== null && <p role="alert">{failure}</p>}
+      {marked !== null && (
+        <p role="status">
+          {marked.ingredient} marked out.{' '}
+          <button onClick={() => write(marked.itemId, marked.previous, () => setMarked(null))}>Undo</button>
+        </p>
+      )}
       {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
       {recipe.sourceUrl !== undefined && (
         <p>
@@ -53,7 +94,14 @@ export function RecipeView({ recipe, items, editHref }: RecipeViewProps) {
       )}
       <ul>
         {recipe.ingredients.map((ingredient, index) => (
-          <IngredientLine key={index} ingredient={ingredient} items={items} />
+          <IngredientLine
+            key={index}
+            ingredient={ingredient}
+            items={items}
+            onActuallyOut={(marking, itemId, previous) =>
+              write(itemId, 'out', () => setMarked({ ingredient: marking.name, itemId, previous }))
+            }
+          />
         ))}
       </ul>
       {recipe.prepSteps.length > 0 && (
