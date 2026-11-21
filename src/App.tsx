@@ -282,7 +282,7 @@ function RecipeScreen({ id, recipeStore, itemsPort }: AppProps & { id: RecipeId 
   if (entries === null || items === null) return null
   const entry = entries.find((e) => e.id === id)
   if (entry === undefined) return <RecipeNotFound />
-  return <RecipeView recipe={entry.recipe} items={items} itemsPort={itemsPort} editHref={editRecipeHref(id)} />
+  return <RecipeView recipeId={id} recipe={entry.recipe} items={items} itemsPort={itemsPort} editHref={editRecipeHref(id)} />
 }
 
 /** Edits the Recipe, keeping it open once found so a Soft delete's Undo outlives the Recipe leaving the watch. */

@@ -2,13 +2,15 @@ import { act, render, screen, within } from '@testing-library/preact'
 import { fireEvent } from '@testing-library/preact'
 import { useEffect, useState } from 'preact/hooks'
 import { describe, expect, it } from 'vitest'
-import type { core, recipes } from 'data-platform'
+import { recipes, type core } from 'data-platform'
 import { fakeItemsPort, type FakeItemsPort } from '../items/fake-items-port.ts'
 import type { WatchedItem } from '../items/items-port.ts'
+import { addToCatalogueHref } from '../routes.ts'
 import { RecipeView } from './RecipeView.tsx'
 import type { ItemsById } from './makeability.ts'
 
 const id = (value: string) => value as core.ItemId
+const rid = recipes.recipeId('r1')
 
 const items: ItemsById = new Map([
   [id('flour'), { state: 'enough' }],
@@ -29,6 +31,7 @@ describe('RecipeView ingredients', () => {
   it('shows each Ingredient with its quantity, unit and prep note', () => {
     render(
       <RecipeView
+        recipeId={rid}
         recipe={recipe({
           ingredients: [{ name: 'Flour', itemId: id('flour'), quantity: 200, unit: 'g', prepNote: 'sifted' }],
         })}
@@ -43,27 +46,27 @@ describe('RecipeView ingredients', () => {
   })
 
   it('flags an Unlinked Ingredient as Missing', () => {
-    render(<RecipeView recipe={recipe({ ingredients: [{ name: 'Salt' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Salt' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
     expect(line('Salt')).toHaveTextContent('Missing: Unlinked')
   })
 
   it('flags an Ingredient whose Item is out as Missing', () => {
     render(
-      <RecipeView recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
     expect(line('Eggs')).toHaveTextContent('Missing: out')
   })
 
   it('flags an Ingredient whose Item the Catalogue deleted as Missing', () => {
     render(
-      <RecipeView recipe={recipe({ ingredients: [{ name: 'Old', itemId: id('gone') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Old', itemId: id('gone') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
     expect(line('Old')).toHaveTextContent('Missing: deleted in the Catalogue')
   })
 
   it('flags an Ingredient whose Item is running low', () => {
     render(
-      <RecipeView recipe={recipe({ ingredients: [{ name: 'Milk', itemId: id('milk') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Milk', itemId: id('milk') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
     expect(line('Milk')).toHaveTextContent('Running low')
     expect(line('Milk')).not.toHaveTextContent('Missing')
@@ -71,7 +74,7 @@ describe('RecipeView ingredients', () => {
 
   it('flags an Assumed Ingredient', () => {
     render(
-      <RecipeView recipe={recipe({ ingredients: [{ name: 'Water', assumed: true }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Water', assumed: true }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
     expect(line('Water')).toHaveTextContent('Assumed')
   })
@@ -81,6 +84,7 @@ describe('RecipeView sections', () => {
   it('shows Prep Steps as their own section before the Steps', () => {
     render(
       <RecipeView
+        recipeId={rid}
         recipe={recipe({ prepSteps: ['Sift the flour'], steps: ['Whisk', 'Fry'] })}
         items={items}
         itemsPort={fakeItemsPort([])}
@@ -95,13 +99,14 @@ describe('RecipeView sections', () => {
   })
 
   it('leaves out the Prep Steps section when there are none', () => {
-    render(<RecipeView recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
     expect(screen.queryByRole('heading', { name: 'Prep Steps' })).toBeNull()
   })
 
   it('shows Servings, the source link and notes when present', () => {
     render(
       <RecipeView
+        recipeId={rid}
         recipe={recipe({ servings: 4, sourceUrl: 'https://example.com/p', notes: 'Rest the batter' })}
         items={items}
         itemsPort={fakeItemsPort([])}
@@ -114,14 +119,14 @@ describe('RecipeView sections', () => {
   })
 
   it('leaves out Servings, the source link and notes when absent', () => {
-    render(<RecipeView recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
     expect(screen.queryByText(/Servings/)).toBeNull()
     expect(screen.queryByRole('link', { name: 'Source' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Notes' })).toBeNull()
   })
 
   it('opens the editor from an Edit button in the top app bar', () => {
-    render(<RecipeView recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/recipes/r1/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/recipes/r1/edit" />)
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Edit' }))
     expect(location.hash).toBe('#/recipes/r1/edit')
   })
@@ -149,7 +154,7 @@ describe('RecipeView actually out', () => {
         ),
       [port],
     )
-    return <RecipeView recipe={recipe({ ingredients })} items={current} itemsPort={port} editHref="#/edit" />
+    return <RecipeView recipeId={rid} recipe={recipe({ ingredients })} items={current} itemsPort={port} editHref="#/edit" />
   }
 
   const renderWith = (port: FakeItemsPort, ...ingredients: recipes.Ingredient[]) =>
@@ -266,9 +271,27 @@ async function click(element: HTMLElement) {
 
 describe('RecipeView top app bar', () => {
   it('titles the bar with the Recipe and offers a back arrow', () => {
-    render(<RecipeView recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
     const bar = within(screen.getByRole('banner'))
     expect(bar.getByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
     expect(bar.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+  })
+})
+
+describe('RecipeView Add to Catalogue', () => {
+  it('offers the Catalogue hand-off on an Unlinked Ingredient only', () => {
+    render(
+      <RecipeView
+        recipeId={rid}
+        recipe={recipe({ ingredients: [{ name: 'Flour', itemId: id('flour') }, { name: 'Salt' }, { name: 'Pepper', assumed: true }, { name: 'Eggs', itemId: id('eggs') }] })}
+        items={items}
+        itemsPort={fakeItemsPort([])}
+        editHref="#/edit"
+      />,
+    )
+    expect(screen.getAllByText('Add to Catalogue')).toHaveLength(1)
+    const href = within(line('Salt')).getByText('Add to Catalogue').getAttribute('href')!
+    expect(href).toBe(addToCatalogueHref(rid, 1, 'Salt'))
+    expect(href).toMatch(/^\/home-catalogue\/#\/items\?add=Salt&return=/)
   })
 })

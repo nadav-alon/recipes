@@ -5,10 +5,13 @@ import { Button } from 'household-ui/ui/Button.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import type { ItemsPort } from '../items/items-port.ts'
 import { BackButton } from '../shell/BackButton.tsx'
-import { HOME_HREF, navigate } from '../routes.ts'
+import { HOME_HREF, addToCatalogueHref, navigate } from '../routes.ts'
+import type { RecipeId } from './recipe-store.ts'
 import { classifyIngredient, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
 
 export interface RecipeViewProps {
+  /** The Recipe's id, which the Catalogue's return URL names. */
+  recipeId: RecipeId
   recipe: recipes.Recipe
   items: ItemsById
   /** Where "actually out" writes an Item's State. */
@@ -60,11 +63,14 @@ function StepList({ steps }: { steps: readonly string[] }) {
 
 function IngredientLine({
   ingredient,
+  catalogueHref,
   items,
   busy,
   onActuallyOut,
 }: {
   ingredient: recipes.Ingredient
+  /** The Catalogue hand-off for an Unlinked Ingredient; absent when it has no name to hand over. */
+  catalogueHref?: string
   items: ItemsById
   busy: boolean
   onActuallyOut: (marking: MarkedOut) => void
@@ -87,13 +93,17 @@ function IngredientLine({
           >
             Actually out
           </Button>
+        ) : status.kind === 'missing' && status.reason === 'unlinked' && catalogueHref !== undefined ? (
+          <a href={catalogueHref} aria-label={`Add ${ingredient.name.trim()} to Catalogue`}>
+            Add to Catalogue
+          </a>
         ) : undefined
       }
     />
   )
 }
 
-export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewProps) {
+export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: RecipeViewProps) {
   const [marked, setMarked] = useState<ReadonlyMap<core.ItemId, MarkedOut>>(new Map())
   const [inFlight, setInFlight] = useState<ReadonlySet<core.ItemId>>(new Set())
   const [failure, setFailure] = useState<string | null>(null)
@@ -159,6 +169,7 @@ export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewPro
             <IngredientLine
               key={index}
               ingredient={ingredient}
+              catalogueHref={ingredient.name.trim() === '' ? undefined : addToCatalogueHref(recipeId, index, ingredient.name.trim())}
               items={items}
               busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
               onActuallyOut={(marking) => setItemState(marking.itemId, 'out', () => remember(marking))}
