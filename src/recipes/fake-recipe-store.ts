@@ -5,6 +5,11 @@ import { validatedFields, type Recipe, type RecipeEntry, type RecipeId, type Rec
 export interface FakeRecipeStore extends RecipeStore {
   /** Ends every watch, calling each one's `onError` with `error`, as the real store does on a denied read. */
   failWatches(error: Error): void
+  /**
+   * Makes every later `create` be refused by the "server" once it has resolved, as the real store is by a
+   * rules denial: the Recipe leaves `watch` and the `create`'s `onRefused` is called with `error`.
+   */
+  refuseCreates(error: Error): void
 }
 
 /**
@@ -17,6 +22,7 @@ export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): FakeRecip
   )
   const watchers = new Map<(entries: readonly RecipeEntry[]) => void, ((error: Error) => void) | undefined>()
   let nextId = 1
+  let creationRefusal: Error | null = null
 
   const live = (): RecipeEntry[] =>
     [...stored].filter(([, s]) => !s.deleted).map(([id, s]) => ({ id, recipe: s.recipe }))
@@ -38,11 +44,22 @@ export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): FakeRecip
       watchers.clear()
       failing.forEach((onError) => onError?.(error))
     },
-    async create(recipe) {
+    refuseCreates(error) {
+      creationRefusal = error
+    },
+    async create(recipe, onRefused) {
       const fields = validatedFields(recipe)
       const id = recipes.recipeId(`fake-${nextId++}`)
       stored.set(id, { recipe: fields, deleted: false })
       notify()
+      const refusal = creationRefusal
+      if (refusal) {
+        setTimeout(() => {
+          stored.delete(id)
+          notify()
+          onRefused?.(refusal)
+        }, 0)
+      }
       return id
     },
     async update(id, recipe) {

@@ -67,4 +67,18 @@ describe('fakeRecipeStore', () => {
 
     expect(onChange).toHaveBeenCalledTimes(1)
   })
+
+  it('refuses a create after it has resolved when told to: the Recipe leaves watch and onRefused is called', async () => {
+    const store = fakeRecipeStore()
+    store.refuseCreates(new Error('Permission denied'))
+    const onChange = vi.fn()
+    store.watch(onChange)
+    const onRefused = vi.fn()
+
+    const id = await store.create(pancakes, onRefused)
+    expect(onChange.mock.lastCall?.[0].map((e: { id: string }) => e.id)).toEqual([id])
+
+    await vi.waitFor(() => expect(onRefused).toHaveBeenCalledWith(new Error('Permission denied')))
+    expect(onChange.mock.lastCall?.[0]).toEqual([])
+  })
 })

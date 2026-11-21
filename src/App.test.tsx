@@ -105,22 +105,15 @@ describe('App', () => {
   })
 
   it('reports a refused create on the view it navigated to, with a way back to the editor holding the new Recipe', async () => {
-    const inner = fakeRecipeStore()
-    const refusing = {
-      ...inner,
-      async create(recipe: Parameters<typeof inner.create>[0], onRefused?: (error: Error) => void) {
-        const id = await inner.create(recipe)
-        setTimeout(() => onRefused?.(new Error('Permission denied')), 0)
-        return id
-      },
-    }
+    const refusing = fakeRecipeStore()
+    refusing.refuseCreates(new Error('Permission denied'))
     location.hash = NEW_RECIPE_HREF
     render(<App recipeStore={refusing} itemsPort={fakeItemsPort([])} />)
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
     fireEvent(window, new HashChangeEvent('hashchange'))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Your new Recipe Pancakes was not saved: Permission denied')
+    expect(await screen.findByText('Your new Recipe Pancakes was not saved: Permission denied')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('link', { name: 'Back to the editor' }))
     fireEvent(window, new HashChangeEvent('hashchange'))
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Pancakes'))

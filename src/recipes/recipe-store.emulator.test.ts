@@ -89,6 +89,17 @@ describe('firestoreRecipeStore', () => {
       expect((await current()).map((e) => [e.id, e.recipe.title])).toEqual([[id, 'Pancakes']])
     })
 
+    it('calls onRefused when the rules deny the write, and nothing is stored', async () => {
+      const outsider = firestoreRecipeStore(emulator.client('mallory'))
+      const refused = vi.fn()
+
+      await outsider.create(pancakes, refused)
+
+      await vi.waitFor(() => expect(refused).toHaveBeenCalledTimes(1))
+      expect(refused.mock.calls[0][0]).toBeInstanceOf(Error)
+      expect(await current()).toEqual([])
+    })
+
     it('refuses an invalid Recipe without a write', async () => {
       // The rules only look at the first Ingredient, so only the schema check catches the second.
       const invalid = { ...pancakes, ingredients: [...pancakes.ingredients, { name: '' }] }
