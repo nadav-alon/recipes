@@ -147,6 +147,12 @@ describe.each([
 })
 
 describe('RecipeEditor validation', () => {
+  it('shows each problem as a household-ui field error', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(screen.getByRole('alert')).toHaveClass('ui-field__error')
+  })
+
   it('blocks saving a Recipe with no title and says why', () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { Button } from 'household-ui/ui/Button.tsx'
+import { FieldError } from 'household-ui/ui/FieldError.tsx'
+import { ListRow } from 'household-ui/ui/ListRow.tsx'
+import { Select } from 'household-ui/ui/Select.tsx'
+import { TextArea } from 'household-ui/ui/TextArea.tsx'
+import { TextField } from 'household-ui/ui/TextField.tsx'
 import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { BackButton } from '../shell/BackButton.tsx'
@@ -105,25 +111,23 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
       <TopAppBar title={entry ? 'Edit Recipe' : 'New Recipe'}>
         <form onSubmit={save}>
           <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
-          <label>
-            Title
-            <input value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
-          </label>
-          <label>
-            Servings
-            <input inputMode="numeric" value={draft.servings} onInput={(e) => change({ servings: e.currentTarget.value })} />
-          </label>
-          <label>
-            Source URL
-            <input type="url" value={draft.sourceUrl} onInput={(e) => change({ sourceUrl: e.currentTarget.value })} />
-          </label>
-          <label>
-            Notes
-            <textarea value={draft.notes} onInput={(e) => change({ notes: e.currentTarget.value })} />
-          </label>
+          <TextField label="Title" value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
+          <TextField
+            label="Servings"
+            inputMode="numeric"
+            value={draft.servings}
+            onInput={(e) => change({ servings: e.currentTarget.value })}
+          />
+          <TextField
+            label="Source URL"
+            type="url"
+            value={draft.sourceUrl}
+            onInput={(e) => change({ sourceUrl: e.currentTarget.value })}
+          />
+          <TextArea label="Notes" value={draft.notes} onInput={(e) => change({ notes: e.currentTarget.value })} />
           <fieldset>
             <legend>Ingredients</legend>
-            {itemsFailed && <p role="alert">The Items could not be loaded, so Ingredients cannot be linked.</p>}
+            <FieldError id="items-load-error" error={itemsFailed ? 'The Items could not be loaded, so Ingredients cannot be linked.' : undefined} />
             {draft.ingredients.map((ingredient, i) => (
               <IngredientRow
                 key={ingredient.key}
@@ -138,28 +142,28 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
                 onRemove={() => change({ ingredients: without(draft.ingredients, i) })}
               />
             ))}
-            <button type="button" onClick={() => change({ ingredients: [...draft.ingredients, emptyIngredient()] })}>
+            <Button variant="tonal" onClick={() => change({ ingredients: [...draft.ingredients, emptyIngredient()] })}>
               Add Ingredient
-            </button>
+            </Button>
           </fieldset>
           <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
           <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
           {blockers.length > 0 && (
-            <div role="alert">
+            <div>
               <p>This Recipe cannot be saved yet:</p>
-              <ul>
-                {blockers.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
+              {blockers.map((reason) => (
+                <FieldError key={reason} id={`recipe-problem-${reason}`} error={reason} />
+              ))}
             </div>
           )}
-          {failure !== null && <p role="alert">{failure}</p>}
-          <button type="submit" disabled={deleted}>Save</button>
+          <FieldError id="recipe-failure" error={failure ?? undefined} />
+          <Button type="submit" disabled={deleted}>
+            Save
+          </Button>
           {entry && (
-            <button type="button" disabled={deleted} onClick={softDelete}>
+            <Button variant="text" destructive disabled={deleted} onClick={softDelete}>
               Delete Recipe
-            </button>
+            </Button>
           )}
         </form>
       </TopAppBar>
@@ -194,15 +198,15 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
   const link = linkStatus(ingredient.link, items)
   return (
     <div role="group" aria-label={row}>
-      <input aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
-      <input
-        aria-label={`${row} quantity`}
+      <TextField label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
+      <TextField
+        label={`${row} quantity`}
         inputMode="decimal"
         value={ingredient.quantity}
         onInput={(e) => onChange({ quantity: e.currentTarget.value })}
       />
-      <select
-        aria-label={`${row} unit`}
+      <Select
+        label={`${row} unit`}
         value={ingredient.unit}
         onChange={(e) => onChange({ unit: e.currentTarget.value as IngredientUnit | '' })}
       >
@@ -212,9 +216,9 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
             {unit}
           </option>
         ))}
-      </select>
-      <input
-        aria-label={`${row} prep note`}
+      </Select>
+      <TextField
+        label={`${row} prep note`}
         value={ingredient.prepNote}
         onInput={(e) => onChange({ prepNote: e.currentTarget.value })}
       />
@@ -231,19 +235,23 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
         </p>
       )}
       {ingredient.link.kind === 'linked' && (
-        <button type="button" onClick={() => onChange({ link: UNLINKED })}>
+        <Button variant="text" onClick={() => onChange({ link: UNLINKED })}>
           Unlink {row}
-        </button>
+        </Button>
       )}
-      <label>
-        <input
-          type="checkbox"
-          aria-label={`${row} assumed`}
-          checked={ingredient.link.kind === 'assumed'}
-          onChange={(e) => onChange({ link: e.currentTarget.checked ? ASSUMED : UNLINKED })}
+      <ul>
+        <ListRow
+          headline="Assumed"
+          control={
+            <input
+              type="checkbox"
+              aria-label={`${row} assumed`}
+              checked={ingredient.link.kind === 'assumed'}
+              onChange={(e) => onChange({ link: e.currentTarget.checked ? ASSUMED : UNLINKED })}
+            />
+          }
         />
-        Assumed
-      </label>
+      </ul>
       <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
@@ -321,8 +329,8 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
         const row = `${label} ${i + 1}`
         return (
           <div key={step.key} role="group" aria-label={row}>
-            <textarea
-              aria-label={`${row} text`}
+            <TextArea
+              label={`${row} text`}
               value={step.text}
               onInput={(e) => {
                 const text = e.currentTarget.value
@@ -339,9 +347,9 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
           </div>
         )
       })}
-      <button type="button" onClick={() => onChange([...steps, emptyStep()])}>
+      <Button variant="tonal" onClick={() => onChange([...steps, emptyStep()])}>
         Add {label}
-      </button>
+      </Button>
     </fieldset>
   )
 }
@@ -370,15 +378,15 @@ interface RowControlsProps {
 function RowControls({ label, first, last, onMove, onRemove }: RowControlsProps) {
   return (
     <>
-      <button type="button" disabled={first} onClick={() => onMove(-1)}>
+      <Button variant="text" disabled={first} onClick={() => onMove(-1)}>
         Move {label} up
-      </button>
-      <button type="button" disabled={last} onClick={() => onMove(1)}>
+      </Button>
+      <Button variant="text" disabled={last} onClick={() => onMove(1)}>
         Move {label} down
-      </button>
-      <button type="button" onClick={onRemove}>
+      </Button>
+      <Button variant="text" onClick={onRemove}>
         Remove {label}
-      </button>
+      </Button>
     </>
   )
 }
