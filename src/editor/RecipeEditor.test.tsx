@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/preact'
 import { describe, expect, it, vi } from 'vitest'
+import { core, recipes } from 'data-platform'
 import { fakeRecipeStore } from '../recipes/fake-recipe-store.ts'
 import type { RecipeEntry } from '../recipes/recipe-store.ts'
 import { RecipeEditor } from './RecipeEditor.tsx'
@@ -130,5 +131,41 @@ describe('RecipeEditor validation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('RecipeEditor editing', () => {
+  const beef = { name: 'Beef', itemId: core.itemId('beef'), quantity: 500, unit: 'g' as const }
+  const water = { name: 'Water', assumed: true as const }
+  const entry: RecipeEntry = {
+    id: recipes.recipeId('stew'),
+    recipe: { title: 'Stew', ingredients: [beef, water], prepSteps: ['Cube'], steps: ['Simmer'], servings: 4, notes: 'Nice' },
+  }
+
+  it('shows the Recipe and updates it under the same id, keeping links and Assumed marks', async () => {
+    const store = fakeRecipeStore([entry])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} entry={entry} onSaved={onSaved} />)
+    expect(screen.getByLabelText('Title')).toHaveValue('Stew')
+    expect(screen.getByLabelText('Ingredient 1 unit')).toHaveValue('g')
+
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Beef stew' } })
+    fireEvent.input(screen.getByLabelText('Servings'), { target: { value: '' } })
+    fireEvent.input(screen.getByLabelText('Ingredient 1 quantity'), { target: { value: '600' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(stored(store)).toEqual([
+      {
+        id: 'stew',
+        recipe: {
+          title: 'Beef stew',
+          ingredients: [{ ...beef, quantity: 600 }, water],
+          prepSteps: ['Cube'],
+          steps: ['Simmer'],
+          notes: 'Nice',
+        },
+      },
+    ])
   })
 })
