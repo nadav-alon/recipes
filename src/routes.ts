@@ -40,17 +40,28 @@ export function addToCatalogueHref(catalogue: string, name: string, returnUrl: s
 
 /** The screen a URL hash names; any hash that names none is the Home screen. */
 export function parseRoute(hash: string): Route {
-  const [root, id, action, ...rest] = hash.replace(/^#\/?/, '').split('/')
-  if (root !== 'recipes' || !id || rest.length > 0) return { screen: 'home' }
+  const [root, id, action, position, ...rest] = hash.replace(/^#\/?/, '').split('/')
+  if (root !== 'recipes' || !id) return { screen: 'home' }
+  if (action === 'ingredients') {
+    const ingredient = Number(position)
+    if (!/^\d+$/.test(position ?? '') || rest.length > 0 || !Number.isSafeInteger(ingredient)) return { screen: 'home' }
+    const recipeId = decodeId(id)
+    return recipeId === undefined ? { screen: 'home' } : { screen: 'catalogue-return', id: recipeId, ingredient }
+  }
+  if (position !== undefined) return { screen: 'home' }
   if (action === undefined && id === 'new') return { screen: 'new-recipe' }
   if (action !== undefined && action !== 'edit') return { screen: 'home' }
-  let decoded: string
+  const recipeId = decodeId(id)
+  if (recipeId === undefined) return { screen: 'home' }
+  return { screen: action === undefined ? 'recipe' : 'edit-recipe', id: recipeId }
+}
+
+function decodeId(encoded: string): RecipeId | undefined {
   try {
-    decoded = decodeURIComponent(id)
+    return recipes.recipeId(decodeURIComponent(encoded))
   } catch {
-    return { screen: 'home' }
+    return undefined
   }
-  return { screen: action === undefined ? 'recipe' : 'edit-recipe', id: recipes.recipeId(decoded) }
 }
 
 /** The current route, following the hash as links, Back and Forward change it. */

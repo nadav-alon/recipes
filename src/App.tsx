@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
+import { core } from 'data-platform'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import type { ItemsPort } from './items/items-port.ts'
 import { useItemsById } from './items/use-items-by-id.ts'
@@ -65,6 +66,15 @@ export function App({ recipeStore, itemsPort }: AppProps) {
           />
         )
       }
+      case 'catalogue-return':
+        return (
+          <CatalogueReturnScreen
+            key={`${route.id}/${route.ingredient}`}
+            id={route.id}
+            ingredient={route.ingredient}
+            recipeStore={recipeStore}
+          />
+        )
       case 'new-recipe': {
         const target: SaveTarget = { kind: 'new' }
         return (
@@ -198,6 +208,38 @@ function RecipeNotFound() {
       </main>
     </TopAppBar>
   )
+}
+
+/**
+ * Where the Catalogue's add-Item hand-off returns to. A returned `itemId` links the Ingredient to that Item
+ * and saves the Recipe; without one nothing changes. Either way the user lands on the Recipe's view, and the
+ * `itemId` leaves the URL first so that reloading cannot link twice.
+ */
+function CatalogueReturnScreen({ id, ingredient, recipeStore }: { id: RecipeId; ingredient: number; recipeStore: RecipeStore }) {
+  const { entries, failed } = useRecipeEntries(recipeStore)
+  const [saveFailure, setSaveFailure] = useState<string | null>(null)
+  const handled = useRef(false)
+  const entry = entries?.find((e) => e.id === id)
+
+  useEffect(() => {
+    if (entry === undefined || handled.current) return
+    handled.current = true
+    const itemId = new URLSearchParams(location.search).get('itemId')
+    history.replaceState(null, '', `${location.pathname}${location.hash}`)
+    const target = entry.recipe.ingredients[ingredient]
+    if (itemId === null || itemId === '' || target === undefined) return navigate(recipeHref(id))
+    const { assumed: _assumed, ...rest } = target
+    const ingredients = entry.recipe.ingredients.map((candidate, i) => (i === ingredient ? { ...rest, itemId: core.itemId(itemId) } : candidate))
+    recipeStore
+      .update(id, { ...entry.recipe, ingredients })
+      .then(() => navigate(recipeHref(id)), (error: Error) => setSaveFailure(error.message))
+  }, [entry, id, ingredient, recipeStore])
+
+  if (failed) return <LoadFailed />
+  if (entries === null) return null
+  if (entry === undefined) return <RecipeNotFound />
+  if (saveFailure !== null) return <p role="alert">The Item could not be linked: {saveFailure}</p>
+  return null
 }
 
 function RecipeScreen({ id, recipeStore, itemsPort }: AppProps & { id: RecipeId }) {
