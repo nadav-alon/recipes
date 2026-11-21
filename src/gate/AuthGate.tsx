@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import {
   authClient,
@@ -9,7 +9,15 @@ import {
 } from 'data-platform/client'
 
 /** The Catalogue shares this origin; it is where a Household is claimed and joined. */
-export const CATALOGUE_URL = '/home-catalogue/'
+const DEFAULT_CATALOGUE_URL = '/home-catalogue/'
+
+/**
+ * Where the Catalogue lives. It shares this origin when deployed; set `VITE_CATALOGUE_URL` where it
+ * does not, as under `vite --mode local`.
+ */
+export function catalogueUrl(): string {
+  return import.meta.env.VITE_CATALOGUE_URL || DEFAULT_CATALOGUE_URL
+}
 
 export type AuthGateProps = {
   client: FirebaseClient
@@ -30,7 +38,7 @@ type GateState =
  */
 export function AuthGate({ client, children }: AuthGateProps) {
   const [state, setState] = useState<GateState>({ status: 'checking' })
-  const auth = authClient(client.app)
+  const auth = useMemo(() => authClient(client.app), [client])
   /** Bumped on every lookup, sign-out and unmount, so only the latest lookup may set state. */
   const generation = useRef(0)
 
@@ -52,7 +60,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
   )
 
   useEffect(() => {
-    const unwatch = authClient(client.app).onAuthChange((user) => {
+    const unwatch = auth.onAuthChange((user) => {
       if (user === null) {
         generation.current++
         setState({ status: 'signed-out' })
@@ -64,7 +72,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
       generation.current++
       unwatch()
     }
-  }, [client, resolveMembership])
+  }, [auth, resolveMembership])
 
   switch (state.status) {
     case 'checking':
@@ -84,7 +92,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
           <h1>Household not claimed</h1>
           <p>No one has claimed this Household yet. Claim it through the Catalogue.</p>
           <CatalogueLink />
-          <button onClick={() => void auth.signOut()}>Sign out</button>
+          <SignOutButton onClick={() => void auth.signOut()} />
         </main>
       )
 
@@ -95,7 +103,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
           <p>Signed in as {state.user.email}, who is not a Member of this Household.</p>
           <p>Join through the Catalogue, then come back.</p>
           <CatalogueLink />
-          <button onClick={() => void auth.signOut()}>Sign out</button>
+          <SignOutButton onClick={() => void auth.signOut()} />
         </main>
       )
 
@@ -112,7 +120,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
           >
             Retry
           </button>
-          <button onClick={() => void auth.signOut()}>Sign out</button>
+          <SignOutButton onClick={() => void auth.signOut()} />
         </main>
       )
 
@@ -124,7 +132,11 @@ export function AuthGate({ client, children }: AuthGateProps) {
 function CatalogueLink() {
   return (
     <p>
-      <a href={CATALOGUE_URL}>Open the Catalogue</a>
+      <a href={catalogueUrl()}>Open the Catalogue</a>
     </p>
   )
+}
+
+function SignOutButton({ onClick }: { onClick: () => void }) {
+  return <button onClick={onClick}>Sign out</button>
 }

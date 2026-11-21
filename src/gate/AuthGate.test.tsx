@@ -68,6 +68,18 @@ describe('AuthGate', () => {
     expect(screen.queryByText('the app')).toBeNull()
   })
 
+  it('points the link at VITE_CATALOGUE_URL when set', async () => {
+    vi.stubEnv('VITE_CATALOGUE_URL', 'http://localhost:5173/home-catalogue/')
+    mocks.isHouseholdMember.mockResolvedValue(false)
+    renderGate()
+    mocks.listener!(user)
+    expect(await screen.findByRole('link', { name: /catalogue/i })).toHaveAttribute(
+      'href',
+      'http://localhost:5173/home-catalogue/',
+    )
+    vi.unstubAllEnvs()
+  })
+
   it('sends a signed-in user to the Catalogue to claim when the Household is unclaimed', async () => {
     mocks.householdExists.mockResolvedValue(false)
     renderGate()
