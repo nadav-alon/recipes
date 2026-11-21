@@ -54,6 +54,25 @@ describe('Root', () => {
   })
 })
 
+describe('Root and deep links', () => {
+  const stored = { apiKey: 'k', authDomain: 'a', projectId: 'p', storageBucket: 's', messagingSenderId: '1', appId: 'x' }
+
+  it('keeps a screen URL through setup, so it is still there once the gate passes', () => {
+    history.replaceState(null, '', '/#/recipes/r1/edit')
+    render(<Root />)
+    expect(screen.getByRole('heading', { name: 'Set up' })).toBeInTheDocument()
+    expect(location.hash).toBe('#/recipes/r1/edit')
+  })
+
+  it('keeps a screen URL at the sign-in gate', () => {
+    localStorage.setItem('data-platform:firebase-config', JSON.stringify(stored))
+    history.replaceState(null, '', '/#/recipes/r1')
+    render(<Root />)
+    expect(mocks.initFirebase).toHaveBeenCalled()
+    expect(location.hash).toBe('#/recipes/r1')
+  })
+})
+
 describe('Root and #config= links', () => {
   const stored = {
     apiKey: 'k',

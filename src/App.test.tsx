@@ -31,6 +31,21 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', editRecipeHref(r1))
   })
 
+  it('opens a Recipe from its link on Home, then its editor from the Edit link', async () => {
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Omelette' }))
+    expect(await screen.findByRole('heading', { name: 'Omelette' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Edit' }))
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Omelette'))
+  })
+
+  it('opens the empty editor from the New Recipe link on Home', async () => {
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'New Recipe' }))
+    expect(await screen.findByRole('heading', { name: 'New Recipe' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Title')).toHaveValue('')
+  })
+
   it('follows the URL as it changes, from Home to a Recipe', async () => {
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     await act(() => {
