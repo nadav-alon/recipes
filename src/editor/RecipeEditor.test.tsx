@@ -21,6 +21,8 @@ function itemsPort(items: readonly WatchedItem[] = CATALOGUE) {
 }
 
 const field = (name: string) => screen.getByLabelText(name)
+const openPicker = (row: string) => fireEvent.click(screen.getByRole('button', { name: `Choose Item for ${row}` }))
+const pickerRow = (name: string) => screen.getByRole('button', { name })
 
 function stored(store: ReturnType<typeof fakeRecipeStore>): RecipeEntry[] {
   let entries: readonly RecipeEntry[] = []
@@ -147,6 +149,12 @@ describe.each([
 })
 
 describe('RecipeEditor validation', () => {
+  it('shows each problem as a household-ui field error', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(screen.getByRole('alert')).toHaveClass('ui-field__error')
+  })
+
   it('blocks saving a Recipe with no title and says why', () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
@@ -325,14 +333,17 @@ describe('RecipeEditor linking an Ingredient to an Item', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
     fireEvent.input(field('Ingredient 1 name'), { target: { value: 'Milk' } })
 
-    expect(screen.queryAllByRole('button', { name: /^Link Ingredient 1 to / })).toHaveLength(0)
+    openPicker('Ingredient 1')
+    expect(screen.getByRole('dialog', { name: 'Ingredient 1 Item' })).toBeInTheDocument()
+    expect(screen.queryAllByRole('button', { name: /^(Milk|Oat milk) / })).toHaveLength(0)
     fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'MILK' } })
-    expect(screen.getAllByRole('button', { name: /^Link Ingredient 1 to / }).map((b) => b.textContent)).toEqual([
-      'Link Ingredient 1 to Milk (running low)',
-      'Link Ingredient 1 to Oat milk (enough)',
+    expect(screen.getAllByRole('button', { name: /^(Milk|Oat milk) / }).map((b) => b.textContent)).toEqual([
+      'Milkrunning low',
+      'Oat milkenough',
     ])
 
-    fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 1 to Oat milk (enough)' }))
+    fireEvent.click(pickerRow('Oat milk enough'))
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByText('Linked to Oat milk (enough)')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -392,8 +403,9 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     const store = fakeRecipeStore([entry])
     const onSaved = vi.fn()
     render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    openPicker('Ingredient 2')
     fireEvent.input(field('Ingredient 2 Item search'), { target: { value: 'flour' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 2 to Flour (out)' }))
+    fireEvent.click(pickerRow('Flour out'))
     expect((screen.getByLabelText('Ingredient 2 assumed') as HTMLInputElement).checked).toBe(false)
 
     expect((await save(store, onSaved))[1]).toEqual({ name: 'Water', itemId: 'flour' })
@@ -417,8 +429,9 @@ describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
     expect(screen.getByText(says)).toBeTruthy()
     expect(screen.queryByRole('button', { name: /Old milk/ })).toBeNull()
 
+    openPicker('Ingredient 1')
     fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'milk' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 1 to Milk (running low)' }))
+    fireEvent.click(pickerRow('Milk running low'))
     expect(screen.queryByText(says)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(onSaved).toHaveBeenCalled())

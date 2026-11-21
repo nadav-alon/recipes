@@ -1,9 +1,11 @@
 import { useState } from 'preact/hooks'
 import type { core, recipes } from 'data-platform'
-import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
+import { Button } from 'household-ui/ui/Button.tsx'
+import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import type { ItemsPort } from '../items/items-port.ts'
 import { BackButton } from '../shell/BackButton.tsx'
-import { HOME_HREF } from '../routes.ts'
+import { HOME_HREF, navigate } from '../routes.ts'
 import { classifyIngredient, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
 
 export interface RecipeViewProps {
@@ -40,6 +42,22 @@ function flag(status: IngredientStatus): string | null {
   }
 }
 
+/** The parts that are present, joined for a row's text. */
+function joinParts(parts: ReadonlyArray<string | number | null | undefined>, separator: string): string {
+  return parts.filter((part) => part !== undefined && part !== null && part !== '').join(separator)
+}
+
+/** Steps in order; the numbers come from a CSS counter (screens.css), so a row's text stays the step alone. */
+function StepList({ steps }: { steps: readonly string[] }) {
+  return (
+    <ol class="step-list">
+      {steps.map((step, index) => (
+        <ListRow key={index} headline={step} />
+      ))}
+    </ol>
+  )
+}
+
 function IngredientLine({
   ingredient,
   items,
@@ -54,24 +72,24 @@ function IngredientLine({
   const status = classifyIngredient(ingredient, items)
   const flagged = flag(status)
   const item = ingredient.itemId === undefined ? undefined : items.get(ingredient.itemId)
-  const amount = [ingredient.quantity, ingredient.quantity === undefined ? undefined : ingredient.unit]
-    .filter((part) => part !== undefined)
-    .join(' ')
+  const amount = joinParts([ingredient.quantity, ingredient.quantity === undefined ? undefined : ingredient.unit], ' ')
   return (
-    <li aria-label={ingredient.name}>
-      {amount !== '' && <span>{amount} </span>}
-      <span>{ingredient.name}</span>
-      {ingredient.prepNote !== undefined && <span>, {ingredient.prepNote}</span>}
-      {flagged !== null && <strong> {flagged}</strong>}
-      {status.kind === 'at home' && ingredient.itemId !== undefined && item !== undefined && (
-        <button
-          disabled={busy}
-          onClick={() => onActuallyOut({ ingredientName: ingredient.name, itemId: ingredient.itemId!, previous: item.state })}
-        >
-          Actually out
-        </button>
-      )}
-    </li>
+    <ListRow
+      headline={ingredient.name}
+      supporting={joinParts([amount, ingredient.prepNote, flagged], ', ') || undefined}
+      muted={status.kind === 'missing'}
+      trailing={
+        status.kind === 'at home' && ingredient.itemId !== undefined && item !== undefined ? (
+          <Button
+            variant="tonal"
+            disabled={busy}
+            onClick={() => onActuallyOut({ ingredientName: ingredient.name, itemId: ingredient.itemId!, previous: item.state })}
+          >
+            Actually out
+          </Button>
+        ) : undefined
+      }
+    />
   )
 }
 
@@ -112,17 +130,22 @@ export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewPro
     <TopAppBar title={recipe.title}>
       <article>
         <BackButton fallback={HOME_HREF} />
-        <a href={editHref}>Edit</a>
+        <TopAppBarActions>
+          <Button variant="text" onClick={() => navigate(editHref)}>
+            Edit
+          </Button>
+        </TopAppBarActions>
         {failure !== null && <p role="alert">{failure}</p>}
         {undoable.map((marking) => (
           <p role="status" key={marking.itemId}>
             {marking.ingredientName}'s Item marked out.{' '}
-            <button
+            <Button
+              variant="text"
               disabled={inFlight.has(marking.itemId)}
               onClick={() => setItemState(marking.itemId, marking.previous, () => forget(marking.itemId))}
             >
               Undo {marking.ingredientName}
-            </button>
+            </Button>
           </p>
         ))}
         {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
@@ -145,20 +168,12 @@ export function RecipeView({ recipe, items, itemsPort, editHref }: RecipeViewPro
         {recipe.prepSteps.length > 0 && (
           <section>
             <h2>Prep Steps</h2>
-            <ol>
-              {recipe.prepSteps.map((step, index) => (
-                <li key={index}>{step}</li>
-              ))}
-            </ol>
+            <StepList steps={recipe.prepSteps} />
           </section>
         )}
         <section>
           <h2>Steps</h2>
-          <ol>
-            {recipe.steps.map((step, index) => (
-              <li key={index}>{step}</li>
-            ))}
-          </ol>
+          <StepList steps={recipe.steps} />
         </section>
         {recipe.notes !== undefined && (
           <section>

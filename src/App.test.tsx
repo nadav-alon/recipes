@@ -24,24 +24,25 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Makeable' })).toBeInTheDocument()
   })
 
-  it('opens a Recipe directly from its URL, with an Edit link to its editor', () => {
+  it('opens a Recipe directly from its URL, with an Edit button to its editor', () => {
     location.hash = recipeHref(r1)
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('heading', { name: 'Omelette' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', editRecipeHref(r1))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(location.hash).toBe(editRecipeHref(r1))
   })
 
-  it('opens a Recipe from its link on Home, then its editor from the Edit link', async () => {
+  it('opens a Recipe from its link on Home, then its editor from the Edit button', async () => {
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     fireEvent.click(await screen.findByRole('link', { name: 'Omelette' }))
     expect(await screen.findByRole('heading', { name: 'Omelette' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('link', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Omelette'))
   })
 
-  it('opens the empty editor from the New Recipe link on Home', async () => {
+  it('opens the empty editor from the New Recipe button on Home', async () => {
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
-    fireEvent.click(await screen.findByRole('link', { name: 'New Recipe' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'New Recipe' }))
     expect(await screen.findByRole('heading', { name: 'New Recipe' })).toBeInTheDocument()
     expect(screen.getByLabelText('Title')).toHaveValue('')
   })

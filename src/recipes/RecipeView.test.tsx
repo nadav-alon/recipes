@@ -22,7 +22,7 @@ function recipe(fields: Partial<recipes.Recipe> = {}): recipes.Recipe {
 }
 
 function line(name: string): HTMLElement {
-  return screen.getByRole('listitem', { name })
+  return screen.getByText(name, { selector: '.ui-list-row__headline' }).closest('li')!
 }
 
 describe('RecipeView ingredients', () => {
@@ -120,9 +120,10 @@ describe('RecipeView sections', () => {
     expect(screen.queryByRole('heading', { name: 'Notes' })).toBeNull()
   })
 
-  it('links to the editor', () => {
+  it('opens the editor from an Edit button in the top app bar', () => {
     render(<RecipeView recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/recipes/r1/edit" />)
-    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '#/recipes/r1/edit')
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Edit' }))
+    expect(location.hash).toBe('#/recipes/r1/edit')
   })
 })
 
