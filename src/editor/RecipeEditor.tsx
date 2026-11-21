@@ -4,12 +4,14 @@ import {
   draftOf,
   emptyDraft,
   emptyIngredient,
+  emptyStep,
   moved,
   recipeOf,
   UNITS,
   type IngredientDraft,
   type IngredientUnit,
   type RecipeDraft,
+  type StepDraft,
 } from './recipe-form.ts'
 
 export interface RecipeEditorProps {
@@ -72,6 +74,8 @@ export function RecipeEditor({ store, entry, onSaved }: RecipeEditorProps) {
           Add Ingredient
         </button>
       </fieldset>
+      <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
+      <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
       {failure !== null && <p role="alert">{failure}</p>}
       <button type="submit">Save</button>
     </form>
@@ -125,5 +129,49 @@ function IngredientRow({ ingredient, position, last, onChange, onMove, onRemove 
         Remove {row}
       </button>
     </div>
+  )
+}
+
+interface StepListProps {
+  /** Singular name of a row, as in "Step 2". */
+  readonly label: string
+  readonly legend: string
+  readonly steps: readonly StepDraft[]
+  readonly onChange: (steps: StepDraft[]) => void
+}
+
+/** An ordered list of instructions that can be added to, edited, removed and reordered. */
+function StepList({ label, legend, steps, onChange }: StepListProps) {
+  return (
+    <fieldset>
+      <legend>{legend}</legend>
+      {steps.map((step, i) => {
+        const row = `${label} ${i + 1}`
+        return (
+          <div key={step.key} role="group" aria-label={row}>
+            <textarea
+              aria-label={`${row} text`}
+              value={step.text}
+              onInput={(e) => {
+                const text = e.currentTarget.value
+                onChange(steps.map((s, j) => (j === i ? { ...s, text } : s)))
+              }}
+            />
+            <button type="button" disabled={i === 0} onClick={() => onChange(moved(steps, i, i - 1))}>
+              Move {row} up
+            </button>
+            <button type="button" disabled={i === steps.length - 1} onClick={() => onChange(moved(steps, i, i + 1))}>
+              Move {row} down
+            </button>
+            <button type="button" onClick={() => onChange(steps.filter((_, j) => j !== i))}>
+              Remove {row}
+            </button>
+          </div>
+        )
+      })}
+      <button type="button" onClick={() => onChange([...steps, emptyStep()])}>
+        Add {label}
+      </button>
+    </fieldset>
   )
 }

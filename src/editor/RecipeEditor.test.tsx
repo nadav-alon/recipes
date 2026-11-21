@@ -76,3 +76,27 @@ describe('RecipeEditor Ingredients', () => {
     expect(stored(store)[0].recipe.ingredients.map((i) => i.name)).toEqual(['Salt', 'Onion'])
   })
 })
+
+describe.each([
+  ['Prep Step', 'prepSteps'],
+  ['Step', 'steps'],
+] as const)('RecipeEditor %ss', (label, key) => {
+  it('adds, edits, removes and reorders them', async () => {
+    const store = fakeRecipeStore()
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Stew' } })
+    for (const [i, text] of ['Chop', 'Brown', 'Simmer', 'Oops'].entries()) {
+      fireEvent.click(screen.getByRole('button', { name: `Add ${label}` }))
+      fireEvent.input(screen.getByLabelText(`${label} ${i + 1} text`), { target: { value: text } })
+    }
+    fireEvent.input(screen.getByLabelText(`${label} 2 text`), { target: { value: 'Brown well' } })
+    fireEvent.click(screen.getByRole('button', { name: `Move ${label} 3 up` }))
+    fireEvent.click(screen.getByRole('button', { name: `Move ${label} 1 down` }))
+    fireEvent.click(screen.getByRole('button', { name: `Remove ${label} 4` }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(stored(store)[0].recipe[key]).toEqual(['Simmer', 'Chop', 'Brown well'])
+  })
+})
