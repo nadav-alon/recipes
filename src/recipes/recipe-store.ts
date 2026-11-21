@@ -64,7 +64,7 @@ export function validatedRecipe(recipe: Recipe): Recipe {
 }
 
 /** What a write carries: `recipe` checked against the schema, without `deletedAt`, which only softDelete and restore change. */
-export function validatedFields(recipe: Recipe): Omit<Recipe, 'deletedAt'> {
+export function validatedFields(recipe: Recipe): Recipe {
   const { deletedAt: _ignored, ...fields } = validatedRecipe(recipe)
   return fields
 }

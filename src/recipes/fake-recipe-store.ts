@@ -1,19 +1,26 @@
 import { recipes } from 'data-platform'
-import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from './recipe-store.ts'
+import { validatedFields, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from './recipe-store.ts'
 
-export { InvalidRecipeError }
+/** A `RecipeStore` whose watches can be made to fail, to exercise a screen's error path. */
+export interface FakeRecipeStore extends RecipeStore {
+  /** Ends every watch, calling each one's `onError` with `error`, as the real store does on a denied read. */
+  failWatches(error: Error): void
+}
 
-/** An in-memory `RecipeStore` for screen tests, with the same validation and soft-delete behavior as the real one. */
-export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): RecipeStore {
+/**
+ * An in-memory `RecipeStore` for screen tests, with the same validation and soft-delete behavior
+ * as the real one: soft-deleting a Recipe that is already soft-deleted is refused, as the rules do.
+ */
+export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): FakeRecipeStore {
   const stored = new Map<RecipeId, { recipe: Recipe; deleted: boolean }>(
     initial.map((entry) => [entry.id, { recipe: entry.recipe, deleted: false }]),
   )
-  const watchers = new Set<(entries: readonly RecipeEntry[]) => void>()
+  const watchers = new Map<(entries: readonly RecipeEntry[]) => void, ((error: Error) => void) | undefined>()
   let nextId = 1
 
   const live = (): RecipeEntry[] =>
     [...stored].filter(([, s]) => !s.deleted).map(([id, s]) => ({ id, recipe: s.recipe }))
-  const notify = () => watchers.forEach((w) => w(live()))
+  const notify = () => watchers.forEach((_, w) => w(live()))
   const existing = (id: RecipeId) => {
     const entry = stored.get(id)
     if (!entry) throw new Error(`No Recipe ${id}`)
@@ -21,25 +28,32 @@ export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): RecipeSto
   }
 
   return {
-    watch(onChange) {
-      watchers.add(onChange)
+    watch(onChange, onError) {
+      watchers.set(onChange, onError)
       onChange(live())
       return () => watchers.delete(onChange)
     },
+    failWatches(error) {
+      const failing = [...watchers.values()]
+      watchers.clear()
+      failing.forEach((onError) => onError?.(error))
+    },
     async create(recipe) {
-      const { deletedAt: _ignored, ...fields } = validatedRecipe(recipe)
+      const fields = validatedFields(recipe)
       const id = recipes.recipeId(`fake-${nextId++}`)
       stored.set(id, { recipe: fields, deleted: false })
       notify()
       return id
     },
     async update(id, recipe) {
-      const { deletedAt: _ignored, ...fields } = validatedRecipe(recipe)
+      const fields = validatedFields(recipe)
       existing(id).recipe = fields
       notify()
     },
     async softDelete(id) {
-      existing(id).deleted = true
+      const entry = existing(id)
+      if (entry.deleted) throw new Error(`Recipe ${id} is already soft-deleted`)
+      entry.deleted = true
       notify()
     },
     async restore(id) {

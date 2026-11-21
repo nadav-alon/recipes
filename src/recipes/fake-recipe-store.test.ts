@@ -36,6 +36,28 @@ describe('fakeRecipeStore', () => {
     await expect(store.create({ ...pancakes, title: '' })).rejects.toBeInstanceOf(InvalidRecipeError)
   })
 
+  it('refuses to soft-delete a Recipe that is already soft-deleted, as the rules do', async () => {
+    const id = recipes.recipeId('pancakes')
+    const store = fakeRecipeStore([{ id, recipe: pancakes }])
+    await store.softDelete(id)
+
+    await expect(store.softDelete(id)).rejects.toThrow('already soft-deleted')
+  })
+
+  it('reports a failed watch to onError and stops calling the watcher', async () => {
+    const store = fakeRecipeStore()
+    const onChange = vi.fn()
+    const onError = vi.fn()
+    store.watch(onChange, onError)
+    const error = new Error('permission-denied')
+
+    store.failWatches(error)
+    await store.create(pancakes)
+
+    expect(onError).toHaveBeenCalledWith(error)
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+
   it('stops calling a watcher once it unsubscribes', async () => {
     const store = fakeRecipeStore()
     const onChange = vi.fn()
