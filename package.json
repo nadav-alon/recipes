@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "data-platform": "github:nadav-alon/data-platform#v0.14.0",
+    "firebase": "^12.19.0",
     "preact": "^10.29.8"
   },
   "devDependencies": {
