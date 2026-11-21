@@ -27,7 +27,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
         (watched) =>
           // An Item the Catalogue has soft-deleted is left out: a link to an absent id counts as soft-deleted.
           setItems(new Map(watched.filter((i) => !i.deleted).map((i) => [i.id, { state: i.state }]))),
-        () => {},
+        () => setFailed(true),
       ),
     [itemsPort],
   )

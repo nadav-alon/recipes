@@ -75,4 +75,12 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
     expect(screen.queryByRole('heading', { level: 2 })).toBeNull()
   })
+
+  it('shows the same load error when the Items watch fails', async () => {
+    const port = itemsPort()
+    render(<HomeScreen recipeStore={store()} itemsPort={port} />)
+    await act(() => port.failWatches(new Error('permission-denied')))
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull()
+  })
 })
