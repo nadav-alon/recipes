@@ -1,4 +1,4 @@
-import { recipes } from 'data-platform'
+import { recipes, type core } from 'data-platform'
 import type { Recipe } from '../recipes/recipe-store.ts'
 
 export type Ingredient = recipes.Ingredient
@@ -9,11 +9,18 @@ export const UNITS = recipes.INGREDIENT_UNITS
 
 /**
  * An Ingredient as typed into the form. `base` is the stored Ingredient it started from, so what the
- * form does not edit (its link to an Item, Assumed, unknown fields) survives a save.
+ * form does not edit (unknown fields) survives a save. `link` is the link as edited.
  */
+/** What an Ingredient is tied to: an Item, nothing, or Assumed (at home without an Item). Never both an Item and Assumed. */
+export type IngredientLink =
+  | { readonly kind: 'unlinked' }
+  | { readonly kind: 'linked'; readonly itemId: core.ItemId }
+  | { readonly kind: 'assumed' }
+
 export interface IngredientDraft {
   readonly key: number
   readonly base: Ingredient | null
+  link: IngredientLink
   name: string
   quantity: string
   unit: IngredientUnit | ''
@@ -41,7 +48,7 @@ let nextKey = 1
 const newKey = (): number => nextKey++
 
 export function emptyIngredient(): IngredientDraft {
-  return { key: newKey(), base: null, name: '', quantity: '', unit: '', prepNote: '' }
+  return { key: newKey(), base: null, link: UNLINKED, name: '', quantity: '', unit: '', prepNote: '' }
 }
 
 export function emptyStep(text = ''): StepDraft {
@@ -63,6 +70,7 @@ export function draftOf(recipe: Recipe): RecipeDraft {
     ingredients: recipe.ingredients.map((base) => ({
       key: newKey(),
       base,
+      link: linkOf(base),
       name: base.name,
       quantity: base.quantity === undefined ? '' : String(base.quantity),
       unit: base.unit ?? '',
@@ -102,17 +110,48 @@ export function problems(draft: RecipeDraft): string[] {
   return found
 }
 
+/** The link to `id`; as an Assumed Ingredient has no Item, linking clears an Assumed mark. */
+export function linkedTo(id: core.ItemId): IngredientLink {
+  return { kind: 'linked', itemId: id }
+}
+
+/** An Ingredient with no Item that is not Assumed. */
+export const UNLINKED: IngredientLink = { kind: 'unlinked' }
+
+/** An Assumed Ingredient, which has no Item. */
+export const ASSUMED: IngredientLink = { kind: 'assumed' }
+
+/** The link a stored Ingredient has. */
+function linkOf(stored: Ingredient | null): IngredientLink {
+  if (stored?.assumed === true) return ASSUMED
+  return stored?.itemId === undefined ? UNLINKED : linkedTo(stored.itemId as core.ItemId)
+}
+
+function sameLink(a: IngredientLink, b: IngredientLink): boolean {
+  return a.kind === b.kind && (a.kind !== 'linked' || a.itemId === (b as typeof a).itemId)
+}
+
 function optional<K extends string, V>(key: K, value: V | undefined): { [P in K]?: V } {
   return value === undefined ? {} : ({ [key]: value } as { [P in K]: V })
 }
 
 function ingredientOf(draft: IngredientDraft): Ingredient {
-  const { quantity: _q, unit: _u, prepNote: _p, ...kept } = draft.base ?? {}
+  const { quantity: _q, unit: _u, prepNote: _p, ...stored } = draft.base ?? ({} as Partial<Ingredient>)
+  // A link left as it was keeps the stored fields untouched; an edited one replaces them.
+  const { itemId: _i, assumed: _a, ...unlinked } = stored
+  const linkEdited = !sameLink(draft.link, linkOf(draft.base))
+  const kept = linkEdited ? unlinked : stored
   const quantity = draft.quantity.trim()
   const prepNote = draft.prepNote.trim()
   return {
     ...kept,
     name: draft.name.trim(),
+    ...(linkEdited
+      ? {
+          ...(draft.link.kind === 'linked' ? { itemId: draft.link.itemId } : {}),
+          ...(draft.link.kind === 'assumed' ? { assumed: true as const } : {}),
+        }
+      : {}),
     ...optional('quantity', quantity === '' ? undefined : Number(quantity)),
     ...optional('unit', draft.unit === '' ? undefined : draft.unit),
     ...optional('prepNote', prepNote === '' ? undefined : prepNote),

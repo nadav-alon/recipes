@@ -1,9 +1,26 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/preact'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/preact'
 import { describe, expect, it, vi } from 'vitest'
 import { core, recipes } from 'data-platform'
+import { fakeItemsPort } from '../items/fake-items-port.ts'
+import type { WatchedItem } from '../items/items-port.ts'
 import { fakeRecipeStore } from '../recipes/fake-recipe-store.ts'
 import type { RecipeEntry } from '../recipes/recipe-store.ts'
 import { RecipeEditor } from './RecipeEditor.tsx'
+
+const item = (id: string, name: string, state: WatchedItem['state'], deleted = false): WatchedItem => ({
+  id: core.itemId(id),
+  name,
+  state,
+  deleted,
+})
+
+const CATALOGUE = [item('milk', 'Milk', 'running low'), item('oat-milk', 'Oat milk', 'enough'), item('flour', 'Flour', 'out'), item('beef', 'Beef', 'enough')]
+
+function itemsPort(items: readonly WatchedItem[] = CATALOGUE) {
+  return fakeItemsPort(items)
+}
+
+const field = (name: string) => screen.getByLabelText(name)
 
 function stored(store: ReturnType<typeof fakeRecipeStore>): RecipeEntry[] {
   let entries: readonly RecipeEntry[] = []
@@ -15,7 +32,7 @@ describe('RecipeEditor creating', () => {
   it('reports the new Recipe\'s id once the store has created it', async () => {
     const store = fakeRecipeStore()
     const onCreated = vi.fn()
-    render(<RecipeEditor store={store} onCreated={onCreated} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} onCreated={onCreated} />)
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -25,7 +42,7 @@ describe('RecipeEditor creating', () => {
   it('saves the title, Servings, source URL and notes as a new Recipe', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} onSaved={onSaved} />)
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
     fireEvent.input(screen.getByLabelText('Servings'), { target: { value: '4' } })
     fireEvent.input(screen.getByLabelText('Source URL'), { target: { value: 'https://example.com/p' } })
@@ -48,12 +65,10 @@ describe('RecipeEditor creating', () => {
 })
 
 describe('RecipeEditor Ingredients', () => {
-  const field = (name: string) => screen.getByLabelText(name)
-
   it('adds Ingredients with a quantity, a unit from the fixed set and a prep note', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} onSaved={onSaved} />)
     fireEvent.input(field('Title'), { target: { value: 'Stew' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
     fireEvent.input(field('Ingredient 1 name'), { target: { value: 'Onion' } })
@@ -72,7 +87,7 @@ describe('RecipeEditor Ingredients', () => {
   it('removes and reorders Ingredients', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} onSaved={onSaved} />)
     fireEvent.input(field('Title'), { target: { value: 'Stew' } })
     for (const [i, name] of ['Onion', 'Beef', 'Salt'].entries()) {
       fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
@@ -95,7 +110,7 @@ describe.each([
   it('adds, edits, removes and reorders them', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} onSaved={onSaved} />)
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Stew' } })
     for (const [i, text] of ['Chop', 'Brown', 'Simmer', 'Oops'].entries()) {
       fireEvent.click(screen.getByRole('button', { name: `Add ${label}` }))
@@ -116,7 +131,7 @@ describe('RecipeEditor validation', () => {
   it('blocks saving a Recipe with no title and says why', () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} onSaved={onSaved} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(screen.getByRole('alert')).toHaveTextContent('Give the Recipe a title.')
@@ -127,7 +142,7 @@ describe('RecipeEditor validation', () => {
   it('blocks a unit without a quantity, then saves once it is fixed', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} onSaved={onSaved} />)
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Soup' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
     fireEvent.input(screen.getByLabelText('Ingredient 1 name'), { target: { value: 'Salt' } })
@@ -151,7 +166,7 @@ describe('RecipeEditor validation', () => {
     const store = fakeRecipeStore([odd])
     const update = vi.spyOn(store, 'update')
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} entry={odd} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={odd} onSaved={onSaved} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(screen.getByRole('alert')).toHaveTextContent('ingredients.0.assumed')
@@ -171,7 +186,7 @@ describe('RecipeEditor editing', () => {
   it('shows the Recipe and updates it under the same id, keeping links and Assumed marks', async () => {
     const store = fakeRecipeStore([entry])
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} entry={entry} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
     expect(screen.getByLabelText('Title')).toHaveValue('Stew')
     expect(screen.getByLabelText('Ingredient 1 unit')).toHaveValue('g')
 
@@ -203,14 +218,14 @@ describe('RecipeEditor deleting', () => {
   }
 
   it('offers no delete while creating', () => {
-    render(<RecipeEditor store={fakeRecipeStore()} />)
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
     expect(screen.queryByRole('button', { name: 'Delete Recipe' })).not.toBeInTheDocument()
   })
 
   it('Soft deletes the Recipe and offers Undo in a snackbar, which brings it back', async () => {
     const store = fakeRecipeStore([entry])
     const onDeleted = vi.fn()
-    render(<RecipeEditor store={store} entry={entry} onDeleted={onDeleted} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onDeleted={onDeleted} />)
     fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
 
     expect(screen.getByRole('status')).toHaveTextContent('Deleted Stew')
@@ -223,7 +238,7 @@ describe('RecipeEditor deleting', () => {
 
   it('keeps Delete and Save off while the Recipe is Soft deleted, and on again after Undo', async () => {
     const store = fakeRecipeStore([entry])
-    render(<RecipeEditor store={store} entry={entry} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} />)
     fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
     expect(screen.getByRole('button', { name: 'Delete Recipe' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
@@ -238,7 +253,7 @@ describe('RecipeEditor deleting', () => {
     try {
       const store = fakeRecipeStore([entry])
       const onDeleted = vi.fn()
-      render(<RecipeEditor store={store} entry={entry} onDeleted={onDeleted} />)
+      render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onDeleted={onDeleted} />)
       fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
       expect(onDeleted).not.toHaveBeenCalled()
 
@@ -254,7 +269,7 @@ describe('RecipeEditor deleting', () => {
   it('does not tell the parent about a deletion that Undo took back', async () => {
     const store = fakeRecipeStore([entry])
     const onDeleted = vi.fn()
-    render(<RecipeEditor store={store} entry={entry} onDeleted={onDeleted} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onDeleted={onDeleted} />)
     fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     await waitFor(() => expect(stored(store).map((e) => e.id)).toEqual(['stew']))
@@ -265,7 +280,7 @@ describe('RecipeEditor deleting', () => {
     vi.useFakeTimers()
     try {
       const store = fakeRecipeStore([entry])
-      render(<RecipeEditor store={store} entry={entry} />)
+      render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} />)
       fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
       await vi.advanceTimersByTimeAsync(8000)
       expect(screen.queryByRole('status')).not.toBeInTheDocument()
@@ -273,5 +288,158 @@ describe('RecipeEditor deleting', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('RecipeEditor linking an Ingredient to an Item', () => {
+  it('searches live Items by name, shows each State, and saves the link', async () => {
+    const store = fakeRecipeStore()
+    const onSaved = vi.fn()
+    render(
+      <RecipeEditor
+        store={store}
+        itemsPort={itemsPort([...CATALOGUE, item('gone', 'Milk powder', 'enough', true)])}
+        onSaved={onSaved}
+      />,
+    )
+    fireEvent.input(field('Title'), { target: { value: 'Porridge' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    fireEvent.input(field('Ingredient 1 name'), { target: { value: 'Milk' } })
+
+    expect(screen.queryAllByRole('button', { name: /^Link Ingredient 1 to / })).toHaveLength(0)
+    fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'MILK' } })
+    expect(screen.getAllByRole('button', { name: /^Link Ingredient 1 to / }).map((b) => b.textContent)).toEqual([
+      'Link Ingredient 1 to Milk (running low)',
+      'Link Ingredient 1 to Oat milk (enough)',
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 1 to Oat milk (enough)' }))
+    expect(screen.getByText('Linked to Oat milk (enough)')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(stored(store)[0].recipe.ingredients).toEqual([{ name: 'Milk', itemId: 'oat-milk' }])
+  })
+})
+
+const entryOf = (id: string): RecipeEntry => ({
+  id: recipes.recipeId('x'),
+  recipe: { title: 'X', ingredients: [{ name: 'Beef', itemId: core.itemId(id) }], prepSteps: [], steps: [] },
+})
+
+describe('RecipeEditor unlinking and marking Assumed', () => {
+  it('does not offer an Ingredient the Item it is already linked to', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} entry={entryOf('beef')} />)
+    fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'b' } })
+    expect(screen.queryByRole('button', { name: /^Link Ingredient 1 to Beef/ })).toBeNull()
+  })
+
+  const beef = { name: 'Beef', itemId: core.itemId('beef'), quantity: 500, unit: 'g' as const }
+  const entry: RecipeEntry = {
+    id: recipes.recipeId('stew'),
+    recipe: { title: 'Stew', ingredients: [beef, { name: 'Water', assumed: true as const }], prepSteps: [], steps: [] },
+  }
+  const save = async (store: ReturnType<typeof fakeRecipeStore>, onSaved: () => void) => {
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    return stored(store)[0].recipe.ingredients
+  }
+
+  it('unlinks an Ingredient, keeping the rest of the line', async () => {
+    const store = fakeRecipeStore([entry])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink Ingredient 1' }))
+    expect(screen.queryByText(/^Linked to/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Unlink Ingredient 1' })).toBeNull()
+
+    expect((await save(store, onSaved))[0]).toEqual({ name: 'Beef', quantity: 500, unit: 'g' })
+  })
+
+  it('marking an Ingredient Assumed clears its link, and the mark can be removed', async () => {
+    const store = fakeRecipeStore([entry])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    fireEvent.click(screen.getByLabelText('Ingredient 2 assumed'))
+
+    expect(await save(store, onSaved)).toEqual([
+      { name: 'Beef', assumed: true, quantity: 500, unit: 'g' },
+      { name: 'Water' },
+    ])
+  })
+
+  it('linking an Assumed Ingredient to an Item removes the mark', async () => {
+    const store = fakeRecipeStore([entry])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.input(field('Ingredient 2 Item search'), { target: { value: 'flour' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 2 to Flour (out)' }))
+    expect((screen.getByLabelText('Ingredient 2 assumed') as HTMLInputElement).checked).toBe(false)
+
+    expect((await save(store, onSaved))[1]).toEqual({ name: 'Water', itemId: 'flour' })
+  })
+})
+
+describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
+  const entryLinkedTo = (id: string): RecipeEntry => ({
+    id: recipes.recipeId('porridge'),
+    recipe: { title: 'Porridge', ingredients: [{ name: 'Milk', itemId: core.itemId(id) }], prepSteps: [], steps: [] },
+  })
+  const says = /Ingredient 1 is linked to .*an Item the Catalogue has soft-deleted/
+
+  it.each([
+    ['soft-deleted', [...CATALOGUE, item('old', 'Old milk', 'enough', true)]],
+    ['no longer listed', CATALOGUE],
+  ])('says so for an Item that is %s, and relinking replaces the link', async (_, items) => {
+    const store = fakeRecipeStore([entryLinkedTo('old')])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort(items)} entry={entryLinkedTo('old')} onSaved={onSaved} />)
+    expect(screen.getByText(says)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Old milk/ })).toBeNull()
+
+    fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'milk' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 1 to Milk (running low)' }))
+    expect(screen.queryByText(says)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(stored(store)[0].recipe.ingredients).toEqual([{ name: 'Milk', itemId: 'milk' }])
+  })
+
+  it('does not say so for a live Item', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} entry={entryLinkedTo('milk')} />)
+    expect(screen.queryByText(says)).toBeNull()
+    expect(screen.getByText('Linked to Milk (running low)')).toBeTruthy()
+  })
+
+  it('says the link has not been checked before the Items have arrived', () => {
+    render(
+      <RecipeEditor
+        store={fakeRecipeStore()}
+        itemsPort={fakeItemsPort(CATALOGUE, { neverDelivers: true })}
+        entry={entryLinkedTo('old')}
+      />,
+    )
+    expect(screen.queryByText(says)).toBeNull()
+    expect(screen.getByText(/Ingredient 1 is linked to an Item, but the Items have not loaded/)).toBeTruthy()
+  })
+
+  it('says the link has not been checked when the watch fails before delivering', () => {
+    const port = fakeItemsPort(CATALOGUE, { neverDelivers: true })
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={port} entry={entryLinkedTo('old')} />)
+    act(() => port.failWatches(new Error('permission-denied')))
+    expect(screen.getByRole('alert')).toBeTruthy()
+    expect(screen.getByText(/Ingredient 1 is linked to an Item, but the Items have not loaded/)).toBeTruthy()
+  })
+
+  it('names the soft-deleted Item when the Catalogue still lists it', () => {
+    render(
+      <RecipeEditor
+        store={fakeRecipeStore()}
+        itemsPort={itemsPort([...CATALOGUE, item('old', 'Old milk', 'enough', true)])}
+        entry={entryLinkedTo('old')}
+      />,
+    )
+    expect(screen.getByText(/Ingredient 1 is linked to Old milk, an Item the Catalogue has soft-deleted/)).toBeTruthy()
   })
 })

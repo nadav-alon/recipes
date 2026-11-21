@@ -1,4 +1,6 @@
-import { useCallback, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import type { core } from 'data-platform'
+import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
@@ -6,6 +8,9 @@ import {
   emptyDraft,
   emptyIngredient,
   emptyStep,
+  linkedTo,
+  UNLINKED,
+  ASSUMED,
   moved,
   problems,
   recipeOf,
@@ -13,6 +18,7 @@ import {
   updated,
   without,
   type IngredientDraft,
+  type IngredientLink,
   type IngredientUnit,
   type RecipeDraft,
   type StepDraft,
@@ -20,6 +26,8 @@ import {
 
 export interface RecipeEditorProps {
   readonly store: RecipeStore
+  /** Where the Items an Ingredient can be linked to are read from. */
+  readonly itemsPort: ItemsPort
   /** The Recipe to edit; absent when creating a new one. */
   readonly entry?: RecipeEntry
   /** The Recipe the form opens on, in place of `entry`'s or an empty one: an unsaved Recipe the store refused. */
@@ -41,12 +49,15 @@ export interface RecipeEditorProps {
 }
 
 /** The form that creates a Recipe, or edits `entry`. */
-export function RecipeEditor({ store, entry, initial, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
+export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
   const seed = initial ?? entry?.recipe
   const [draft, setDraft] = useState<RecipeDraft>(() => (seed ? draftOf(seed) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
   const [deletion, setDeletion] = useState<'none' | 'undoable' | 'final'>('none')
+  const [items, setItems] = useState<readonly WatchedItem[] | null>(null)
+  const [itemsFailed, setItemsFailed] = useState(false)
+  useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const onDeletedRef = useRef(onDeleted)
   onDeletedRef.current = onDeleted
   const deleted = deletion !== 'none'
@@ -108,10 +119,12 @@ export function RecipeEditor({ store, entry, initial, onSaved, onSaveFailed, onC
         </label>
         <fieldset>
           <legend>Ingredients</legend>
+          {itemsFailed && <p role="alert">The Items could not be loaded, so Ingredients cannot be linked.</p>}
           {draft.ingredients.map((ingredient, i) => (
             <IngredientRow
               key={ingredient.key}
               ingredient={ingredient}
+              items={items}
               position={i + 1}
               last={i === draft.ingredients.length - 1}
               onChange={(fields) =>
@@ -162,6 +175,8 @@ export function RecipeEditor({ store, entry, initial, onSaved, onSaveFailed, onC
 
 interface IngredientRowProps {
   readonly ingredient: IngredientDraft
+  /** Every Item the Catalogue has, or null until they have arrived. */
+  readonly items: readonly WatchedItem[] | null
   readonly position: number
   readonly last: boolean
   readonly onChange: (fields: Partial<IngredientDraft>) => void
@@ -169,8 +184,9 @@ interface IngredientRowProps {
   readonly onRemove: () => void
 }
 
-function IngredientRow({ ingredient, position, last, onChange, onMove, onRemove }: IngredientRowProps) {
+function IngredientRow({ ingredient, items, position, last, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
+  const link = linkStatus(ingredient.link, items)
   return (
     <div role="group" aria-label={row}>
       <input aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
@@ -197,7 +213,88 @@ function IngredientRow({ ingredient, position, last, onChange, onMove, onRemove 
         value={ingredient.prepNote}
         onInput={(e) => onChange({ prepNote: e.currentTarget.value })}
       />
+      {link.kind === 'soft-deleted' && (
+        <p>
+          {row} is linked to {link.item ? `${link.item.name}, ` : ''}an Item the Catalogue has soft-deleted. Pick another
+          Item to relink it.
+        </p>
+      )}
+      {link.kind === 'unchecked' && <p>{row} is linked to an Item, but the Items have not loaded to check it.</p>}
+      {link.kind === 'live' && (
+        <p>
+          Linked to {link.item.name} ({link.item.state})
+        </p>
+      )}
+      {ingredient.link.kind === 'linked' && (
+        <button type="button" onClick={() => onChange({ link: UNLINKED })}>
+          Unlink {row}
+        </button>
+      )}
+      <label>
+        <input
+          type="checkbox"
+          aria-label={`${row} assumed`}
+          checked={ingredient.link.kind === 'assumed'}
+          onChange={(e) => onChange({ link: e.currentTarget.checked ? ASSUMED : UNLINKED })}
+        />
+        Assumed
+      </label>
+      <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
+    </div>
+  )
+}
+
+type LinkStatus =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'live'; readonly item: WatchedItem }
+  /** `item` is absent when the Catalogue no longer lists the id, which counts as soft-deleted, as it does for makeability. */
+  | { readonly kind: 'soft-deleted'; readonly item?: WatchedItem }
+  | { readonly kind: 'unchecked' }
+
+/** What an Ingredient's link to `itemId` amounts to, given the Items the Catalogue has (null until they arrive). */
+function linkStatus(link: IngredientLink, items: readonly WatchedItem[] | null): LinkStatus {
+  if (link.kind !== 'linked') return { kind: 'none' }
+  if (items === null) return { kind: 'unchecked' }
+  const item = items.find((candidate) => candidate.id === link.itemId)
+  if (item === undefined) return { kind: 'soft-deleted' }
+  return item.deleted ? { kind: 'soft-deleted', item } : { kind: 'live', item }
+}
+
+interface ItemPickerProps {
+  /** The Ingredient's name, as in "Ingredient 2". */
+  readonly row: string
+  readonly items: readonly WatchedItem[]
+  /** The Item the Ingredient is already linked to, which is not offered again. */
+  readonly linked: core.ItemId | null
+  readonly onPick: (item: WatchedItem) => void
+}
+
+/** Searches the live Items by name, showing each one's State, and offers each match to link to; lists nothing until something is typed. */
+function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
+  const [query, setQuery] = useState('')
+  const needle = query.trim().toLowerCase()
+  const matches =
+    needle === ''
+      ? []
+      : items.filter((item) => !item.deleted && item.id !== linked && item.name.toLowerCase().includes(needle))
+  return (
+    <div role="group" aria-label={`${row} Items`}>
+      <input
+        type="search"
+        aria-label={`${row} Item search`}
+        value={query}
+        onInput={(e) => setQuery(e.currentTarget.value)}
+      />
+      <ul>
+        {matches.map((item) => (
+          <li key={item.id}>
+            <button type="button" onClick={() => onPick(item)}>
+              Link {row} to {item.name} ({item.state})
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

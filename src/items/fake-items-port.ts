@@ -9,7 +9,8 @@ export interface FakeItemsPort extends ItemsPort {
   failWatches(error: unknown): void
 }
 
-export function fakeItemsPort(initial: readonly WatchedItem[]): FakeItemsPort {
+/** With `neverDelivers`, a watch gets no Items at all, as before the first snapshot arrives. */
+export function fakeItemsPort(initial: readonly WatchedItem[], options: { readonly neverDelivers?: boolean } = {}): FakeItemsPort {
   let items = [...initial]
   const history = new Map<core.ItemId, core.State[]>()
   const watchers = new Map<(items: readonly WatchedItem[]) => void, (error: unknown) => void>()
@@ -17,7 +18,7 @@ export function fakeItemsPort(initial: readonly WatchedItem[]): FakeItemsPort {
   return {
     watchItems(onItems, onError) {
       watchers.set(onItems, onError)
-      onItems(items)
+      if (!options.neverDelivers) onItems(items)
       return () => watchers.delete(onItems)
     },
 
