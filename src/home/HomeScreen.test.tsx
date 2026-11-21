@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { core, recipes } from 'data-platform'
 import { fakeItemsPort } from '../items/fake-items-port.ts'
 import { fakeRecipeStore } from '../recipes/fake-recipe-store.ts'
-import type { RecipeEntry } from '../recipes/recipe-store.ts'
+import type { ItemsPort } from '../items/items-port.ts'
+import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
 import { HomeScreen } from './HomeScreen.tsx'
 
 const item = (id: string, state: core.State, deleted = false) => ({
@@ -68,19 +69,49 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('link', { name: 'Omelette' })).toHaveAttribute('href', '#/recipes/2')
   })
 
-  it('shows a load error instead of nothing when the Recipe watch fails', async () => {
+  it('replaces the whole screen with a load error when the Recipe watch fails after it rendered', async () => {
     const recipeStore = store()
     render(<HomeScreen recipeStore={recipeStore} itemsPort={itemsPort()} />)
+    expect(screen.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     await act(() => recipeStore.failWatches(new Error('permission-denied')))
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
-    expect(screen.queryByRole('heading', { level: 2 })).toBeNull()
+    expect(screen.queryByRole('main')).toBeNull()
+    expect(screen.queryByRole('heading')).toBeNull()
+    expect(screen.queryByRole('link', { name: 'New Recipe' })).toBeNull()
   })
 
-  it('shows the same load error when the Items watch fails', async () => {
+  it('replaces the whole screen with the same load error when the Items watch fails after it rendered', async () => {
     const port = itemsPort()
     render(<HomeScreen recipeStore={store()} itemsPort={port} />)
+    expect(screen.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     await act(() => port.failWatches(new Error('permission-denied')))
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
-    expect(screen.queryByRole('heading', { level: 2 })).toBeNull()
+    expect(screen.queryByRole('main')).toBeNull()
+    expect(screen.queryByRole('heading')).toBeNull()
+    expect(screen.queryByRole('link', { name: 'New Recipe' })).toBeNull()
+  })
+
+  it('shows the load error, not a blank page, when the Recipe watch fails before delivering anything', () => {
+    const failingStore: RecipeStore = {
+      ...store(),
+      watch: (_onChange, onError) => {
+        onError?.(new Error('permission-denied'))
+        return () => {}
+      },
+    }
+    render(<HomeScreen recipeStore={failingStore} itemsPort={itemsPort()} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
+  })
+
+  it('shows the load error, not a blank page, when the Items watch fails before delivering anything', () => {
+    const failingPort: ItemsPort = {
+      ...itemsPort(),
+      watchItems: (_onItems, onError) => {
+        onError(new Error('permission-denied'))
+        return () => {}
+      },
+    }
+    render(<HomeScreen recipeStore={store()} itemsPort={failingPort} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
   })
 })
