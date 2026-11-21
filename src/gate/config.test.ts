@@ -27,16 +27,16 @@ function transferHash(value: unknown) {
 
 describe('resolveConfig', () => {
   it('reads the config the Catalogue stored', () => {
-    expect(resolveConfig('', memoryStorage(config))).toEqual({ config, error: null })
+    expect(resolveConfig('', memoryStorage(config))).toMatchObject({ config, error: null })
   })
 
   it('has no config when none is stored', () => {
-    expect(resolveConfig('', memoryStorage())).toEqual({ config: null, error: null })
+    expect(resolveConfig('', memoryStorage())).toMatchObject({ config: null, error: null })
   })
 
   it('stores and uses the config from a #config= link', () => {
     const storage = memoryStorage()
-    expect(resolveConfig(transferHash(config), storage)).toEqual({ config, error: null })
+    expect(resolveConfig(transferHash(config), storage)).toMatchObject({ config, error: null })
     expect(resolveConfig('', storage).config).toEqual(config)
   })
 
@@ -70,5 +70,47 @@ describe('parseConfigText', () => {
 
   it('rejects text that is not a config at all', () => {
     expect(() => parseConfigText('hello')).toThrow(/not a Firebase config/)
+  })
+})
+
+describe('resolveConfig and an existing config', () => {
+  const other = { ...config, projectId: 'other' }
+
+  it('holds back a link whose config differs from the stored one', () => {
+    const storage = memoryStorage(config)
+    const result = resolveConfig(transferHash(other), storage)
+    expect(result).toEqual({ config, error: null, consumed: true, proposed: other })
+    expect(resolveConfig('', storage).config).toEqual(config)
+  })
+
+  it('applies a link whose config equals the stored one', () => {
+    const result = resolveConfig(transferHash(config), memoryStorage(config))
+    expect(result).toEqual({ config, error: null, consumed: true, proposed: null })
+  })
+
+  it('reports that a refused link was consumed', () => {
+    expect(resolveConfig('#config=!!!', memoryStorage()).consumed).toBe(true)
+    expect(resolveConfig('#other', memoryStorage()).consumed).toBe(false)
+  })
+})
+
+describe('parseConfigText limits', () => {
+  it('accepts a #config= link, or a URL holding one', () => {
+    expect(parseConfigText(transferHash(config))).toEqual(config)
+    expect(parseConfigText(`https://x.test/recipes/${transferHash(config)}`)).toEqual(config)
+  })
+
+  it('reports a corrupted pasted link', () => {
+    expect(() => parseConfigText('#config=!!!')).toThrow(/truncated or corrupted/)
+  })
+
+  it('refuses a single-quoted snippet', () => {
+    const snippet = `const firebaseConfig = { apiKey: 'k', authDomain: 'a.firebaseapp.com' };`
+    expect(() => parseConfigText(snippet)).toThrow(/not a Firebase config/)
+  })
+
+  it('refuses a snippet with comments', () => {
+    const snippet = `{ // from the console\n apiKey: "k" }`
+    expect(() => parseConfigText(snippet)).toThrow(/not a Firebase config/)
   })
 })
