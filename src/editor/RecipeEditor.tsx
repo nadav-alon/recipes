@@ -152,8 +152,8 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
           {blockers.length > 0 && (
             <div>
               <p>This Recipe cannot be saved yet:</p>
-              {blockers.map((reason) => (
-                <FieldError key={reason} id={`recipe-problem-${reason}`} error={reason} />
+              {blockers.map((reason, index) => (
+                <FieldError key={reason} id={`recipe-problem-${index}`} error={reason} />
               ))}
             </div>
           )}

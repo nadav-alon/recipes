@@ -22,7 +22,7 @@ function itemsPort(items: readonly WatchedItem[] = CATALOGUE) {
 
 const field = (name: string) => screen.getByLabelText(name)
 const openPicker = (row: string) => fireEvent.click(screen.getByRole('button', { name: `Choose Item for ${row}` }))
-const linkOption = (name: string) => screen.getByRole('button', { name })
+const pickerRow = (name: string) => screen.getByRole('button', { name })
 
 function stored(store: ReturnType<typeof fakeRecipeStore>): RecipeEntry[] {
   let entries: readonly RecipeEntry[] = []
@@ -342,7 +342,7 @@ describe('RecipeEditor linking an Ingredient to an Item', () => {
       'Oat milkenough',
     ])
 
-    fireEvent.click(linkOption('Oat milk enough'))
+    fireEvent.click(pickerRow('Oat milk enough'))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByText('Linked to Oat milk (enough)')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -405,7 +405,7 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
     openPicker('Ingredient 2')
     fireEvent.input(field('Ingredient 2 Item search'), { target: { value: 'flour' } })
-    fireEvent.click(linkOption('Flour out'))
+    fireEvent.click(pickerRow('Flour out'))
     expect((screen.getByLabelText('Ingredient 2 assumed') as HTMLInputElement).checked).toBe(false)
 
     expect((await save(store, onSaved))[1]).toEqual({ name: 'Water', itemId: 'flour' })
@@ -431,7 +431,7 @@ describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
 
     openPicker('Ingredient 1')
     fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'milk' } })
-    fireEvent.click(linkOption('Milk running low'))
+    fireEvent.click(pickerRow('Milk running low'))
     expect(screen.queryByText(says)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(onSaved).toHaveBeenCalled())

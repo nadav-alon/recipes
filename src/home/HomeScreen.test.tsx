@@ -85,7 +85,7 @@ describe('HomeScreen', () => {
   it('links each Recipe to its view', () => {
     render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
     expect(screen.getByRole('link', { name: 'Bread' })).toHaveAttribute('href', '#/recipes/3')
-    expect(screen.getByRole('link', { name: /Omelette/ })).toHaveAttribute('href', '#/recipes/2')
+    expect(screen.getByRole('link', { name: 'OmeletteMissing: eggs' })).toHaveAttribute('href', '#/recipes/2')
   })
 
   it('replaces the whole screen with a load error when the Recipe watch fails after it rendered', async () => {

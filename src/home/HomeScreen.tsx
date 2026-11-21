@@ -67,15 +67,18 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
       <h2 id={headingId}>{title}</h2>
       {list.length === 0 && <p>{empty}</p>}
       <ul>
-        {list.map(({ entry, classification }) => (
-          <ListRow
-            key={entry.id}
-            headline={entry.recipe.title}
-            supporting={showMissing ? `Missing: ${missingNames(classification)}` : undefined}
-            href={recipeHref(entry.id)}
-            onFollow={() => navigate(recipeHref(entry.id))}
-          />
-        ))}
+        {list.map(({ entry, classification }) => {
+          const href = recipeHref(entry.id)
+          return (
+            <ListRow
+              key={entry.id}
+              headline={entry.recipe.title}
+              supporting={showMissing ? `Missing: ${missingNames(classification)}` : undefined}
+              href={href}
+              onFollow={() => navigate(href)}
+            />
+          )
+        })}
       </ul>
     </section>
   )
