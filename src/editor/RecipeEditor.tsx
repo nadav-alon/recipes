@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'preact/hooks'
+import { useCallback, useRef, useState } from 'preact/hooks'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeStore } from '../recipes/recipe-store.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
@@ -22,7 +22,10 @@ export interface RecipeEditorProps {
   readonly entry?: RecipeEntry
   /** Called once a save has been handed to the store; offline it does not wait for the server. */
   readonly onSaved?: () => void
-  /** Called once a Soft delete has been handed to the store; Undo stays on offer afterwards. */
+  /**
+   * Called once the Recipe is Soft deleted and the Undo offer has ended unused (dismissed or timed out), so a
+   * parent that closes the editor here does not take Undo with it. Not called when Undo is used.
+   */
   readonly onDeleted?: () => void
 }
 
@@ -31,8 +34,14 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
   const [draft, setDraft] = useState<RecipeDraft>(() => (entry ? draftOf(entry.recipe) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
-  const [deleted, setDeleted] = useState(false)
-  const dismissUndo = useCallback(() => setDeleted(false), [])
+  const [deletion, setDeletion] = useState<'none' | 'undoable' | 'final'>('none')
+  const onDeletedRef = useRef(onDeleted)
+  onDeletedRef.current = onDeleted
+  const deleted = deletion !== 'none'
+  const dismissUndo = useCallback(() => {
+    setDeletion('final')
+    onDeletedRef.current?.()
+  }, [])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
   const save = (event: Event) => {
@@ -51,8 +60,7 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
   const softDelete = () => {
     if (!entry) return
     store.softDelete(entry.id).catch((error: Error) => setFailure(error.message))
-    setDeleted(true)
-    onDeleted?.()
+    setDeletion('undoable')
   }
 
   return (
@@ -107,20 +115,20 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
           </div>
         )}
         {failure !== null && <p role="alert">{failure}</p>}
-        <button type="submit">Save</button>
+        <button type="submit" disabled={deleted}>Save</button>
         {entry && (
-          <button type="button" onClick={softDelete}>
+          <button type="button" disabled={deleted} onClick={softDelete}>
             Delete Recipe
           </button>
         )}
       </form>
-      {entry && deleted && (
+      {entry && deletion === 'undoable' && (
         <Snackbar
           message={`Deleted ${entry.recipe.title}`}
           actionLabel="Undo"
           onAction={() => {
             store.restore(entry.id).catch((error: Error) => setFailure(error.message))
-            setDeleted(false)
+            setDeletion('none')
           }}
           onDismiss={dismissUndo}
         />
