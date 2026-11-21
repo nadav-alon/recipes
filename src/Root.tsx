@@ -1,10 +1,9 @@
 import type { Firestore } from 'firebase/firestore'
 import { useMemo, useState } from 'preact/hooks'
-import { initFirebase, saveFirebaseWebConfig, type FirebaseWebConfig } from 'data-platform/client'
-import { localKit } from 'data-platform/local'
+import { initFirebase, saveFirebaseWebConfig, type FirebaseWebConfig, type LocalKit } from 'data-platform/client'
 import { AuthGate } from './gate/AuthGate.tsx'
 import { resolveConfig, type ConfigResolution } from './gate/config.ts'
-import { emulatorConfig } from './gate/emulator.ts'
+import { emulatorConfig, emulatorKit } from './gate/emulator.ts'
 import { PlatformGuard } from './gate/PlatformGuard.tsx'
 import { SetupScreen } from './gate/SetupScreen.tsx'
 import { App } from './App.tsx'
@@ -12,20 +11,21 @@ import { firestoreItemsPort } from './items/firestore-items-port.ts'
 import { firestoreRecipeStore } from './recipes/recipe-store.ts'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 
-type RootState = Pick<ConfigResolution, 'config' | 'error' | 'proposed'> & { emulator: boolean }
+type RootState = Pick<ConfigResolution, 'config' | 'error' | 'proposed'> & { kit: LocalKit | undefined }
 
 /** Resolves the config once, before first paint, and strips a consumed `#config=` fragment. */
 function initialState(): RootState {
   const emulator = emulatorConfig()
-  if (emulator !== null) return { config: emulator, error: null, proposed: null, emulator: true }
+  const kit = emulatorKit()
+  if (emulator !== null) return { config: emulator, error: null, proposed: null, kit }
   const { config, error, proposed, consumed } = resolveConfig(location.hash)
   if (consumed) history.replaceState(null, '', location.pathname + location.search)
-  return { config, error, proposed, emulator: false }
+  return { config, error, proposed, kit: undefined }
 }
 
 /** The app's entry: config, then sign-in and membership, then the app. */
 export function Root() {
-  const [{ config, error, proposed, emulator }, setState] = useState(initialState)
+  const [{ config, error, proposed, kit }, setState] = useState(initialState)
 
   if (proposed !== null) {
     return (
@@ -38,12 +38,12 @@ export function Root() {
           <button
             onClick={() => {
               saveFirebaseWebConfig(proposed)
-              setState({ config: proposed, error: null, proposed: null, emulator })
+              setState({ config: proposed, error: null, proposed: null, kit })
             }}
           >
             Switch to {proposed.projectId}
           </button>
-          <button onClick={() => setState({ config, error: null, proposed: null, emulator })}>
+          <button onClick={() => setState({ config, error: null, proposed: null, kit })}>
             Keep the current Household
           </button>
         </main>
@@ -57,7 +57,7 @@ export function Root() {
         initialError={error}
         onConfigured={(next) => {
           saveFirebaseWebConfig(next)
-          setState({ config: next, error: null, proposed: null, emulator })
+          setState({ config: next, error: null, proposed: null, kit })
         }}
       />
     )
@@ -67,16 +67,16 @@ export function Root() {
       {error !== null && (
         <div role="alert">
           <p>{error} The link was ignored.</p>
-          <button onClick={() => setState({ config, error: null, proposed: null, emulator })}>Dismiss</button>
+          <button onClick={() => setState({ config, error: null, proposed: null, kit })}>Dismiss</button>
         </div>
       )}
-      <Connected config={config} emulator={emulator} />
+      <Connected config={config} kit={kit} />
     </>
   )
 }
 
-function Connected({ config, emulator }: { config: FirebaseWebConfig; emulator: boolean }) {
-  const client = useMemo(() => initFirebase(config, { local: emulator ? localKit : undefined }), [config, emulator])
+function Connected({ config, kit }: { config: FirebaseWebConfig; kit: LocalKit | undefined }) {
+  const client = useMemo(() => initFirebase(config, { local: kit }), [config, kit])
   return (
     <AuthGate client={client}>
       <PlatformGuard db={client.db} />
