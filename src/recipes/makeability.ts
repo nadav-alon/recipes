@@ -52,3 +52,20 @@ export function classifyRecipe(recipe: recipes.Recipe, items: ItemsById): Recipe
     missing === 0 ? 'makeable' : missing <= ALMOST_MAKEABLE_MAX_MISSING ? 'almost makeable' : 'neither'
   return { ingredients: statuses, makeability, missing }
 }
+
+/**
+ * The Almost makeable Recipes among `all`, fewest Missing first, then by title. Recipes that are
+ * Makeable or neither are left out.
+ */
+export function rankAlmostMakeable(
+  all: readonly recipes.Recipe[],
+  items: ItemsById,
+): { recipe: recipes.Recipe, result: RecipeMakeability }[] {
+  return all
+    .map((recipe) => ({ recipe, result: classifyRecipe(recipe, items) }))
+    .filter(({ result }) => result.makeability === 'almost makeable')
+    .sort(
+      (a, b) =>
+        a.result.missing - b.result.missing || a.recipe.title.localeCompare(b.recipe.title),
+    )
+}
