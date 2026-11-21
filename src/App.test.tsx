@@ -154,6 +154,61 @@ describe('App', () => {
     }
   })
 
+  it('keeps every refused save listed, each with its own Back to the editor and Dismiss', async () => {
+    const rejecting = { ...store(), update: () => Promise.reject(new Error('Permission denied')) }
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={rejecting} itemsPort={fakeItemsPort([])} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Frittata' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    await screen.findByText('Your edit to Frittata was not saved: Permission denied')
+    location.hash = editRecipeHref(r2)
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Pancakes'))
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Crepes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    await screen.findByText('Your edit to Crepes was not saved: Permission denied')
+    expect(screen.getByText('Your edit to Frittata was not saved: Permission denied')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Back to the editor' })).toHaveLength(2)
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0]!)
+    expect(screen.queryByText(/Frittata was not saved/)).not.toBeInTheDocument()
+    expect(screen.getByText('Your edit to Crepes was not saved: Permission denied')).toBeInTheDocument()
+  })
+
+  it('keeps a refused create listed when a later edit is refused', async () => {
+    const refusing = fakeRecipeStore([
+      { id: r1, recipe: { title: 'Omelette', ingredients: [], prepSteps: [], steps: ['Whisk'] } },
+    ])
+    refusing.refuseCreates(new Error('Permission denied'))
+    const rejecting = { ...refusing, update: () => Promise.reject(new Error('Offline')) }
+    vi.useFakeTimers()
+    try {
+      location.hash = NEW_RECIPE_HREF
+      render(<App recipeStore={rejecting} itemsPort={fakeItemsPort([])} />)
+      fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+      await act(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      })
+      await act(() => {
+        location.hash = editRecipeHref(r1)
+        fireEvent(window, new HashChangeEvent('hashchange'))
+      })
+      fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Frittata' } })
+      await act(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      })
+      await act(() => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(screen.getByText('Your new Recipe Pancakes was not saved: Permission denied')).toBeInTheDocument()
+      expect(screen.getByText('Your edit to Frittata was not saved: Offline')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('opens the editor on the Recipe at its edit URL, and saving returns to its view', async () => {
     location.hash = editRecipeHref(r1)
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
