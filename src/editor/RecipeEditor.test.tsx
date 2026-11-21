@@ -357,6 +357,32 @@ const entryOf = (id: string): RecipeEntry => ({
   recipe: { title: 'X', ingredients: [{ name: 'Beef', itemId: core.itemId(id) }], prepSteps: [], steps: [] },
 })
 
+describe('RecipeEditor adding to the Catalogue', () => {
+  const edited = (ingredients: RecipeEntry['recipe']['ingredients']): RecipeEntry => ({
+    id: recipes.recipeId('r 1'),
+    recipe: { title: 'X', ingredients, prepSteps: [], steps: [] },
+  })
+
+  it('offers an Unlinked Ingredient the Catalogue hand-off, naming it and returning to this Recipe and Ingredient', () => {
+    const entry = edited([{ name: 'Beef', itemId: core.itemId('beef') }, { name: 'Sea salt' }])
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+
+    expect(screen.queryByRole('link', { name: 'Add Ingredient 1 to Catalogue' })).toBeNull()
+    const href = screen.getByRole('link', { name: 'Add Ingredient 2 to Catalogue' }).getAttribute('href')!
+    const handOff = new URL(href, location.origin)
+    expect(handOff.pathname).toBe('/home-catalogue/')
+    const params = new URLSearchParams(handOff.hash.replace('#/items?', ''))
+    expect(params.get('add')).toBe('Sea salt')
+    expect(params.get('return')).toBe(`${location.origin}${location.pathname}#/recipes/r%201/ingredients/1`)
+  })
+
+  it('does not offer it for an Assumed Ingredient', () => {
+    const entry = edited([{ name: 'Water', assumed: true }])
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.queryByRole('link', { name: /to Catalogue$/ })).toBeNull()
+  })
+})
+
 describe('RecipeEditor unlinking and marking Assumed', () => {
   it('does not offer an Ingredient the Item it is already linked to', () => {
     render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} entry={entryOf('beef')} />)

@@ -12,6 +12,8 @@ export type Route =
   | { readonly screen: 'new-recipe' }
   | { readonly screen: 'recipe'; readonly id: RecipeId }
   | { readonly screen: 'edit-recipe'; readonly id: RecipeId }
+  /** Where the Catalogue sends the user back to after adding an Item for one of a Recipe's Ingredients. */
+  | { readonly screen: 'catalogue-return'; readonly id: RecipeId; readonly ingredient: number }
 
 /** Where the Home screen lives. */
 export const HOME_HREF = '#/'
@@ -24,6 +26,17 @@ export const recipeHref = (id: RecipeId) => `#/recipes/${encodeURIComponent(id)}
 
 /** Where a Recipe's editor lives. */
 export const editRecipeHref = (id: RecipeId) => `${recipeHref(id)}/edit`
+
+/** Where the Catalogue returns to for the Ingredient at `index` (from 0) of a Recipe. */
+export const catalogueReturnHref = (id: RecipeId, index: number) => `${recipeHref(id)}/ingredients/${index}`
+
+/**
+ * The Catalogue's add-Item hand-off for an Ingredient called `name`: it opens the add-Item dialog with
+ * that name and, when done, returns to `returnUrl` with the new Item's id as an `itemId` query parameter.
+ */
+export function addToCatalogueHref(catalogue: string, name: string, returnUrl: string): string {
+  return `${catalogue}#/items?${new URLSearchParams({ add: name, return: returnUrl })}`
+}
 
 /** The screen a URL hash names; any hash that names none is the Home screen. */
 export function parseRoute(hash: string): Route {
