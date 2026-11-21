@@ -42,9 +42,10 @@ export interface RecipeStore {
   /**
    * Saves a new Recipe and resolves with its client-generated id as soon as the write is issued,
    * without waiting for the server. Anything issued afterwards, such as a new `watch`, sees the
-   * Recipe. Rejects with `InvalidRecipeError` before any write.
+   * Recipe. Rejects with `InvalidRecipeError` before any write. If the server later refuses the write,
+   * the Recipe leaves `watch` and `onRefused`, if given, is called with the refusal.
    */
-  create(recipe: Recipe): Promise<RecipeId>
+  create(recipe: Recipe, onRefused?: (error: Error) => void): Promise<RecipeId>
 
   /**
    * Replaces the Recipe stored under `id`; fields the schema knows that `recipe` lacks are removed. Whether the
@@ -107,12 +108,12 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
       )
     },
 
-    async create(recipe) {
+    async create(recipe, onRefused) {
       const ref = doc(recipesCollection)
       const write = setDoc(ref, validatedFields(recipe))
       // The id is generated here, so it is known once the local write is applied; a write the server
       // later refuses is rolled back out of the cache and the Recipe leaves `watch`.
-      write.catch(() => {})
+      write.catch((error: Error) => onRefused?.(error))
       return recipes.recipeId(ref.id)
     },
 

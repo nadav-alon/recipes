@@ -22,11 +22,13 @@ export interface RecipeEditorProps {
   readonly store: RecipeStore
   /** The Recipe to edit; absent when creating a new one. */
   readonly entry?: RecipeEntry
+  /** The Recipe the form opens on, in place of `entry`'s or an empty one: an unsaved Recipe the store refused. */
+  readonly initial?: Recipe
   /** Called once a save has been handed to the store; offline it does not wait for the server. */
   readonly onSaved?: () => void
   /**
-   * Called when the store rejects an edit that `onSaved` has already reported, with the Recipe that was
-   * not saved, so a parent that has left the editor can keep the edit. Not called when creating.
+   * Called when the store rejects a save that `onSaved` or `onCreated` has already reported, with the Recipe
+   * that was not saved, so a parent that has left the editor can keep it.
    */
   readonly onSaveFailed?: (recipe: Recipe, error: Error) => void
   /** Called with the new Recipe's id once the store has applied creating it, offline too; never called when editing. */
@@ -39,8 +41,9 @@ export interface RecipeEditorProps {
 }
 
 /** The form that creates a Recipe, or edits `entry`. */
-export function RecipeEditor({ store, entry, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
-  const [draft, setDraft] = useState<RecipeDraft>(() => (entry ? draftOf(entry.recipe) : emptyDraft()))
+export function RecipeEditor({ store, entry, initial, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
+  const seed = initial ?? entry?.recipe
+  const [draft, setDraft] = useState<RecipeDraft>(() => (seed ? draftOf(seed) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
   const [deletion, setDeletion] = useState<'none' | 'undoable' | 'final'>('none')
@@ -55,17 +58,25 @@ export function RecipeEditor({ store, entry, onSaved, onSaveFailed, onCreated, o
 
   const save = (event: Event) => {
     event.preventDefault()
-    const recipe = recipeOf(draft, entry?.recipe)
+    const recipe = recipeOf(draft, seed)
     const found = problems(draft)
     if (found.length === 0) found.push(...schemaProblems(recipe))
     setBlockers(found)
     if (found.length > 0) return
     setFailure(null)
-    const write = entry ? store.update(entry.id, recipe) : store.create(recipe).then((id) => onCreated?.(id))
-    write.catch((error: Error) => {
-      if (entry) onSaveFailed?.(recipe, error)
+    const refused = (error: Error) => {
+      onSaveFailed?.(recipe, error)
       setFailure(error.message)
-    })
+    }
+    if (entry) {
+      store.update(entry.id, recipe).catch(refused)
+    } else {
+      // A server refusal reaches `refused` through `create`; only a rejection before any write lands here.
+      store
+        .create(recipe, refused)
+        .then((id) => onCreated?.(id))
+        .catch((error: Error) => setFailure(error.message))
+    }
     onSaved?.()
   }
 

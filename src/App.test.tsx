@@ -104,6 +104,56 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
   })
 
+  it('reports a refused create on the view it navigated to, with a way back to the editor holding the new Recipe', async () => {
+    const refusing = fakeRecipeStore()
+    refusing.refuseCreates(new Error('Permission denied'))
+    location.hash = NEW_RECIPE_HREF
+    render(<App recipeStore={refusing} itemsPort={fakeItemsPort([])} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(await screen.findByText('Your new Recipe Pancakes was not saved: Permission denied')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Back to the editor' }))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Pancakes'))
+    expect(screen.getByRole('heading', { name: 'New Recipe' })).toBeInTheDocument()
+  })
+
+  it('reports a refused create that arrives while another new Recipe is being written, keeping that form and offering the refused one', async () => {
+    vi.useFakeTimers()
+    try {
+      const refusing = fakeRecipeStore()
+      refusing.refuseCreates(new Error('Permission denied'))
+      location.hash = NEW_RECIPE_HREF
+      render(<App recipeStore={refusing} itemsPort={fakeItemsPort([])} />)
+      fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+      await act(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      })
+      expect(location.hash).toMatch(/^#\/recipes\/fake-/)
+      await act(() => {
+        location.hash = NEW_RECIPE_HREF
+        fireEvent(window, new HashChangeEvent('hashchange'))
+      })
+      fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Waffles' } })
+
+      await act(() => {
+        vi.advanceTimersByTime(1)
+      })
+
+      expect(screen.getByText('Your new Recipe Pancakes was not saved: Permission denied')).toBeInTheDocument()
+      expect(screen.getByLabelText('Title')).toHaveValue('Waffles')
+      await act(() => {
+        fireEvent.click(screen.getByRole('link', { name: 'Back to the editor' }))
+      })
+      expect(screen.getByLabelText('Title')).toHaveValue('Pancakes')
+      expect(screen.queryByText(/was not saved/)).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('opens the editor on the Recipe at its edit URL, and saving returns to its view', async () => {
     location.hash = editRecipeHref(r1)
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
