@@ -1,13 +1,16 @@
 import { firebaseWebConfig, type FirebaseWebConfig } from 'data-platform/client'
 import { LOCAL_PROJECT_ID } from 'data-platform/local'
 
+/** The Vite mode (`vite --mode emulator`) that runs the app against the local kit; `npm run ux` serves it, and `dev:local` in package.json must name the same mode. */
+export const EMULATOR_MODE = 'emulator'
+
 /**
  * The config for the `emulator` Vite mode, or `null` in every other mode: it names the local kit's
  * demo project and carries no real key. The mode check is inline so a production build folds it
  * away along with the kit.
  */
-export function localConfig(): FirebaseWebConfig | null {
-  if (import.meta.env.MODE !== 'emulator') return null
+export function emulatorConfig(): FirebaseWebConfig | null {
+  if (import.meta.env.MODE !== EMULATOR_MODE) return null
   return firebaseWebConfig({
     apiKey: 'local',
     authDomain: `${LOCAL_PROJECT_ID}.firebaseapp.com`,

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { core, recipes, COLLECTION_SCHEMAS } from 'data-platform'
-import { seedScenario, type Fixture } from 'data-platform/local'
+import { catalogue, core, recipes, COLLECTION_SCHEMAS } from 'data-platform'
+import { scenarioName, seedScenario, type Fixture } from 'data-platform/local'
 import { homeSections } from '../../src/home/home-sections.ts'
 import type { ItemsById } from '../../src/recipes/makeability.ts'
 import { uxFixtures } from './fixtures.ts'
 
-const SCENARIO = 'owner-with-items'
+const SCENARIO = scenarioName('owner-with-items')
 
-/** The Items the Household holds once the kit's scenario and the ux fixtures are both written. */
-async function items(): Promise<ItemsById> {
+/** Every document the Household holds once the kit's scenario and the ux fixtures are both written. */
+async function allFixtures(): Promise<Fixture[]> {
   const seeded: Fixture[] = []
   await seedScenario(
     {
@@ -19,8 +19,15 @@ async function items(): Promise<ItemsById> {
     },
     SCENARIO,
   )
+  // A later write to the same document replaces the earlier one, as in Firestore.
+  const byPath = new Map([...seeded, ...uxFixtures(SCENARIO)].map((f) => [`${f.collection}/${f.id}`, f]))
+  return [...byPath.values()]
+}
+
+/** The Items the Household holds once the kit's scenario and the ux fixtures are both written. */
+async function items(): Promise<ItemsById> {
   return new Map(
-    [...seeded, ...uxFixtures(SCENARIO)]
+    (await allFixtures())
       .filter((f) => f.collection === core.ITEMS_COLLECTION)
       .map((f) => [core.itemId(f.id), f.data as core.Item]),
   )
@@ -35,6 +42,18 @@ describe('uxFixtures for owner-with-items', () => {
   it('only writes documents that match the platform schemas', () => {
     for (const f of uxFixtures(SCENARIO)) {
       expect(COLLECTION_SCHEMAS[f.collection]?.safeParse(f.data).success, `${f.collection}/${f.id}`).toBe(true)
+    }
+  })
+
+  it('counts the references to each Category and Shop from what is seeded', async () => {
+    const all = await allFixtures()
+    const count = (collection: string, field: string, id: string) =>
+      all.filter((f) => f.collection === collection && f.data[field] === id).length
+    for (const f of all.filter((f) => f.collection === catalogue.CATEGORIES_COLLECTION)) {
+      expect(f.data.referenceCount, `categories/${f.id}`).toBe(count(catalogue.CATALOGUE_ITEMS_COLLECTION, 'categoryId', f.id))
+    }
+    for (const f of all.filter((f) => f.collection === catalogue.SHOPS_COLLECTION)) {
+      expect(f.data.referenceCount, `shops/${f.id}`).toBe(count(catalogue.CATEGORIES_COLLECTION, 'defaultShopId', f.id))
     }
   })
 
@@ -64,6 +83,6 @@ describe('uxFixtures for owner-with-items', () => {
   })
 
   it('writes nothing for a scenario without Recipes of its own', () => {
-    expect(uxFixtures('empty')).toEqual([])
+    expect(uxFixtures(scenarioName('empty'))).toEqual([])
   })
 })
