@@ -3,7 +3,7 @@ import type { core, recipes } from 'data-platform'
 /** The part of a Catalogue Item that decides whether an Ingredient linked to it is Missing. */
 export type ItemState = Pick<core.Item, 'state' | 'deletedAt'>
 
-export type ItemsById = ReadonlyMap<string, ItemState>
+export type ItemsById = ReadonlyMap<core.ItemId, ItemState>
 
 export type MissingReason = 'unlinked' | 'item out' | 'item soft-deleted'
 

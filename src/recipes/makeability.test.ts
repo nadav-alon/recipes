@@ -9,11 +9,11 @@ function ingredient(fields: Partial<recipes.Ingredient> = {}): recipes.Ingredien
 }
 
 const items: ItemsById = new Map([
-  ['flour', { state: 'enough' }],
-  ['milk', { state: 'running low' }],
-  ['eggs', { state: 'out' }],
-  ['out-and-gone', { state: 'out', deletedAt: { seconds: 1, nanoseconds: 0 } }],
-  ['gone', { state: 'enough', deletedAt: { seconds: 1, nanoseconds: 0 } }],
+  [id('flour'), { state: 'enough' }],
+  [id('milk'), { state: 'running low' }],
+  [id('eggs'), { state: 'out' }],
+  [id('out-and-gone'), { state: 'out', deletedAt: { seconds: 1, nanoseconds: 0 } }],
+  [id('gone'), { state: 'enough', deletedAt: { seconds: 1, nanoseconds: 0 } }],
 ])
 
 describe('classifyIngredient', () => {
