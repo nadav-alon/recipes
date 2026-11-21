@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:local": "vite --mode local",
+    "dev:local": "vite --mode emulator",
     "build": "vite build",
     "preview": "vite preview",
     "test": "firebase emulators:exec --only firestore --project demo-recipes \"vitest run --no-file-parallelism\"",
