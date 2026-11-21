@@ -67,4 +67,12 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('link', { name: 'Bread' })).toHaveAttribute('href', '#/recipes/3')
     expect(screen.getByRole('link', { name: 'Omelette' })).toHaveAttribute('href', '#/recipes/2')
   })
+
+  it('shows a load error instead of nothing when the Recipe watch fails', async () => {
+    const recipeStore = store()
+    render(<HomeScreen recipeStore={recipeStore} itemsPort={itemsPort()} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull()
+  })
 })

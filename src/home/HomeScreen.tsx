@@ -18,7 +18,9 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
   const [items, setItems] = useState<ItemsById | null>(null)
 
-  useEffect(() => recipeStore.watch(setEntries), [recipeStore])
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => recipeStore.watch(setEntries, () => setFailed(true)), [recipeStore])
   useEffect(
     () =>
       itemsPort.watchItems(
@@ -30,6 +32,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
     [itemsPort],
   )
 
+  if (failed) return <p role="alert">The Recipes could not be loaded.</p>
   if (entries === null || items === null) return null
   const sections = homeSections(entries, items)
 
