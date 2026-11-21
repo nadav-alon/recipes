@@ -27,18 +27,17 @@ export const editRecipeHref = (id: RecipeId) => `${recipeHref(id)}/edit`
 
 /** The screen a URL hash names; any hash that names none is the Home screen. */
 export function parseRoute(hash: string): Route {
-  const parts = hash.replace(/^#\/?/, '').split('/')
-  if (parts[0] === 'recipes' && parts.length === 2 && parts[1] === 'new') return { screen: 'new-recipe' }
-  if (parts[0] === 'recipes' && (parts.length === 2 || (parts.length === 3 && parts[2] === 'edit')) && parts[1] !== '') {
-    let id: string
-    try {
-      id = decodeURIComponent(parts[1]!)
-    } catch {
-      return { screen: 'home' }
-    }
-    return { screen: parts.length === 2 ? 'recipe' : 'edit-recipe', id: recipes.recipeId(id) }
+  const [root, id, action, ...rest] = hash.replace(/^#\/?/, '').split('/')
+  if (root !== 'recipes' || !id || rest.length > 0) return { screen: 'home' }
+  if (action === undefined && id === 'new') return { screen: 'new-recipe' }
+  if (action !== undefined && action !== 'edit') return { screen: 'home' }
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(id)
+  } catch {
+    return { screen: 'home' }
   }
-  return { screen: 'home' }
+  return { screen: action === undefined ? 'recipe' : 'edit-recipe', id: recipes.recipeId(decoded) }
 }
 
 /** The current route, following the hash as links, Back and Forward change it. */
