@@ -56,6 +56,7 @@ export function App({ recipeStore, itemsPort }: AppProps) {
             key={id}
             id={id}
             recipeStore={recipeStore}
+            itemsPort={itemsPort}
             held={openEdit?.recipe ?? null}
             onHeldCleared={() => openEdit && release(openEdit)}
             onSaveFailed={(recipe, error) => hold(target, recipe, error)}
@@ -68,6 +69,7 @@ export function App({ recipeStore, itemsPort }: AppProps) {
           <NewRecipeScreen
             key={newEditorKey}
             recipeStore={recipeStore}
+            itemsPort={itemsPort}
             held={newSeed?.recipe ?? null}
             onHeldCleared={() => newSeed && release(newSeed)}
             onSaveFailed={(recipe, error) => hold(target, recipe, error)}
@@ -204,12 +206,14 @@ function RecipeScreen({ id, recipeStore, itemsPort }: AppProps & { id: RecipeId 
 function EditScreen({
   id,
   recipeStore,
+  itemsPort,
   held,
   onHeldCleared,
   onSaveFailed,
 }: {
   id: RecipeId
   recipeStore: RecipeStore
+  itemsPort: ItemsPort
   /** An edit of this Recipe the store rejected; the editor opens on it rather than on the stored Recipe. */
   held: Recipe | null
   /** Called when the editor hands the save to the store, so any edit held for this Recipe can be forgotten. */
@@ -226,6 +230,7 @@ function EditScreen({
   return (
     <RecipeEditor
       store={recipeStore}
+      itemsPort={itemsPort}
       entry={opened.current}
       initial={held ?? undefined}
       onSaved={() => {
@@ -241,11 +246,13 @@ function EditScreen({
 /** Creates a Recipe, then shows it; the store generates the id, so it is known without waiting for the server. */
 function NewRecipeScreen({
   recipeStore,
+  itemsPort,
   held,
   onHeldCleared,
   onSaveFailed,
 }: {
   recipeStore: RecipeStore
+  itemsPort: ItemsPort
   /** A new Recipe the store refused; the editor opens on it rather than empty. */
   held: Recipe | null
   /** Called once the editor has created a Recipe, so any refused new Recipe held can be forgotten. */
@@ -255,6 +262,7 @@ function NewRecipeScreen({
   return (
     <RecipeEditor
       store={recipeStore}
+      itemsPort={itemsPort}
       initial={held ?? undefined}
       onCreated={(id) => {
         onHeldCleared()

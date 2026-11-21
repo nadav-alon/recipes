@@ -1,4 +1,4 @@
-import { recipes } from 'data-platform'
+import { recipes, type core } from 'data-platform'
 import type { Recipe } from '../recipes/recipe-store.ts'
 
 export type Ingredient = recipes.Ingredient
@@ -9,11 +9,14 @@ export const UNITS = recipes.INGREDIENT_UNITS
 
 /**
  * An Ingredient as typed into the form. `base` is the stored Ingredient it started from, so what the
- * form does not edit (its link to an Item, Assumed, unknown fields) survives a save.
+ * form does not edit (unknown fields) survives a save. `itemId` and `assumed` are the link as edited:
+ * an Ingredient never has both.
  */
 export interface IngredientDraft {
   readonly key: number
   readonly base: Ingredient | null
+  itemId: core.ItemId | null
+  assumed: boolean
   name: string
   quantity: string
   unit: IngredientUnit | ''
@@ -41,7 +44,7 @@ let nextKey = 1
 const newKey = (): number => nextKey++
 
 export function emptyIngredient(): IngredientDraft {
-  return { key: newKey(), base: null, name: '', quantity: '', unit: '', prepNote: '' }
+  return { key: newKey(), base: null, itemId: null, assumed: false, name: '', quantity: '', unit: '', prepNote: '' }
 }
 
 export function emptyStep(text = ''): StepDraft {
@@ -63,6 +66,8 @@ export function draftOf(recipe: Recipe): RecipeDraft {
     ingredients: recipe.ingredients.map((base) => ({
       key: newKey(),
       base,
+      itemId: base.itemId === undefined ? null : (base.itemId as core.ItemId),
+      assumed: base.assumed === true,
       name: base.name,
       quantity: base.quantity === undefined ? '' : String(base.quantity),
       unit: base.unit ?? '',
@@ -102,17 +107,32 @@ export function problems(draft: RecipeDraft): string[] {
   return found
 }
 
+/** The fields that link an Ingredient to `id`; an Assumed mark is cleared, as an Assumed Ingredient has no Item. */
+export function linkedTo(id: core.ItemId): Pick<IngredientDraft, 'itemId' | 'assumed'> {
+  return { itemId: id, assumed: false }
+}
+
 function optional<K extends string, V>(key: K, value: V | undefined): { [P in K]?: V } {
   return value === undefined ? {} : ({ [key]: value } as { [P in K]: V })
 }
 
 function ingredientOf(draft: IngredientDraft): Ingredient {
-  const { quantity: _q, unit: _u, prepNote: _p, ...kept } = draft.base ?? {}
+  const { quantity: _q, unit: _u, prepNote: _p, ...stored } = draft.base ?? {}
+  // A link left as it was keeps the stored fields untouched; an edited one replaces them.
+  const { itemId: _i, assumed: _a, ...unlinked } = stored
+  const linkEdited = draft.itemId !== (draft.base?.itemId ?? null) || draft.assumed !== (draft.base?.assumed === true)
+  const kept = linkEdited ? unlinked : stored
   const quantity = draft.quantity.trim()
   const prepNote = draft.prepNote.trim()
   return {
     ...kept,
     name: draft.name.trim(),
+    ...(linkEdited
+      ? {
+          ...optional('itemId', draft.itemId ?? undefined),
+          ...optional('assumed', draft.assumed ? (true as const) : undefined),
+        }
+      : {}),
     ...optional('quantity', quantity === '' ? undefined : Number(quantity)),
     ...optional('unit', draft.unit === '' ? undefined : draft.unit),
     ...optional('prepNote', prepNote === '' ? undefined : prepNote),

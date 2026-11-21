@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
@@ -6,6 +7,7 @@ import {
   emptyDraft,
   emptyIngredient,
   emptyStep,
+  linkedTo,
   moved,
   problems,
   recipeOf,
@@ -20,6 +22,8 @@ import {
 
 export interface RecipeEditorProps {
   readonly store: RecipeStore
+  /** Where the Items an Ingredient can be linked to are read from. */
+  readonly itemsPort: ItemsPort
   /** The Recipe to edit; absent when creating a new one. */
   readonly entry?: RecipeEntry
   /** The Recipe the form opens on, in place of `entry`'s or an empty one: an unsaved Recipe the store refused. */
@@ -41,12 +45,15 @@ export interface RecipeEditorProps {
 }
 
 /** The form that creates a Recipe, or edits `entry`. */
-export function RecipeEditor({ store, entry, initial, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
+export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
   const seed = initial ?? entry?.recipe
   const [draft, setDraft] = useState<RecipeDraft>(() => (seed ? draftOf(seed) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
   const [deletion, setDeletion] = useState<'none' | 'undoable' | 'final'>('none')
+  const [items, setItems] = useState<readonly WatchedItem[]>([])
+  const [itemsFailed, setItemsFailed] = useState(false)
+  useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const onDeletedRef = useRef(onDeleted)
   onDeletedRef.current = onDeleted
   const deleted = deletion !== 'none'
@@ -108,10 +115,12 @@ export function RecipeEditor({ store, entry, initial, onSaved, onSaveFailed, onC
         </label>
         <fieldset>
           <legend>Ingredients</legend>
+          {itemsFailed && <p role="alert">The Items could not be loaded, so Ingredients cannot be linked.</p>}
           {draft.ingredients.map((ingredient, i) => (
             <IngredientRow
               key={ingredient.key}
               ingredient={ingredient}
+              items={items}
               position={i + 1}
               last={i === draft.ingredients.length - 1}
               onChange={(fields) =>
@@ -162,6 +171,7 @@ export function RecipeEditor({ store, entry, initial, onSaved, onSaveFailed, onC
 
 interface IngredientRowProps {
   readonly ingredient: IngredientDraft
+  readonly items: readonly WatchedItem[]
   readonly position: number
   readonly last: boolean
   readonly onChange: (fields: Partial<IngredientDraft>) => void
@@ -169,8 +179,9 @@ interface IngredientRowProps {
   readonly onRemove: () => void
 }
 
-function IngredientRow({ ingredient, position, last, onChange, onMove, onRemove }: IngredientRowProps) {
+function IngredientRow({ ingredient, items, position, last, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
+  const linked = ingredient.itemId === null ? undefined : items.find((item) => item.id === ingredient.itemId)
   return (
     <div role="group" aria-label={row}>
       <input aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
@@ -197,7 +208,46 @@ function IngredientRow({ ingredient, position, last, onChange, onMove, onRemove 
         value={ingredient.prepNote}
         onInput={(e) => onChange({ prepNote: e.currentTarget.value })}
       />
+      {linked && (
+        <p>
+          Linked to {linked.name} ({linked.state})
+        </p>
+      )}
+      <ItemPicker row={row} items={items} onPick={(item) => onChange(linkedTo(item.id))} />
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
+    </div>
+  )
+}
+
+interface ItemPickerProps {
+  /** The Ingredient's name, as in "Ingredient 2". */
+  readonly row: string
+  readonly items: readonly WatchedItem[]
+  readonly onPick: (item: WatchedItem) => void
+}
+
+/** Searches the live Items by name, showing each one's State, and offers each to link to. */
+function ItemPicker({ row, items, onPick }: ItemPickerProps) {
+  const [query, setQuery] = useState('')
+  const needle = query.trim().toLowerCase()
+  const matches = items.filter((item) => !item.deleted && item.name.toLowerCase().includes(needle))
+  return (
+    <div role="group" aria-label={`${row} Items`}>
+      <input
+        type="search"
+        aria-label={`${row} Item search`}
+        value={query}
+        onInput={(e) => setQuery(e.currentTarget.value)}
+      />
+      <ul>
+        {matches.map((item) => (
+          <li key={item.id}>
+            <button type="button" onClick={() => onPick(item)}>
+              Link {row} to {item.name} ({item.state})
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
