@@ -1,9 +1,12 @@
 import type { core, recipes } from 'data-platform'
 
 /** The part of a Catalogue Item that decides whether an Ingredient linked to it is Missing. */
-export type ItemState = Pick<core.Item, 'state' | 'deletedAt'>
+export type ItemView = Pick<core.Item, 'state' | 'deletedAt'>
 
-export type ItemsById = ReadonlyMap<core.ItemId, ItemState>
+export type ItemsById = ReadonlyMap<core.ItemId, ItemView>
+
+/** Orders titles the same on every device. */
+const titleOrder = new Intl.Collator('en')
 
 export type MissingReason = 'unlinked' | 'item out' | 'item soft-deleted'
 
@@ -41,6 +44,11 @@ export interface RecipeMakeability {
   missing: number
 }
 
+export interface RankedRecipe {
+  recipe: recipes.Recipe
+  classification: RecipeMakeability
+}
+
 /** The most Missing Ingredients a Recipe can have and still be Almost makeable. */
 const ALMOST_MAKEABLE_MAX_MISSING = 2
 
@@ -59,12 +67,12 @@ export function classifyRecipe(recipe: recipes.Recipe, items: ItemsById): Recipe
 export function rankAlmostMakeable(
   all: readonly recipes.Recipe[],
   items: ItemsById,
-): { recipe: recipes.Recipe, result: RecipeMakeability }[] {
+): RankedRecipe[] {
   return all
-    .map((recipe) => ({ recipe, result: classifyRecipe(recipe, items) }))
-    .filter(({ result }) => result.makeability === 'almost makeable')
+    .map((recipe) => ({ recipe, classification: classifyRecipe(recipe, items) }))
+    .filter(({ classification }) => classification.makeability === 'almost makeable')
     .sort(
       (a, b) =>
-        a.result.missing - b.result.missing || a.recipe.title.localeCompare(b.recipe.title),
+        a.classification.missing - b.classification.missing || titleOrder.compare(a.recipe.title, b.recipe.title),
     )
 }
