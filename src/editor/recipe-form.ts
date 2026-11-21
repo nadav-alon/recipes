@@ -117,7 +117,7 @@ function optional<K extends string, V>(key: K, value: V | undefined): { [P in K]
 }
 
 function ingredientOf(draft: IngredientDraft): Ingredient {
-  const { quantity: _q, unit: _u, prepNote: _p, ...stored } = draft.base ?? {}
+  const { quantity: _q, unit: _u, prepNote: _p, ...stored } = draft.base ?? ({} as Partial<Ingredient>)
   // A link left as it was keeps the stored fields untouched; an edited one replaces them.
   const { itemId: _i, assumed: _a, ...unlinked } = stored
   const linkEdited = draft.itemId !== (draft.base?.itemId ?? null) || draft.assumed !== (draft.base?.assumed === true)
