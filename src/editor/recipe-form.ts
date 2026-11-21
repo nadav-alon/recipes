@@ -112,6 +112,12 @@ export function linkedTo(id: core.ItemId): Pick<IngredientDraft, 'itemId' | 'ass
   return { itemId: id, assumed: false }
 }
 
+/** The fields of an Ingredient with no Item that is not Assumed. */
+export const UNLINKED: Pick<IngredientDraft, 'itemId' | 'assumed'> = { itemId: null, assumed: false }
+
+/** The fields that mark an Ingredient Assumed, which clears any link: an Assumed Ingredient has no Item. */
+export const ASSUMED: Pick<IngredientDraft, 'itemId' | 'assumed'> = { itemId: null, assumed: true }
+
 function optional<K extends string, V>(key: K, value: V | undefined): { [P in K]?: V } {
   return value === undefined ? {} : ({ [key]: value } as { [P in K]: V })
 }

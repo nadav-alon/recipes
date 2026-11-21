@@ -8,6 +8,8 @@ import {
   emptyIngredient,
   emptyStep,
   linkedTo,
+  UNLINKED,
+  ASSUMED,
   moved,
   problems,
   recipeOf,
@@ -213,6 +215,20 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
           Linked to {linked.name} ({linked.state})
         </p>
       )}
+      {ingredient.itemId !== null && (
+        <button type="button" onClick={() => onChange(UNLINKED)}>
+          Unlink {row}
+        </button>
+      )}
+      <label>
+        <input
+          type="checkbox"
+          aria-label={`${row} assumed`}
+          checked={ingredient.assumed}
+          onChange={(e) => onChange(e.currentTarget.checked ? ASSUMED : UNLINKED)}
+        />
+        Assumed
+      </label>
       <ItemPicker row={row} items={items} onPick={(item) => onChange(linkedTo(item.id))} />
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>

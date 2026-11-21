@@ -323,3 +323,50 @@ describe('RecipeEditor linking an Ingredient to an Item', () => {
     expect(stored(store)[0].recipe.ingredients).toEqual([{ name: 'Milk', itemId: 'oat-milk' }])
   })
 })
+
+describe('RecipeEditor unlinking and marking Assumed', () => {
+  const beef = { name: 'Beef', itemId: core.itemId('milk'), quantity: 500, unit: 'g' as const }
+  const entry: RecipeEntry = {
+    id: recipes.recipeId('stew'),
+    recipe: { title: 'Stew', ingredients: [beef, { name: 'Water', assumed: true as const }], prepSteps: [], steps: [] },
+  }
+  const save = async (store: ReturnType<typeof fakeRecipeStore>, onSaved: () => void) => {
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    return stored(store)[0].recipe.ingredients
+  }
+
+  it('unlinks an Ingredient, keeping the rest of the line', async () => {
+    const store = fakeRecipeStore([entry])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink Ingredient 1' }))
+    expect(screen.queryByText(/^Linked to/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Unlink Ingredient 1' })).toBeNull()
+
+    expect((await save(store, onSaved))[0]).toEqual({ name: 'Beef', quantity: 500, unit: 'g' })
+  })
+
+  it('marking an Ingredient Assumed clears its link, and the mark can be removed', async () => {
+    const store = fakeRecipeStore([entry])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    fireEvent.click(screen.getByLabelText('Ingredient 2 assumed'))
+
+    expect(await save(store, onSaved)).toEqual([
+      { name: 'Beef', assumed: true, quantity: 500, unit: 'g' },
+      { name: 'Water' },
+    ])
+  })
+
+  it('linking an Assumed Ingredient to an Item removes the mark', async () => {
+    const store = fakeRecipeStore([entry])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Link Ingredient 2 to Flour (out)' }))
+    expect((screen.getByLabelText('Ingredient 2 assumed') as HTMLInputElement).checked).toBe(false)
+
+    expect((await save(store, onSaved))[1]).toEqual({ name: 'Water', itemId: 'flour' })
+  })
+})
