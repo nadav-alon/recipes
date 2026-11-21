@@ -38,7 +38,7 @@ export interface RecipeDraft {
 }
 
 let nextKey = 1
-export const newKey = (): number => nextKey++
+const newKey = (): number => nextKey++
 
 export function emptyIngredient(): IngredientDraft {
   return { key: newKey(), base: null, name: '', quantity: '', unit: '', prepNote: '' }
@@ -73,6 +73,11 @@ export function draftOf(recipe: Recipe): RecipeDraft {
   }
 }
 
+/** Plain decimal text (no exponent, hex or `Infinity`) that is finite and above zero. */
+function isPositiveDecimal(text: string): boolean {
+  return /^\d+(\.\d+)?$/.test(text) && Number.isFinite(Number(text)) && Number(text) > 0
+}
+
 /** Why a draft cannot be saved, in the words the form shows; empty when it can. */
 export function problems(draft: RecipeDraft): string[] {
   const found: string[] = []
@@ -85,7 +90,7 @@ export function problems(draft: RecipeDraft): string[] {
     const row = `Ingredient ${i + 1}`
     const quantity = ingredient.quantity.trim()
     if (ingredient.name.trim() === '') found.push(`${row} needs a name.`)
-    if (quantity !== '' && !(Number(quantity) > 0)) found.push(`${row}: the quantity must be a number above zero.`)
+    if (quantity !== '' && !isPositiveDecimal(quantity)) found.push(`${row}: the quantity must be a number above zero.`)
     if (ingredient.unit !== '' && quantity === '') found.push(`${row}: a unit needs a quantity.`)
   })
   draft.prepSteps.forEach((step, i) => {

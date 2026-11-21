@@ -25,6 +25,16 @@ describe('problems', () => {
     expect(problems(emptyDraft())).toEqual(['Give the Recipe a title.'])
   })
 
+  it.each(['Infinity', '1e400', '0x10', '1e2', '-1', '0', 'abc'])('rejects the quantity %s', (quantity) => {
+    const draft = { ...emptyDraft(), title: 'Soup', ingredients: [{ ...emptyIngredient(), name: 'Salt', quantity }] }
+    expect(problems(draft)).toEqual(['Ingredient 1: the quantity must be a number above zero.'])
+  })
+
+  it.each(['2', '0.5', '12.25'])('accepts the quantity %s', (quantity) => {
+    const draft = { ...emptyDraft(), title: 'Soup', ingredients: [{ ...emptyIngredient(), name: 'Salt', quantity }] }
+    expect(problems(draft)).toEqual([])
+  })
+
   it('says a unit needs a quantity', () => {
     const draft = { ...emptyDraft(), title: 'Soup', ingredients: [{ ...emptyIngredient(), name: 'Salt', unit: 'g' as const }] }
     expect(problems(draft)).toEqual(['Ingredient 1: a unit needs a quantity.'])
