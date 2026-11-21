@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import { FirebaseError } from 'firebase/app'
 import { Timestamp } from 'firebase/firestore'
@@ -46,11 +46,14 @@ async function seedItem(id: string, data: Record<string, unknown>) {
   })
 }
 
+/** The port over `uid`'s emulator connection; the emulator's compat Firestore is the modular one at runtime, only typed apart. */
+const portAs = (uid: string) => firestoreItemsPort(env.authenticatedContext(uid).firestore() as never)
+
 describe('watchItems', () => {
   it('delivers live and soft-deleted Items with their State, marking the soft-deleted', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     await seedItem('salt', { name: 'Salt', state: 'out', deletedAt: Timestamp.now() })
-    const port = firestoreItemsPort(env.authenticatedContext(alice).firestore() as never)
+    const port = portAs(alice)
 
     const items = await new Promise<readonly WatchedItem[]>((resolve, reject) => {
       stops.push(port.watchItems(resolve, reject))
@@ -61,13 +64,45 @@ describe('watchItems', () => {
       { id: salt, name: 'Salt', state: 'out', deleted: true },
     ])
   })
+
+  it('delivers a later change, including a soft delete, in a further snapshot', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    const port = portAs(alice)
+    const snapshots: Array<readonly WatchedItem[]> = []
+    const second = new Promise<readonly WatchedItem[]>((resolve, reject) => {
+      stops.push(
+        port.watchItems((items) => {
+          snapshots.push(items)
+          if (snapshots.length === 2) resolve(items)
+        }, reject),
+      )
+    })
+
+    await vi.waitFor(() => expect(snapshots).toHaveLength(1))
+    await seedItem('flour', { name: 'Flour', state: 'out', deletedAt: Timestamp.now() })
+
+    expect(await second).toEqual([{ id: flour, name: 'Flour', state: 'out', deleted: true }])
+  })
+
+  it('reports a malformed Item through onError and delivers nothing', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'bogus' })
+    const port = portAs(alice)
+    const onItems = vi.fn()
+
+    const error = await new Promise<unknown>((resolve) => {
+      stops.push(port.watchItems(onItems, resolve))
+    })
+
+    expect(error).toBeDefined()
+    expect(onItems).not.toHaveBeenCalled()
+  })
 })
 
 describe('setItemState', () => {
   it('writes the new State and appends a State history entry stamped with the server time', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     const db = env.authenticatedContext(alice).firestore()
-    const port = firestoreItemsPort(db as never)
+    const port = portAs(alice)
 
     await port.setItemState(flour, 'out')
 
@@ -82,10 +117,14 @@ describe('setItemState to the State the Item already has', () => {
   it('writes nothing', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
     const db = env.authenticatedContext(alice).firestore()
-    const port = firestoreItemsPort(db as never)
+    const port = portAs(alice)
+
+    const before = await db.doc(`${ITEMS_COLLECTION}/flour`).get()
 
     await port.setItemState(flour, 'enough')
 
+    const after = await db.doc(`${ITEMS_COLLECTION}/flour`).get()
+    expect(after.data()).toEqual(before.data())
     const history = await db.collection(core.stateHistoryCollectionPath(flour)).get()
     expect(history.empty).toBe(true)
   })
@@ -94,15 +133,20 @@ describe('setItemState to the State the Item already has', () => {
 describe('a rules refusal', () => {
   it('surfaces from setItemState as an error', async () => {
     await seedItem('flour', { name: 'Flour', state: 'enough' })
-    const outsider = env.authenticatedContext('mallory').firestore()
-    const port = firestoreItemsPort(outsider as never)
+    const port = portAs('mallory')
 
     await expect(port.setItemState(flour, 'out')).rejects.toSatisfy(isRulesRefusal)
   })
 
+  it('surfaces from setItemState when the read is allowed and the commit is denied', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    const port = portAs(alice)
+
+    await expect(port.setItemState(flour, 'bogus' as core.State)).rejects.toSatisfy(isRulesRefusal)
+  })
+
   it('surfaces from watchItems through onError', async () => {
-    const outsider = env.authenticatedContext('mallory').firestore()
-    const port = firestoreItemsPort(outsider as never)
+    const port = portAs('mallory')
 
     const error = await new Promise<unknown>((resolve) => {
       stops.push(port.watchItems(() => {}, resolve))

@@ -23,7 +23,8 @@ export interface ItemsPort {
 
   /**
    * Sets an Item's State and appends a State history entry stamped with the server time, in one
-   * batch; setting the State the Item already has writes nothing. Rejects if the Item does not exist or the write is refused.
+   * batch; setting the State the Item already has writes nothing. Rejects if the Item does not
+   * exist or the write is refused.
    */
   setItemState(id: core.ItemId, state: core.State): Promise<void>
 }
