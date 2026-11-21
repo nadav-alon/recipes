@@ -56,74 +56,74 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
 
   return (
     <>
-    <form onSubmit={save}>
-      <h1>{entry ? 'Edit Recipe' : 'New Recipe'}</h1>
-      <label>
-        Title
-        <input value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
-      </label>
-      <label>
-        Servings
-        <input inputMode="numeric" value={draft.servings} onInput={(e) => change({ servings: e.currentTarget.value })} />
-      </label>
-      <label>
-        Source URL
-        <input type="url" value={draft.sourceUrl} onInput={(e) => change({ sourceUrl: e.currentTarget.value })} />
-      </label>
-      <label>
-        Notes
-        <textarea value={draft.notes} onInput={(e) => change({ notes: e.currentTarget.value })} />
-      </label>
-      <fieldset>
-        <legend>Ingredients</legend>
-        {draft.ingredients.map((ingredient, i) => (
-          <IngredientRow
-            key={ingredient.key}
-            ingredient={ingredient}
-            position={i + 1}
-            last={i === draft.ingredients.length - 1}
-            onChange={(fields) =>
-              change({ ingredients: draft.ingredients.map((row, j) => (j === i ? { ...row, ...fields } : row)) })
-            }
-            onMove={(by) => change({ ingredients: moved(draft.ingredients, i, i + by) })}
-            onRemove={() => change({ ingredients: draft.ingredients.filter((_, j) => j !== i) })}
-          />
-        ))}
-        <button type="button" onClick={() => change({ ingredients: [...draft.ingredients, emptyIngredient()] })}>
-          Add Ingredient
-        </button>
-      </fieldset>
-      <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
-      <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
-      {blockers.length > 0 && (
-        <div role="alert">
-          <p>This Recipe cannot be saved yet:</p>
-          <ul>
-            {blockers.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        </div>
+      <form onSubmit={save}>
+        <h1>{entry ? 'Edit Recipe' : 'New Recipe'}</h1>
+        <label>
+          Title
+          <input value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
+        </label>
+        <label>
+          Servings
+          <input inputMode="numeric" value={draft.servings} onInput={(e) => change({ servings: e.currentTarget.value })} />
+        </label>
+        <label>
+          Source URL
+          <input type="url" value={draft.sourceUrl} onInput={(e) => change({ sourceUrl: e.currentTarget.value })} />
+        </label>
+        <label>
+          Notes
+          <textarea value={draft.notes} onInput={(e) => change({ notes: e.currentTarget.value })} />
+        </label>
+        <fieldset>
+          <legend>Ingredients</legend>
+          {draft.ingredients.map((ingredient, i) => (
+            <IngredientRow
+              key={ingredient.key}
+              ingredient={ingredient}
+              position={i + 1}
+              last={i === draft.ingredients.length - 1}
+              onChange={(fields) =>
+                change({ ingredients: draft.ingredients.map((row, j) => (j === i ? { ...row, ...fields } : row)) })
+              }
+              onMove={(by) => change({ ingredients: moved(draft.ingredients, i, i + by) })}
+              onRemove={() => change({ ingredients: draft.ingredients.filter((_, j) => j !== i) })}
+            />
+          ))}
+          <button type="button" onClick={() => change({ ingredients: [...draft.ingredients, emptyIngredient()] })}>
+            Add Ingredient
+          </button>
+        </fieldset>
+        <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
+        <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
+        {blockers.length > 0 && (
+          <div role="alert">
+            <p>This Recipe cannot be saved yet:</p>
+            <ul>
+              {blockers.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {failure !== null && <p role="alert">{failure}</p>}
+        <button type="submit">Save</button>
+        {entry && (
+          <button type="button" onClick={softDelete}>
+            Delete Recipe
+          </button>
+        )}
+      </form>
+      {entry && deleted && (
+        <Snackbar
+          message={`Deleted ${entry.recipe.title}`}
+          actionLabel="Undo"
+          onAction={() => {
+            store.restore(entry.id).catch((error: Error) => setFailure(error.message))
+            setDeleted(false)
+          }}
+          onDismiss={dismissUndo}
+        />
       )}
-      {failure !== null && <p role="alert">{failure}</p>}
-      <button type="submit">Save</button>
-      {entry && (
-        <button type="button" onClick={softDelete}>
-          Delete Recipe
-        </button>
-      )}
-    </form>
-    {entry && deleted && (
-      <Snackbar
-        message={`Deleted ${entry.recipe.title}`}
-        actionLabel="Undo"
-        onAction={() => {
-          store.restore(entry.id).catch((error: Error) => setFailure(error.message))
-          setDeleted(false)
-        }}
-        onDismiss={dismissUndo}
-      />
-    )}
     </>
   )
 }
