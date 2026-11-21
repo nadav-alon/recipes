@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "firebase emulators:exec --only firestore --project demo-recipes \"vitest run\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "data-platform": "github:nadav-alon/data-platform#v0.14.0",
