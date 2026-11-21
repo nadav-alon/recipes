@@ -44,11 +44,6 @@ export interface RecipeMakeability {
   missing: number
 }
 
-export interface RankedRecipe {
-  recipe: recipes.Recipe
-  classification: RecipeMakeability
-}
-
 /** The most Missing Ingredients a Recipe can have and still be Almost makeable. */
 const ALMOST_MAKEABLE_MAX_MISSING = 2
 
@@ -58,21 +53,4 @@ export function classifyRecipe(recipe: recipes.Recipe, items: ItemsById): Recipe
   const makeability =
     missing === 0 ? 'makeable' : missing <= ALMOST_MAKEABLE_MAX_MISSING ? 'almost makeable' : 'neither'
   return { ingredients: statuses, makeability, missing }
-}
-
-/**
- * The Almost makeable Recipes among `all`, fewest Missing first, then by title. Recipes that are
- * Makeable or neither are left out.
- */
-export function rankAlmostMakeable(
-  all: readonly recipes.Recipe[],
-  items: ItemsById,
-): RankedRecipe[] {
-  return all
-    .map((recipe) => ({ recipe, classification: classifyRecipe(recipe, items) }))
-    .filter(({ classification }) => classification.makeability === 'almost makeable')
-    .sort(
-      (a, b) =>
-        a.classification.missing - b.classification.missing || titleOrder.compare(a.recipe.title, b.recipe.title),
-    )
 }

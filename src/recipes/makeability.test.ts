@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { core, recipes } from 'data-platform'
-import { classifyIngredient, classifyRecipe, rankAlmostMakeable, type ItemsById } from './makeability.ts'
+import { classifyIngredient, classifyRecipe, type ItemsById } from './makeability.ts'
 
 const id = (value: string) => value as core.ItemId
 
@@ -103,32 +103,5 @@ describe('classifyRecipe', () => {
       { kind: 'missing', reason: 'item out' },
       { kind: 'at home', runningLow: false },
     ])
-  })
-})
-
-describe('rankAlmostMakeable', () => {
-  const lack = ingredient({ itemId: id('eggs') })
-  const titled = (title: string, ...ingredients: recipes.Ingredient[]) => ({
-    ...recipe(...ingredients),
-    title,
-  })
-
-  it('ranks by fewest Missing, then by title, leaving out Makeable and neither', () => {
-    const ranked = rankAlmostMakeable(
-      [
-        titled('Zeta', lack),
-        titled('Beta', lack, lack),
-        titled('Makeable'),
-        titled('Alpha', lack, lack),
-        titled('Far', lack, lack, lack),
-        titled('Gamma', lack),
-      ],
-      items,
-    )
-    expect(ranked.map(({ recipe }) => recipe.title)).toEqual(['Gamma', 'Zeta', 'Alpha', 'Beta'])
-  })
-
-  it('is empty when no Recipe is Almost makeable', () => {
-    expect(rankAlmostMakeable([titled('Makeable')], items)).toEqual([])
   })
 })
