@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { doc, getDoc, type Firestore } from 'firebase/firestore'
+import { disableNetwork, doc, getDoc, type Firestore } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { core } from 'data-platform'
 import { startEmulator, type Emulator } from '../test/emulator.ts'
@@ -47,6 +47,15 @@ describe('firestoreRecipeStore', () => {
 
     it('reports an empty list when there are no Recipes', async () => {
       expect(await current()).toEqual([])
+    })
+
+    it('keeps serving the Recipes it has already seen while offline', async () => {
+      await emulator.seed('recipes/pancakes', pancakes)
+      await current()
+
+      await disableNetwork(alice)
+
+      expect((await current()).map((e) => e.id)).toEqual(['pancakes'])
     })
 
     it('calls again when a Recipe appears, until stopped', async () => {
