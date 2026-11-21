@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'preact/hooks'
 import type { ItemsPort } from '../items/items-port.ts'
 import type { ItemsById } from '../recipes/makeability.ts'
-import type { RecipeEntry, RecipeId, RecipeStore } from '../recipes/recipe-store.ts'
+import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
+import { NEW_RECIPE_HREF, recipeHref } from '../routes.ts'
 import { homeSections, type ClassifiedEntry } from './home-sections.ts'
 
 export interface HomeScreenProps {
@@ -51,12 +52,6 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
     </main>
   )
 }
-
-/** Where creating a Recipe lives. */
-export const NEW_RECIPE_HREF = '#/recipes/new'
-
-/** Where a Recipe's view lives. */
-export const recipeHref = (id: RecipeId) => `#/recipes/${id}`
 
 interface SectionProps {
   title: string
