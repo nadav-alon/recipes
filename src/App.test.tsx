@@ -177,6 +177,68 @@ describe('App', () => {
     expect(screen.getByText('Your edit to Crepes was not saved: Permission denied')).toBeInTheDocument()
   })
 
+  async function refuseTwoCreates() {
+    const refusing = fakeRecipeStore()
+    refusing.refuseCreates(new Error('Permission denied'))
+    // The previous test's hash reset fires its hashchange after a tick.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    render(<App recipeStore={refusing} itemsPort={fakeItemsPort([])} />)
+    for (const title of ['Pancakes', 'Waffles']) {
+      location.hash = NEW_RECIPE_HREF
+      fireEvent(window, new HashChangeEvent('hashchange'))
+      fireEvent.input(screen.getByLabelText('Title'), { target: { value: title } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
+      fireEvent(window, new HashChangeEvent('hashchange'))
+      await screen.findByText(`Your new Recipe ${title} was not saved: Permission denied`)
+    }
+  }
+
+  it('restores one of several refused creates, leaving the others listed', async () => {
+    await refuseTwoCreates()
+    fireEvent.click(screen.getAllByRole('link', { name: 'Back to the editor' })[1]!)
+    location.hash = NEW_RECIPE_HREF
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Waffles'))
+    expect(screen.getByText('Your new Recipe Pancakes was not saved: Permission denied')).toBeInTheDocument()
+    expect(screen.queryByText(/Waffles was not saved/)).not.toBeInTheDocument()
+  })
+
+  it('does not reopen a held create on the next visit after a modified click on its link', async () => {
+    await refuseTwoCreates()
+    fireEvent.click(screen.getAllByRole('link', { name: 'Back to the editor' })[1]!, { ctrlKey: true })
+    location.hash = NEW_RECIPE_HREF
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(screen.getByLabelText('Title')).toHaveValue('')
+  })
+
+  it('keeps both refused edits of one Recipe listed when two saves are in flight, and reopens the editor on the latest', async () => {
+    const refusals: Array<(error: Error) => void> = []
+    const pending = {
+      ...store(),
+      update: () => new Promise<void>((_, reject) => refusals.push(reject)),
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    render(<App recipeStore={pending} itemsPort={fakeItemsPort([])} />)
+    for (const title of ['Frittata', 'Quiche']) {
+      location.hash = editRecipeHref(r1)
+      fireEvent(window, new HashChangeEvent('hashchange'))
+      fireEvent.input(screen.getByLabelText('Title'), { target: { value: title } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      fireEvent(window, new HashChangeEvent('hashchange'))
+    }
+    await act(() => {
+      for (const refuse of refusals) refuse(new Error('Permission denied'))
+    })
+    await screen.findByText('Your edit to Quiche was not saved: Permission denied')
+    expect(screen.getByText('Your edit to Frittata was not saved: Permission denied')).toBeInTheDocument()
+    location.hash = editRecipeHref(r1)
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Quiche'))
+    expect(screen.getByText('Your edit to Frittata was not saved: Permission denied')).toBeInTheDocument()
+    expect(screen.queryByText(/Quiche was not saved/)).not.toBeInTheDocument()
+  })
+
   it('keeps a refused create listed when a later edit is refused', async () => {
     const refusing = fakeRecipeStore([
       { id: r1, recipe: { title: 'Omelette', ingredients: [], prepSteps: [], steps: ['Whisk'] } },

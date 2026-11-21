@@ -32,11 +32,13 @@ export function App({ recipeStore, itemsPort }: AppProps) {
   }
   const newSeed = newEditorOpenedOn.current?.held ?? null
 
+  // Several held edits of one Recipe stay listed; its editor reopens on the latest.
+  const openEdit = route.screen === 'edit-recipe' ? held.findLast((entry) => isEditOf(entry, route.id)) : undefined
+
   const hold = (target: SaveTarget, recipe: Recipe, error: Error) =>
     setHeld((all) => {
       const entry = { key: nextHeldKey.current++, target, recipe, message: error.message }
-      // A later refusal of the edit of a Recipe continues the held edit, which its editor reopens on.
-      return [...all.filter((h) => target.kind === 'new' || !isEditOf(h, target.id)), entry]
+      return [...all, entry]
     })
   const release = (entry: HeldSave) => setHeld((all) => all.filter((h) => h.key !== entry.key))
 
@@ -49,14 +51,13 @@ export function App({ recipeStore, itemsPort }: AppProps) {
       case 'edit-recipe': {
         const id = route.id
         const target: SaveTarget = { kind: 'edit', id }
-        const heldEdit = held.find((h) => isEditOf(h, id)) ?? null
         return (
           <EditScreen
             key={id}
             id={id}
             recipeStore={recipeStore}
-            unsaved={heldEdit?.recipe ?? null}
-            onUnsavedCleared={() => setHeld((all) => all.filter((h) => !isEditOf(h, id)))}
+            held={openEdit?.recipe ?? null}
+            onHeldCleared={() => openEdit && release(openEdit)}
             onSaveFailed={(recipe, error) => hold(target, recipe, error)}
           />
         )
@@ -67,8 +68,8 @@ export function App({ recipeStore, itemsPort }: AppProps) {
           <NewRecipeScreen
             key={newEditorKey}
             recipeStore={recipeStore}
-            unsaved={newSeed?.recipe ?? null}
-            onUnsavedCleared={() => newSeed && release(newSeed)}
+            held={newSeed?.recipe ?? null}
+            onHeldCleared={() => newSeed && release(newSeed)}
             onSaveFailed={(recipe, error) => hold(target, recipe, error)}
           />
         )
@@ -78,16 +79,13 @@ export function App({ recipeStore, itemsPort }: AppProps) {
 
   // The notice lists the held saves the open editor does not hold: on the New Recipe screen that is
   // every held new Recipe but the one the editor opened on, such as one refused while the user started another.
-  const heldByOpenEditor = (entry: HeldSave) =>
-    route.screen === 'new-recipe'
-      ? entry === newSeed
-      : entry.target.kind === 'edit' && route.screen === 'edit-recipe' && route.id === entry.target.id
+  const heldByOpenEditor = (entry: HeldSave) => (route.screen === 'new-recipe' ? entry === newSeed : entry === openEdit)
   const shown = held.filter((entry) => !heldByOpenEditor(entry))
 
   return (
     <>
       {shown.length > 0 && (
-        <UnsavedEditNotice
+        <HeldSavesNotice
           held={shown}
           onDismiss={release}
           onBackToEditor={(entry) => {
@@ -119,8 +117,8 @@ interface HeldSave {
   readonly message: string
 }
 
-function isEditOf(held: HeldSave, id: RecipeId): boolean {
-  return held.target.kind === 'edit' && held.target.id === id
+function isEditOf(entry: HeldSave, id: RecipeId): boolean {
+  return entry.target.kind === 'edit' && entry.target.id === id
 }
 
 /** How the notice names a held save and where its editor is. */
@@ -131,7 +129,7 @@ function describeTarget(target: SaveTarget): { label: string; href: string } {
 }
 
 /** Tells the user which saves were rejected after their editor had gone, each with the way back to the editor holding it. */
-function UnsavedEditNotice({
+function HeldSavesNotice({
   held,
   onDismiss,
   onBackToEditor,
@@ -150,7 +148,13 @@ function UnsavedEditNotice({
               <p>
                 {label} {entry.recipe.title} was not saved: {entry.message}
               </p>
-              <a href={href} onClick={() => onBackToEditor(entry)}>
+              <a
+                href={href}
+                onClick={(e) => {
+                  // A click that opens the editor elsewhere leaves this tab's editor alone.
+                  if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) onBackToEditor(entry)
+                }}
+              >
                 Back to the editor
               </a>
               <button type="button" onClick={() => onDismiss(entry)}>
@@ -200,16 +204,16 @@ function RecipeScreen({ id, recipeStore, itemsPort }: AppProps & { id: RecipeId 
 function EditScreen({
   id,
   recipeStore,
-  unsaved,
-  onUnsavedCleared,
+  held,
+  onHeldCleared,
   onSaveFailed,
 }: {
   id: RecipeId
   recipeStore: RecipeStore
   /** An edit of this Recipe the store rejected; the editor opens on it rather than on the stored Recipe. */
-  unsaved: Recipe | null
+  held: Recipe | null
   /** Called when the editor hands the save to the store, so any edit held for this Recipe can be forgotten. */
-  onUnsavedCleared: () => void
+  onHeldCleared: () => void
   onSaveFailed: NonNullable<RecipeEditorProps['onSaveFailed']>
 }) {
   const { entries, failed } = useRecipeEntries(recipeStore)
@@ -223,9 +227,9 @@ function EditScreen({
     <RecipeEditor
       store={recipeStore}
       entry={opened.current}
-      initial={unsaved ?? undefined}
+      initial={held ?? undefined}
       onSaved={() => {
-        onUnsavedCleared()
+        onHeldCleared()
         navigate(recipeHref(id))
       }}
       onSaveFailed={onSaveFailed}
@@ -237,23 +241,23 @@ function EditScreen({
 /** Creates a Recipe, then shows it; the store generates the id, so it is known without waiting for the server. */
 function NewRecipeScreen({
   recipeStore,
-  unsaved,
-  onUnsavedCleared,
+  held,
+  onHeldCleared,
   onSaveFailed,
 }: {
   recipeStore: RecipeStore
   /** A new Recipe the store refused; the editor opens on it rather than empty. */
-  unsaved: Recipe | null
+  held: Recipe | null
   /** Called once the editor has created a Recipe, so any refused new Recipe held can be forgotten. */
-  onUnsavedCleared: () => void
+  onHeldCleared: () => void
   onSaveFailed: NonNullable<RecipeEditorProps['onSaveFailed']>
 }) {
   return (
     <RecipeEditor
       store={recipeStore}
-      initial={unsaved ?? undefined}
+      initial={held ?? undefined}
       onCreated={(id) => {
-        onUnsavedCleared()
+        onHeldCleared()
         navigate(recipeHref(id))
       }}
       onSaveFailed={onSaveFailed}
