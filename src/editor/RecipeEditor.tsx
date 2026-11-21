@@ -1,5 +1,6 @@
-import { useState } from 'preact/hooks'
+import { useCallback, useState } from 'preact/hooks'
 import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
+import { Snackbar } from './Snackbar.tsx'
 import {
   draftOf,
   emptyDraft,
@@ -21,13 +22,17 @@ export interface RecipeEditorProps {
   readonly entry?: RecipeEntry
   /** Called once a save has been handed to the store; offline it does not wait for the server. */
   readonly onSaved?: () => void
+  /** Called once a Soft delete has been handed to the store; Undo stays on offer afterwards. */
+  readonly onDeleted?: () => void
 }
 
 /** The form that creates a Recipe, or edits `entry`. */
-export function RecipeEditor({ store, entry, onSaved }: RecipeEditorProps) {
+export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorProps) {
   const [draft, setDraft] = useState<RecipeDraft>(() => (entry ? draftOf(entry.recipe) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
+  const [deleted, setDeleted] = useState(false)
+  const dismissUndo = useCallback(() => setDeleted(false), [])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
   const save = (event: Event) => {
@@ -42,7 +47,15 @@ export function RecipeEditor({ store, entry, onSaved }: RecipeEditorProps) {
     onSaved?.()
   }
 
+  const remove = () => {
+    if (!entry) return
+    store.softDelete(entry.id).catch((error: Error) => setFailure(error.message))
+    setDeleted(true)
+    onDeleted?.()
+  }
+
   return (
+    <>
     <form onSubmit={save}>
       <h1>{entry ? 'Edit Recipe' : 'New Recipe'}</h1>
       <label>
@@ -94,7 +107,24 @@ export function RecipeEditor({ store, entry, onSaved }: RecipeEditorProps) {
       )}
       {failure !== null && <p role="alert">{failure}</p>}
       <button type="submit">Save</button>
+      {entry && (
+        <button type="button" onClick={remove}>
+          Delete Recipe
+        </button>
+      )}
     </form>
+    {entry && deleted && (
+      <Snackbar
+        message={`Deleted ${entry.recipe.title}`}
+        actionLabel="Undo"
+        onAction={() => {
+          store.restore(entry.id).catch((error: Error) => setFailure(error.message))
+          setDeleted(false)
+        }}
+        onDismiss={dismissUndo}
+      />
+    )}
+    </>
   )
 }
 

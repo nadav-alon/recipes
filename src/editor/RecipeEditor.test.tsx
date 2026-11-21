@@ -169,3 +169,44 @@ describe('RecipeEditor editing', () => {
     ])
   })
 })
+
+describe('RecipeEditor deleting', () => {
+  const entry: RecipeEntry = {
+    id: recipes.recipeId('stew'),
+    recipe: { title: 'Stew', ingredients: [], prepSteps: [], steps: [] },
+  }
+
+  it('offers no delete while creating', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} />)
+    expect(screen.queryByRole('button', { name: 'Delete Recipe' })).not.toBeInTheDocument()
+  })
+
+  it('Soft deletes the Recipe and offers Undo in a snackbar, which brings it back', async () => {
+    const store = fakeRecipeStore([entry])
+    const onDeleted = vi.fn()
+    render(<RecipeEditor store={store} entry={entry} onDeleted={onDeleted} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Deleted Stew')
+    expect(onDeleted).toHaveBeenCalled()
+    await waitFor(() => expect(stored(store)).toEqual([]))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(stored(store).map((e) => e.id)).toEqual(['stew']))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('takes the snackbar away after a while, leaving the Recipe deleted', async () => {
+    vi.useFakeTimers()
+    try {
+      const store = fakeRecipeStore([entry])
+      render(<RecipeEditor store={store} entry={entry} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+      await vi.advanceTimersByTimeAsync(8000)
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      expect(stored(store)).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
