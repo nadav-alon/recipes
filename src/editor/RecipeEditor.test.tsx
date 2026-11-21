@@ -12,6 +12,16 @@ function stored(store: ReturnType<typeof fakeRecipeStore>): RecipeEntry[] {
 }
 
 describe('RecipeEditor creating', () => {
+  it('reports the new Recipe\'s id once the store has created it', async () => {
+    const store = fakeRecipeStore()
+    const onCreated = vi.fn()
+    render(<RecipeEditor store={store} onCreated={onCreated} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(stored(store)[0].id))
+  })
+
   it('saves the title, Servings, source URL and notes as a new Recipe', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()

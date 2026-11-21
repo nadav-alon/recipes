@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import type { ItemsPort } from './items/items-port.ts'
 import { useItemsById } from './items/use-items-by-id.ts'
 import { RecipeEditor } from './editor/RecipeEditor.tsx'
@@ -83,16 +83,5 @@ function EditScreen({ id, recipeStore }: { id: RecipeId; recipeStore: RecipeStor
 
 /** Creates a Recipe, then shows it; the id is only known once the store has acknowledged the write. */
 function NewRecipeScreen({ recipeStore }: { recipeStore: RecipeStore }) {
-  const store = useMemo<RecipeStore>(
-    () => ({
-      ...recipeStore,
-      create: async (recipe) => {
-        const id = await recipeStore.create(recipe)
-        navigate(recipeHref(id))
-        return id
-      },
-    }),
-    [recipeStore],
-  )
-  return <RecipeEditor store={store} />
+  return <RecipeEditor store={recipeStore} onCreated={(id) => navigate(recipeHref(id))} />
 }
