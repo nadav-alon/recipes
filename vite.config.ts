@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // The emulator test files share one Firestore and each wipes it between tests, so files cannot overlap.
+    fileParallelism: false,
   },
 })
