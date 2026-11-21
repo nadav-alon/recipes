@@ -47,7 +47,7 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
     onSaved?.()
   }
 
-  const remove = () => {
+  const softDelete = () => {
     if (!entry) return
     store.softDelete(entry.id).catch((error: Error) => setFailure(error.message))
     setDeleted(true)
@@ -108,7 +108,7 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
       {failure !== null && <p role="alert">{failure}</p>}
       <button type="submit">Save</button>
       {entry && (
-        <button type="button" onClick={remove}>
+        <button type="button" onClick={softDelete}>
           Delete Recipe
         </button>
       )}
