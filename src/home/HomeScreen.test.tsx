@@ -83,7 +83,7 @@ describe('HomeScreen', () => {
     await act(() => recipeStore.failWatches(new Error('permission-denied')))
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
     expect(screen.queryByRole('main')).toBeNull()
-    expect(screen.queryByRole('heading')).toBeNull()
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'New Recipe' })).toBeNull()
   })
 
@@ -94,7 +94,7 @@ describe('HomeScreen', () => {
     await act(() => port.failWatches(new Error('permission-denied')))
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
     expect(screen.queryByRole('main')).toBeNull()
-    expect(screen.queryByRole('heading')).toBeNull()
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'New Recipe' })).toBeNull()
   })
 
@@ -108,6 +108,7 @@ describe('HomeScreen', () => {
     }
     render(<HomeScreen recipeStore={failingStore} itemsPort={itemsPort()} />)
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
   })
 
   it('shows the load error, not a blank page, when the Items watch fails before delivering anything', () => {
@@ -120,5 +121,6 @@ describe('HomeScreen', () => {
     }
     render(<HomeScreen recipeStore={store()} itemsPort={failingPort} />)
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
   })
 })

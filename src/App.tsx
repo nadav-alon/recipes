@@ -181,7 +181,12 @@ function useRecipeEntries(recipeStore: RecipeStore) {
 }
 
 function LoadFailed() {
-  return <p role="alert">The Recipe could not be loaded.</p>
+  return (
+    <TopAppBar title="Recipe">
+      <BackButton fallback={HOME_HREF} />
+      <p role="alert">The Recipe could not be loaded.</p>
+    </TopAppBar>
+  )
 }
 
 function RecipeNotFound() {

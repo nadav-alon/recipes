@@ -23,7 +23,12 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   useEffect(() => recipeStore.watch(setEntries, () => setFailed(true)), [recipeStore])
   const items = useItemsById(itemsPort, () => setFailed(true))
 
-  if (failed) return <p role="alert">The Recipes could not be loaded.</p>
+  if (failed)
+    return (
+      <TopAppBar title="Recipes">
+        <p role="alert">The Recipes could not be loaded.</p>
+      </TopAppBar>
+    )
   if (entries === null || items === null) return null
   const sections = homeSections(entries, items)
 
