@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
+import { FirebaseError } from 'firebase/app'
 import { Timestamp } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 import { core } from 'data-platform'
@@ -7,6 +8,9 @@ import { firestoreItemsPort } from './firestore-items-port.ts'
 import type { WatchedItem } from './items-port.ts'
 
 const { HOUSEHOLD_DOC_PATH, ITEMS_COLLECTION, itemId, memberDocPath, uid } = core
+
+/** Whether Firestore's rules denied the operation, as opposed to a network or programming error. */
+const isRulesRefusal = (error: unknown) => error instanceof FirebaseError && error.code === 'permission-denied'
 
 const alice = uid('alice')
 const flour = itemId('flour')
@@ -84,5 +88,26 @@ describe('setItemState to the State the Item already has', () => {
 
     const history = await db.collection(core.stateHistoryCollectionPath(flour)).get()
     expect(history.empty).toBe(true)
+  })
+})
+
+describe('a rules refusal', () => {
+  it('surfaces from setItemState as an error', async () => {
+    await seedItem('flour', { name: 'Flour', state: 'enough' })
+    const outsider = env.authenticatedContext('mallory').firestore()
+    const port = firestoreItemsPort(outsider as never)
+
+    await expect(port.setItemState(flour, 'out')).rejects.toSatisfy(isRulesRefusal)
+  })
+
+  it('surfaces from watchItems through onError', async () => {
+    const outsider = env.authenticatedContext('mallory').firestore()
+    const port = firestoreItemsPort(outsider as never)
+
+    const error = await new Promise<unknown>((resolve) => {
+      stops.push(port.watchItems(() => {}, resolve))
+    })
+
+    expect(isRulesRefusal(error)).toBe(true)
   })
 })
