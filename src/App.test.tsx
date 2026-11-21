@@ -70,6 +70,15 @@ describe('App', () => {
     location.hash = recipeHref(recipes.recipeId('nope'))
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('alert')).toHaveTextContent('This Recipe does not exist.')
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
+  })
+
+  it('keeps the top app bar, with Back, when the Recipes cannot be loaded', () => {
+    location.hash = recipeHref(r1)
+    const failing = { ...store(), watch: (_onChange: unknown, onError?: (e: Error) => void) => (onError?.(new Error('permission-denied')), () => {}) }
+    render(<App recipeStore={failing as never} itemsPort={fakeItemsPort([])} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
   })
 
   it('opens the editor empty at the new-Recipe URL, and shows the Recipe once it is saved', async () => {

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
+import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
+import { BackButton } from '../shell/BackButton.tsx'
+import { HOME_HREF, recipeHref } from '../routes.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
   draftOf,
@@ -99,65 +102,67 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
 
   return (
     <>
-      <form onSubmit={save}>
-        <h1>{entry ? 'Edit Recipe' : 'New Recipe'}</h1>
-        <label>
-          Title
-          <input value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
-        </label>
-        <label>
-          Servings
-          <input inputMode="numeric" value={draft.servings} onInput={(e) => change({ servings: e.currentTarget.value })} />
-        </label>
-        <label>
-          Source URL
-          <input type="url" value={draft.sourceUrl} onInput={(e) => change({ sourceUrl: e.currentTarget.value })} />
-        </label>
-        <label>
-          Notes
-          <textarea value={draft.notes} onInput={(e) => change({ notes: e.currentTarget.value })} />
-        </label>
-        <fieldset>
-          <legend>Ingredients</legend>
-          {itemsFailed && <p role="alert">The Items could not be loaded, so Ingredients cannot be linked.</p>}
-          {draft.ingredients.map((ingredient, i) => (
-            <IngredientRow
-              key={ingredient.key}
-              ingredient={ingredient}
-              items={items}
-              position={i + 1}
-              last={i === draft.ingredients.length - 1}
-              onChange={(fields) =>
-                change({ ingredients: updated(draft.ingredients, i, fields) })
-              }
-              onMove={(by) => change({ ingredients: moved(draft.ingredients, i, i + by) })}
-              onRemove={() => change({ ingredients: without(draft.ingredients, i) })}
-            />
-          ))}
-          <button type="button" onClick={() => change({ ingredients: [...draft.ingredients, emptyIngredient()] })}>
-            Add Ingredient
-          </button>
-        </fieldset>
-        <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
-        <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
-        {blockers.length > 0 && (
-          <div role="alert">
-            <p>This Recipe cannot be saved yet:</p>
-            <ul>
-              {blockers.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {failure !== null && <p role="alert">{failure}</p>}
-        <button type="submit" disabled={deleted}>Save</button>
-        {entry && (
-          <button type="button" disabled={deleted} onClick={softDelete}>
-            Delete Recipe
-          </button>
-        )}
-      </form>
+      <TopAppBar title={entry ? 'Edit Recipe' : 'New Recipe'}>
+        <form onSubmit={save}>
+          <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
+          <label>
+            Title
+            <input value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
+          </label>
+          <label>
+            Servings
+            <input inputMode="numeric" value={draft.servings} onInput={(e) => change({ servings: e.currentTarget.value })} />
+          </label>
+          <label>
+            Source URL
+            <input type="url" value={draft.sourceUrl} onInput={(e) => change({ sourceUrl: e.currentTarget.value })} />
+          </label>
+          <label>
+            Notes
+            <textarea value={draft.notes} onInput={(e) => change({ notes: e.currentTarget.value })} />
+          </label>
+          <fieldset>
+            <legend>Ingredients</legend>
+            {itemsFailed && <p role="alert">The Items could not be loaded, so Ingredients cannot be linked.</p>}
+            {draft.ingredients.map((ingredient, i) => (
+              <IngredientRow
+                key={ingredient.key}
+                ingredient={ingredient}
+                items={items}
+                position={i + 1}
+                last={i === draft.ingredients.length - 1}
+                onChange={(fields) =>
+                  change({ ingredients: updated(draft.ingredients, i, fields) })
+                }
+                onMove={(by) => change({ ingredients: moved(draft.ingredients, i, i + by) })}
+                onRemove={() => change({ ingredients: without(draft.ingredients, i) })}
+              />
+            ))}
+            <button type="button" onClick={() => change({ ingredients: [...draft.ingredients, emptyIngredient()] })}>
+              Add Ingredient
+            </button>
+          </fieldset>
+          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
+          <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
+          {blockers.length > 0 && (
+            <div role="alert">
+              <p>This Recipe cannot be saved yet:</p>
+              <ul>
+                {blockers.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {failure !== null && <p role="alert">{failure}</p>}
+          <button type="submit" disabled={deleted}>Save</button>
+          {entry && (
+            <button type="button" disabled={deleted} onClick={softDelete}>
+              Delete Recipe
+            </button>
+          )}
+        </form>
+      </TopAppBar>
       {entry && deletion === 'undoable' && (
         <Snackbar
           message={`Deleted ${entry.recipe.title}`}

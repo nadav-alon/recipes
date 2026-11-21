@@ -262,3 +262,12 @@ async function click(element: HTMLElement) {
     fireEvent.click(element)
   })
 }
+
+describe('RecipeView top app bar', () => {
+  it('titles the bar with the Recipe and offers a back arrow', () => {
+    render(<RecipeView recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    const bar = within(screen.getByRole('banner'))
+    expect(bar.getByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
+    expect(bar.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+  })
+})

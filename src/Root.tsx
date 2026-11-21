@@ -9,6 +9,7 @@ import { SetupScreen } from './gate/SetupScreen.tsx'
 import { App } from './App.tsx'
 import { firestoreItemsPort } from './items/firestore-items-port.ts'
 import { firestoreRecipeStore } from './recipes/recipe-store.ts'
+import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 
 type RootState = Pick<ConfigResolution, 'config' | 'error' | 'proposed'> & { local: boolean }
 
@@ -27,24 +28,25 @@ export function Root() {
 
   if (proposed !== null) {
     return (
-      <main>
-        <h1>Switch Household?</h1>
-        <p>
-          This link carries the config of another Firebase project (<code>{proposed.projectId}</code>).
-          Accepting it also repoints the Catalogue on this device.
-        </p>
-        <button
-          onClick={() => {
-            saveFirebaseWebConfig(proposed)
-            setState({ config: proposed, error: null, proposed: null, local })
-          }}
-        >
-          Switch to {proposed.projectId}
-        </button>
-        <button onClick={() => setState({ config, error: null, proposed: null, local })}>
-          Keep the current Household
-        </button>
-      </main>
+      <TopAppBar title="Switch Household?">
+        <main>
+          <p>
+            This link carries the config of another Firebase project (<code>{proposed.projectId}</code>).
+            Accepting it also repoints the Catalogue on this device.
+          </p>
+          <button
+            onClick={() => {
+              saveFirebaseWebConfig(proposed)
+              setState({ config: proposed, error: null, proposed: null, local })
+            }}
+          >
+            Switch to {proposed.projectId}
+          </button>
+          <button onClick={() => setState({ config, error: null, proposed: null, local })}>
+            Keep the current Household
+          </button>
+        </main>
+      </TopAppBar>
     )
   }
 
