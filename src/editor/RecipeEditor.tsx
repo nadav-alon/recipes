@@ -184,9 +184,7 @@ interface IngredientRowProps {
 
 function IngredientRow({ ingredient, items, position, last, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
-  const linked = ingredient.itemId === null ? undefined : items?.find((item) => item.id === ingredient.itemId)
-  // An id the Catalogue no longer lists counts as soft-deleted, as it does for makeability.
-  const linkGone = items !== null && ingredient.itemId !== null && (linked === undefined || linked.deleted)
+  const link = linkStatus(ingredient.itemId, items)
   return (
     <div role="group" aria-label={row}>
       <input aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
@@ -213,14 +211,16 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
         value={ingredient.prepNote}
         onInput={(e) => onChange({ prepNote: e.currentTarget.value })}
       />
-      {linkGone && (
+      {link.kind === 'soft-deleted' && (
         <p>
-          {row} is linked to an Item the Catalogue has deleted. Pick another Item to relink it.
+          {row} is linked to {link.item ? `${link.item.name}, ` : ''}an Item the Catalogue has soft-deleted. Pick another
+          Item to relink it.
         </p>
       )}
-      {linked && !linked.deleted && (
+      {link.kind === 'unchecked' && <p>{row} is linked to an Item, but the Items have not loaded to check it.</p>}
+      {link.kind === 'live' && (
         <p>
-          Linked to {linked.name} ({linked.state})
+          Linked to {link.item.name} ({link.item.state})
         </p>
       )}
       {ingredient.itemId !== null && (
@@ -241,6 +241,22 @@ function IngredientRow({ ingredient, items, position, last, onChange, onMove, on
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
   )
+}
+
+type LinkStatus =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'live'; readonly item: WatchedItem }
+  /** `item` is absent when the Catalogue no longer lists the id, which counts as soft-deleted, as it does for makeability. */
+  | { readonly kind: 'soft-deleted'; readonly item?: WatchedItem }
+  | { readonly kind: 'unchecked' }
+
+/** What an Ingredient's link to `itemId` amounts to, given the Items the Catalogue has (null until they arrive). */
+function linkStatus(itemId: IngredientDraft['itemId'], items: readonly WatchedItem[] | null): LinkStatus {
+  if (itemId === null) return { kind: 'none' }
+  if (items === null) return { kind: 'unchecked' }
+  const item = items.find((candidate) => candidate.id === itemId)
+  if (item === undefined) return { kind: 'soft-deleted' }
+  return item.deleted ? { kind: 'soft-deleted', item } : { kind: 'live', item }
 }
 
 interface ItemPickerProps {

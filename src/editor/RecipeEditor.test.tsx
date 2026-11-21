@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/preact'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/preact'
 import { describe, expect, it, vi } from 'vitest'
 import { core, recipes } from 'data-platform'
 import { fakeItemsPort } from '../items/fake-items-port.ts'
@@ -376,7 +376,7 @@ describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
     id: recipes.recipeId('porridge'),
     recipe: { title: 'Porridge', ingredients: [{ name: 'Milk', itemId: core.itemId(id) }], prepSteps: [], steps: [] },
   })
-  const says = /Ingredient 1 is linked to an Item the Catalogue has deleted/
+  const says = /Ingredient 1 is linked to .*an Item the Catalogue has soft-deleted/
 
   it.each([
     ['soft-deleted', [...CATALOGUE, item('old', 'Old milk', 'enough', true)]],
@@ -395,19 +395,40 @@ describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
     expect(stored(store)[0].recipe.ingredients).toEqual([{ name: 'Milk', itemId: 'milk' }])
   })
 
-  it('does not say so for a live Item, nor before the Items have arrived', () => {
-    const { unmount } = render(
-      <RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} entry={entryLinkedTo('milk')} />,
-    )
+  it('does not say so for a live Item', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} entry={entryLinkedTo('milk')} />)
     expect(screen.queryByText(says)).toBeNull()
-    unmount()
+    expect(screen.getByText('Linked to Milk (running low)')).toBeTruthy()
+  })
+
+  it('says the link has not been checked before the Items have arrived', () => {
     render(
       <RecipeEditor
         store={fakeRecipeStore()}
-        itemsPort={{ watchItems: () => () => {}, setItemState: async () => {} }}
+        itemsPort={fakeItemsPort(CATALOGUE, { neverDelivers: true })}
         entry={entryLinkedTo('old')}
       />,
     )
     expect(screen.queryByText(says)).toBeNull()
+    expect(screen.getByText(/Ingredient 1 is linked to an Item, but the Items have not loaded/)).toBeTruthy()
+  })
+
+  it('says the link has not been checked when the watch fails before delivering', () => {
+    const port = fakeItemsPort(CATALOGUE, { neverDelivers: true })
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={port} entry={entryLinkedTo('old')} />)
+    act(() => port.failWatches(new Error('permission-denied')))
+    expect(screen.getByRole('alert')).toBeTruthy()
+    expect(screen.getByText(/Ingredient 1 is linked to an Item, but the Items have not loaded/)).toBeTruthy()
+  })
+
+  it('names the soft-deleted Item when the Catalogue still lists it', () => {
+    render(
+      <RecipeEditor
+        store={fakeRecipeStore()}
+        itemsPort={itemsPort([...CATALOGUE, item('old', 'Old milk', 'enough', true)])}
+        entry={entryLinkedTo('old')}
+      />,
+    )
+    expect(screen.getByText(/Ingredient 1 is linked to Old milk, an Item the Catalogue has soft-deleted/)).toBeTruthy()
   })
 })
