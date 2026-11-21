@@ -1,8 +1,11 @@
-# Gate for pull requests: the app must typecheck and pass its tests before a change merges.
+# Gate for pull requests, and the same check on main: the app must typecheck and pass its tests
+# before a change merges, and a break that lands on main shows as a red run there.
 name: CI
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
 jobs:
   test-typecheck:
