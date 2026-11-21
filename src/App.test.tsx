@@ -83,6 +83,27 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
   })
 
+  it('returns to the new Recipe\'s view while the server has not acknowledged its write', async () => {
+    const inner = fakeRecipeStore()
+    // Like the real store offline: the id comes back once the write is issued; the server's
+    // acknowledgement never arrives.
+    const offline = {
+      ...inner,
+      async create(recipe: Parameters<typeof inner.create>[0]) {
+        const id = await inner.create(recipe)
+        void new Promise<void>(() => {})
+        return id
+      },
+    }
+    location.hash = NEW_RECIPE_HREF
+    render(<App recipeStore={offline} itemsPort={fakeItemsPort([])} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(await screen.findByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
+  })
+
   it('opens the editor on the Recipe at its edit URL, and saving returns to its view', async () => {
     location.hash = editRecipeHref(r1)
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)

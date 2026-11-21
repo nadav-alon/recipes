@@ -81,7 +81,7 @@ function EditScreen({ id, recipeStore }: { id: RecipeId; recipeStore: RecipeStor
   )
 }
 
-/** Creates a Recipe, then shows it; the id is only known once the store has acknowledged the write. */
+/** Creates a Recipe, then shows it; the store generates the id, so it is known without waiting for the server. */
 function NewRecipeScreen({ recipeStore }: { recipeStore: RecipeStore }) {
   return <RecipeEditor store={recipeStore} onCreated={(id) => navigate(recipeHref(id))} />
 }

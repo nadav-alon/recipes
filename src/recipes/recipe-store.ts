@@ -25,9 +25,10 @@ export class InvalidRecipeError extends Error {
  * The single port the screens use for Recipes. Only live Recipes are ever listed: a Soft-deleted
  * Recipe disappears from `watch` and comes back through `restore`.
  *
- * Writes resolve when the server acknowledges them. Offline, a write is applied to the local cache
- * at once (`watch` shows it) but its promise stays pending until the network returns, so a screen
- * must not block navigation on awaiting it.
+ * `update`, `softDelete` and `restore` resolve when the server acknowledges them. Offline, such a write
+ * is applied to the local cache at once (`watch` shows it) but its promise stays pending until the
+ * network returns, so a screen must not block navigation on awaiting it. `create` is the exception:
+ * it resolves without waiting for the server.
  */
 export interface RecipeStore {
   /**
@@ -39,8 +40,9 @@ export interface RecipeStore {
   watch(onChange: (entries: readonly RecipeEntry[]) => void, onError?: (error: Error) => void): () => void
 
   /**
-   * Saves a new Recipe and resolves with its client-generated id as soon as the write is applied
-   * locally, without waiting for the server. Rejects with `InvalidRecipeError` before any write.
+   * Saves a new Recipe and resolves with its client-generated id as soon as the write is issued,
+   * without waiting for the server. Anything issued afterwards, such as a new `watch`, sees the
+   * Recipe. Rejects with `InvalidRecipeError` before any write.
    */
   create(recipe: Recipe): Promise<RecipeId>
 
