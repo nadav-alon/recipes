@@ -130,6 +130,25 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Frittata'))
   })
 
+  it('keeps a rejected edit of one Recipe when another Recipe is saved', async () => {
+    const rejectingFirst = {
+      ...store(),
+      update: (id: typeof r1) => (id === r1 ? Promise.reject(new Error('Permission denied')) : Promise.resolve()),
+    }
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={rejectingFirst} itemsPort={fakeItemsPort([])} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Frittata' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your edit to Frittata was not saved')
+    location.hash = editRecipeHref(r2)
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Pancakes'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your edit to Frittata was not saved')
+  })
+
   it('returns to Home once the Undo offer for a deleted Recipe ends', async () => {
     vi.useFakeTimers()
     try {

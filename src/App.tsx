@@ -45,7 +45,7 @@ export function App({ recipeStore, itemsPort }: AppProps) {
             id={id}
             recipeStore={recipeStore}
             unsaved={unsaved?.id === id ? unsaved.recipe : null}
-            onSaved={() => setUnsaved(null)}
+            onSaved={() => setUnsaved((u) => (u?.id === id ? null : u))}
             onSaveFailed={(recipe, error) => setUnsaved({ id, recipe, message: error.message })}
           />
         )
