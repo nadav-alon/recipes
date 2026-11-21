@@ -43,8 +43,8 @@ describe('Root', () => {
     expect(screen.queryByRole('heading', { name: 'Set up' })).toBeNull()
   })
 
-  it('runs against the local kit in local mode, skipping setup', () => {
-    vi.stubEnv('MODE', 'local')
+  it('runs against the local kit in emulator mode, skipping setup', () => {
+    vi.stubEnv('MODE', 'emulator')
     render(<Root />)
     expect(screen.queryByRole('heading', { name: 'Set up' })).toBeNull()
     expect(mocks.initFirebase).toHaveBeenCalledWith(

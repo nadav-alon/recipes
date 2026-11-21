@@ -3,7 +3,7 @@ import { useMemo, useState } from 'preact/hooks'
 import { initFirebase, saveFirebaseWebConfig, type FirebaseWebConfig } from 'data-platform/client'
 import { AuthGate } from './gate/AuthGate.tsx'
 import { resolveConfig, type ConfigResolution } from './gate/config.ts'
-import { localConfig } from './gate/local.ts'
+import { emulatorConfig } from './gate/emulator.ts'
 import { PlatformGuard } from './gate/PlatformGuard.tsx'
 import { SetupScreen } from './gate/SetupScreen.tsx'
 import { App } from './App.tsx'
@@ -11,20 +11,20 @@ import { firestoreItemsPort } from './items/firestore-items-port.ts'
 import { firestoreRecipeStore } from './recipes/recipe-store.ts'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 
-type RootState = Pick<ConfigResolution, 'config' | 'error' | 'proposed'> & { local: boolean }
+type RootState = Pick<ConfigResolution, 'config' | 'error' | 'proposed'> & { emulator: boolean }
 
 /** Resolves the config once, before first paint, and strips a consumed `#config=` fragment. */
 function initialState(): RootState {
-  const local = localConfig()
-  if (local !== null) return { config: local, error: null, proposed: null, local: true }
+  const emulator = emulatorConfig()
+  if (emulator !== null) return { config: emulator, error: null, proposed: null, emulator: true }
   const { config, error, proposed, consumed } = resolveConfig(location.hash)
   if (consumed) history.replaceState(null, '', location.pathname + location.search)
-  return { config, error, proposed, local: false }
+  return { config, error, proposed, emulator: false }
 }
 
 /** The app's entry: config, then sign-in and membership, then the app. */
 export function Root() {
-  const [{ config, error, proposed, local }, setState] = useState(initialState)
+  const [{ config, error, proposed, emulator }, setState] = useState(initialState)
 
   if (proposed !== null) {
     return (
@@ -37,12 +37,12 @@ export function Root() {
           <button
             onClick={() => {
               saveFirebaseWebConfig(proposed)
-              setState({ config: proposed, error: null, proposed: null, local })
+              setState({ config: proposed, error: null, proposed: null, emulator })
             }}
           >
             Switch to {proposed.projectId}
           </button>
-          <button onClick={() => setState({ config, error: null, proposed: null, local })}>
+          <button onClick={() => setState({ config, error: null, proposed: null, emulator })}>
             Keep the current Household
           </button>
         </main>
@@ -56,7 +56,7 @@ export function Root() {
         initialError={error}
         onConfigured={(next) => {
           saveFirebaseWebConfig(next)
-          setState({ config: next, error: null, proposed: null, local })
+          setState({ config: next, error: null, proposed: null, emulator })
         }}
       />
     )
@@ -66,16 +66,16 @@ export function Root() {
       {error !== null && (
         <div role="alert">
           <p>{error} The link was ignored.</p>
-          <button onClick={() => setState({ config, error: null, proposed: null, local })}>Dismiss</button>
+          <button onClick={() => setState({ config, error: null, proposed: null, emulator })}>Dismiss</button>
         </div>
       )}
-      <Connected config={config} local={local} />
+      <Connected config={config} emulator={emulator} />
     </>
   )
 }
 
-function Connected({ config, local }: { config: FirebaseWebConfig; local: boolean }) {
-  const client = useMemo(() => initFirebase(config, { local }), [config, local])
+function Connected({ config, emulator }: { config: FirebaseWebConfig; emulator: boolean }) {
+  const client = useMemo(() => initFirebase(config, { local: emulator }), [config, emulator])
   return (
     <AuthGate client={client}>
       <PlatformGuard db={client.db} />

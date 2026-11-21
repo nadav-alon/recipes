@@ -7,11 +7,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:local": "vite --mode local",
+    "dev:local": "vite --mode emulator",
     "build": "vite build",
     "preview": "vite preview",
     "test": "firebase emulators:exec --only firestore --project demo-recipes \"vitest run --no-file-parallelism\"",
     "theme": "node scripts/theme.mjs",
+    "ux": "node scripts/ux/run.ts",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run --exclude '**/*.emulator.test.ts' --exclude '**/node_modules/**'"
   },
@@ -30,6 +31,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.20.5",
+    "firebase-admin": "^14.5.1",
     "firebase-tools": "^15.37.0",
     "jsdom": "^30.1.1",
     "typescript": "^7.0.2",
