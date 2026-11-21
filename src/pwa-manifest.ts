@@ -1,4 +1,5 @@
 import type { ManifestOptions } from 'vite-plugin-pwa'
+import { SEED } from './seed.ts'
 
 const sizes = [192, 512]
 
@@ -13,7 +14,7 @@ export const manifest: Partial<ManifestOptions> = {
   name: 'Recipes',
   short_name: 'Recipes',
   description: 'Decide what to cook from what the catalogue says is at home',
-  theme_color: '#c24a2a',
+  theme_color: SEED,
   background_color: '#ffffff',
   display: 'standalone',
   start_url: '.',
