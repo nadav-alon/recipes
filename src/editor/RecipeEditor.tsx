@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'preact/hooks'
-import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeStore } from '../recipes/recipe-store.ts'
+import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { Snackbar } from './Snackbar.tsx'
 import {
   draftOf,
@@ -24,6 +24,8 @@ export interface RecipeEditorProps {
   readonly entry?: RecipeEntry
   /** Called once a save has been handed to the store; offline it does not wait for the server. */
   readonly onSaved?: () => void
+  /** Called with the new Recipe's id once the store has acknowledged creating it; never called when editing. */
+  readonly onCreated?: (id: RecipeId) => void
   /**
    * Called once the Recipe is Soft deleted and the Undo offer has ended unused (dismissed or timed out), so a
    * parent that closes the editor here does not take Undo with it. Not called when Undo is used.
@@ -32,7 +34,7 @@ export interface RecipeEditorProps {
 }
 
 /** The form that creates a Recipe, or edits `entry`. */
-export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorProps) {
+export function RecipeEditor({ store, entry, onSaved, onCreated, onDeleted }: RecipeEditorProps) {
   const [draft, setDraft] = useState<RecipeDraft>(() => (entry ? draftOf(entry.recipe) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
@@ -54,7 +56,9 @@ export function RecipeEditor({ store, entry, onSaved, onDeleted }: RecipeEditorP
     setBlockers(found)
     if (found.length > 0) return
     setFailure(null)
-    const write = entry ? store.update(entry.id, recipe) : store.create(recipe)
+    const write = entry
+      ? store.update(entry.id, recipe)
+      : store.create(recipe).then((id) => onCreated?.(id))
     write.catch((error: Error) => setFailure(error.message))
     onSaved?.()
   }

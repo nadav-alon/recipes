@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'preact/hooks'
 import type { ItemsPort } from '../items/items-port.ts'
-import type { ItemsById } from '../recipes/makeability.ts'
-import type { RecipeEntry, RecipeId, RecipeStore } from '../recipes/recipe-store.ts'
+import { useItemsById } from '../items/use-items-by-id.ts'
+import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
+import { NEW_RECIPE_HREF, recipeHref } from '../routes.ts'
 import { homeSections, type ClassifiedEntry } from './home-sections.ts'
 
 export interface HomeScreenProps {
@@ -16,21 +17,10 @@ export interface HomeScreenProps {
  */
 export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
-  const [items, setItems] = useState<ItemsById | null>(null)
-
   const [failed, setFailed] = useState(false)
 
   useEffect(() => recipeStore.watch(setEntries, () => setFailed(true)), [recipeStore])
-  useEffect(
-    () =>
-      itemsPort.watchItems(
-        (watched) =>
-          // An Item the Catalogue has soft-deleted is left out: a link to an absent id counts as soft-deleted.
-          setItems(new Map(watched.filter((i) => !i.deleted).map((i) => [i.id, { state: i.state }]))),
-        () => setFailed(true),
-      ),
-    [itemsPort],
-  )
+  const items = useItemsById(itemsPort, () => setFailed(true))
 
   if (failed) return <p role="alert">The Recipes could not be loaded.</p>
   if (entries === null || items === null) return null
@@ -51,12 +41,6 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
     </main>
   )
 }
-
-/** Where creating a Recipe lives. */
-export const NEW_RECIPE_HREF = '#/recipes/new'
-
-/** Where a Recipe's view lives. */
-export const recipeHref = (id: RecipeId) => `#/recipes/${id}`
 
 interface SectionProps {
   title: string
