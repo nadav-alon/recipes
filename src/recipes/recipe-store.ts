@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteField, doc, onSnapshot, updateDoc, type Firestore } from 'firebase/firestore'
+import { addDoc, collection, deleteField, doc, onSnapshot, serverTimestamp, updateDoc, type Firestore } from 'firebase/firestore'
 import { recipes } from 'data-platform'
 
 export type Recipe = recipes.Recipe
@@ -40,6 +40,12 @@ export interface RecipeStore {
    * Recipe is soft-deleted is left as it was. Rejects with `InvalidRecipeError` before any write.
    */
   update(id: RecipeId, recipe: Recipe): Promise<void>
+
+  /** Sets `deletedAt` on the Recipe, which stops it being listed. The document is kept, never hard-deleted. */
+  softDelete(id: RecipeId): Promise<void>
+
+  /** Clears `deletedAt`, so the Recipe is listed again under the same id. */
+  restore(id: RecipeId): Promise<void>
 }
 
 /** Checks `recipe` against data-platform's schema and returns it without `undefined` fields, which Firestore refuses. */
@@ -93,6 +99,14 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
       const { deletedAt: _ignored, ...live } = validated(recipe)
       const removed = Object.fromEntries(OPTIONAL_FIELDS.filter((f) => !(f in live)).map((f) => [f, deleteField()]))
       await updateDoc(doc(recipesCollection, id), { ...live, ...removed })
+    },
+
+    async softDelete(id) {
+      await updateDoc(doc(recipesCollection, id), { deletedAt: serverTimestamp() })
+    },
+
+    async restore(id) {
+      await updateDoc(doc(recipesCollection, id), { deletedAt: deleteField() })
     },
   }
 }

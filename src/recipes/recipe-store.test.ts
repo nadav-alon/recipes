@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { doc, getDoc, type Firestore } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { core } from 'data-platform'
 import { startEmulator, type Emulator } from '../test/emulator.ts'
@@ -14,6 +15,7 @@ const pancakes: Recipe = {
 describe('firestoreRecipeStore', () => {
   let emulator: Emulator
   let store: RecipeStore
+  let alice: Firestore
 
   beforeAll(async () => {
     emulator = await startEmulator()
@@ -21,7 +23,8 @@ describe('firestoreRecipeStore', () => {
   afterAll(() => emulator.close())
   beforeEach(async () => {
     await emulator.reset(['alice'])
-    store = firestoreRecipeStore(emulator.client('alice'))
+    alice = emulator.client('alice')
+    store = firestoreRecipeStore(alice)
   })
 
   const current = (): Promise<readonly RecipeEntry[]> =>
@@ -96,6 +99,39 @@ describe('firestoreRecipeStore', () => {
       await expect(store.update(id, { ...pancakes, title: '' })).rejects.toBeInstanceOf(InvalidRecipeError)
 
       expect((await current())[0]?.recipe.title).toBe('Pancakes')
+    })
+  })
+
+  describe('softDelete and restore', () => {
+    it('stops listing a soft-deleted Recipe but keeps its document with deletedAt set', async () => {
+      const id = await store.create(pancakes)
+
+      await store.softDelete(id)
+
+      expect(await current()).toEqual([])
+      const snapshot = await getDoc(doc(alice, 'recipes', id))
+      expect(snapshot.exists()).toBe(true)
+      expect(snapshot.data()?.deletedAt).toBeDefined()
+    })
+
+    it('lists a restored Recipe again under the same id, without deletedAt', async () => {
+      const id = await store.create(pancakes)
+      await store.softDelete(id)
+
+      await store.restore(id)
+
+      const [entry] = await current()
+      expect(entry?.id).toBe(id)
+      expect(entry?.recipe.deletedAt).toBeUndefined()
+    })
+
+    it('keeps a soft-deleted Recipe deleted when it is updated', async () => {
+      const id = await store.create(pancakes)
+      await store.softDelete(id)
+
+      await store.update(id, { ...pancakes, title: 'Renamed' })
+
+      expect(await current()).toEqual([])
     })
   })
 })
