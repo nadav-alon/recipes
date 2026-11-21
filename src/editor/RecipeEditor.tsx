@@ -186,7 +186,7 @@ interface StepListProps {
   readonly onChange: (steps: StepDraft[]) => void
 }
 
-/** An ordered list of instructions that can be added to, edited, removed and reordered. */
+/** An ordered list of Prep Steps or Steps that can be added to, edited, removed and reordered. */
 function StepList({ label, legend, steps, onChange }: StepListProps) {
   return (
     <fieldset>
