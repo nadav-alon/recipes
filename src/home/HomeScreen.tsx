@@ -7,6 +7,7 @@ import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Fab } from 'household-ui/ui/Fab.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import Add from '~icons/material-symbols/add'
+import { AccountAction } from '../gate/account.tsx'
 import { homeSections, type ClassifiedEntry } from './home-sections.ts'
 
 export interface HomeScreenProps {
@@ -38,6 +39,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   return (
     <TopAppBar title="Recipes">
       <main>
+        <AccountAction />
         <Fab symbol={Add} label="New Recipe" onClick={() => navigate(NEW_RECIPE_HREF)} />
         <Section title="Makeable" list={sections.makeable} empty="Nothing is makeable from what is at home right now." />
         <Section

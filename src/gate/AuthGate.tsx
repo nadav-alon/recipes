@@ -9,6 +9,7 @@ import {
 } from 'data-platform/client'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
+import { MemberContext, SignOutButton } from './account.tsx'
 import { catalogueUrl } from '../catalogue-url.ts'
 
 export type AuthGateProps = {
@@ -22,7 +23,7 @@ type GateState =
   | { status: 'unclaimed'; user: AuthUser }
   | { status: 'non-member'; user: AuthUser }
   | { status: 'unreachable'; user: AuthUser }
-  | { status: 'member' }
+  | { status: 'member'; user: AuthUser }
 
 /**
  * Gates `children` behind Google sign-in and Household membership. This app never claims a
@@ -31,6 +32,7 @@ type GateState =
 export function AuthGate({ client, children }: AuthGateProps) {
   const [state, setState] = useState<GateState>({ status: 'checking' })
   const auth = useMemo(() => authClient(client.app), [client])
+  const signOut = useCallback(() => void auth.signOut(), [auth])
   /** Bumped on every lookup, sign-out and unmount, so only the latest lookup may set state. */
   const generation = useRef(0)
 
@@ -43,7 +45,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
       try {
         if (!(await householdExists(client.db))) return setIfCurrent({ status: 'unclaimed', user })
         const member = await isHouseholdMember(client.db, user.uid)
-        setIfCurrent(member ? { status: 'member' } : { status: 'non-member', user })
+        setIfCurrent(member ? { status: 'member', user } : { status: 'non-member', user })
       } catch {
         setIfCurrent({ status: 'unreachable', user })
       }
@@ -88,7 +90,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
           <main>
             <p>No one has claimed this Household yet. Claim it through the Catalogue.</p>
             <CatalogueLink />
-            <SignOutButton onClick={() => void auth.signOut()} />
+            <SignOutButton onClick={signOut} />
           </main>
         </TopAppBar>
       )
@@ -100,7 +102,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
             <p>Signed in as {state.user.email}, who is not a Member of this Household.</p>
             <p>Join through the Catalogue, then come back.</p>
             <CatalogueLink />
-            <SignOutButton onClick={() => void auth.signOut()} />
+            <SignOutButton onClick={signOut} />
           </main>
         </TopAppBar>
       )
@@ -119,13 +121,17 @@ export function AuthGate({ client, children }: AuthGateProps) {
             >
               Retry
             </Button>
-            <SignOutButton onClick={() => void auth.signOut()} />
+            <SignOutButton onClick={signOut} />
           </main>
         </TopAppBar>
       )
 
     case 'member':
-      return <>{children}</>
+      return (
+        <MemberContext.Provider value={{ email: state.user.email, signOut }}>
+          {children}
+        </MemberContext.Provider>
+      )
   }
 }
 
@@ -137,6 +143,3 @@ function CatalogueLink() {
   )
 }
 
-function SignOutButton({ onClick }: { onClick: () => void }) {
-  return <Button variant="tonal" onClick={onClick}>Sign out</Button>
-}
