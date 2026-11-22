@@ -247,6 +247,19 @@ describe('RecipeView actually out', () => {
     expect(port.stateHistory(id('flour'))).toEqual(['out', 'enough'])
   })
 
+  it('leaves a newer State alone when Undo is pressed after the view is gone', async () => {
+    const port = fakeItemsPort([watched('enough')])
+    const view = render(<Live port={port} ingredients={[flour]} />)
+    render(<SnackbarHost />)
+    await click(actuallyOut())
+    view.unmount()
+    await act(async () => {
+      await port.setItemState(id('flour'), 'enough')
+    })
+    await click(screen.getByRole('button', { name: 'Undo' }))
+    expect(port.stateHistory(id('flour'))).toEqual(['out', 'enough'])
+  })
+
   it('ignores a second click while the write is pending', async () => {
     const port = fakeItemsPort([watched('enough')])
     const calls: core.State[] = []

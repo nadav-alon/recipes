@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import type { core, recipes } from 'data-platform'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
@@ -108,26 +108,37 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
   const [inFlight, setInFlight] = useState<ReadonlySet<core.ItemId>>(new Set())
   const [failure, setFailure] = useState<string | null>(null)
 
+  // The Undo closure outlives the render that made it, so its guard reads the writes in flight from a ref.
+  const inFlightRef = useRef<ReadonlySet<core.ItemId>>(inFlight)
+
   const setItemState = (itemId: core.ItemId, state: core.State, then: () => void) => {
-    if (inFlight.has(itemId)) return
+    if (inFlightRef.current.has(itemId)) return
     setFailure(null)
-    setInFlight((current) => new Set(current).add(itemId))
+    inFlightRef.current = new Set(inFlightRef.current).add(itemId)
+    setInFlight(inFlightRef.current)
     itemsPort
       .setItemState(itemId, state)
       .then(then, (error: unknown) => {
         setFailure(error instanceof Error ? error.message : String(error))
       })
-      .finally(() =>
-        setInFlight((current) => {
-          const next = new Set(current)
-          next.delete(itemId)
-          return next
-        }),
-      )
+      .finally(() => {
+        const next = new Set(inFlightRef.current)
+        next.delete(itemId)
+        inFlightRef.current = next
+        setInFlight(next)
+      })
   }
 
   const latestItems = useRef(items)
   latestItems.current = items
+  // The snackbar outlives this view; once it is gone `latestItems` is frozen, so Undo is not honoured then.
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   const markOut = (marking: MarkedOut) =>
     setItemState(marking.itemId, 'out', () =>
@@ -137,7 +148,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
           label: 'Undo',
           // Undo only restores while the Item is still the `out` this view set; a newer State is left alone.
           onAction: () => {
-            if (latestItems.current.get(marking.itemId)?.state === 'out') setItemState(marking.itemId, marking.previous, () => {})
+            if (mounted.current && latestItems.current.get(marking.itemId)?.state === 'out') setItemState(marking.itemId, marking.previous, () => {})
           },
         },
       }),
@@ -167,7 +178,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
               catalogueHref={ingredient.name.trim() === '' ? undefined : addToCatalogueHref(recipeId, index, ingredient.name.trim())}
               items={items}
               busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
-              onActuallyOut={(marking) => markOut(marking)}
+              onActuallyOut={markOut}
             />
           ))}
         </ul>
