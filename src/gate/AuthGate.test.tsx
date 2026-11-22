@@ -6,6 +6,7 @@ import type { FirebaseClient } from 'data-platform/client'
 const mocks = vi.hoisted(() => ({
   listener: null as null | ((user: unknown) => void),
   signIn: vi.fn(),
+  signOut: vi.fn(),
   householdExists: vi.fn(),
   isHouseholdMember: vi.fn(),
 }))
@@ -17,12 +18,14 @@ vi.mock('data-platform/client', () => ({
       return () => {}
     },
     signIn: mocks.signIn,
-    signOut: vi.fn(),
+    signOut: mocks.signOut,
   }),
   householdExists: mocks.householdExists,
   isHouseholdMember: mocks.isHouseholdMember,
 }))
 
+import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { AccountAction } from './account.tsx'
 import { AuthGate } from './AuthGate.tsx'
 
 const client = { app: {}, db: {} } as FirebaseClient
@@ -39,6 +42,7 @@ function renderGate() {
 beforeEach(() => {
   mocks.listener = null
   mocks.signIn.mockReset()
+  mocks.signOut.mockReset()
   mocks.householdExists.mockReset().mockResolvedValue(true)
   mocks.isHouseholdMember.mockReset().mockResolvedValue(true)
 })
@@ -125,5 +129,24 @@ describe('AuthGate Sign out', () => {
     renderGate()
     mocks.listener!(user)
     expect(await screen.findByRole('button', { name: 'Sign out' })).toHaveClass('ui-button')
+  })
+})
+
+describe('AuthGate account', () => {
+  it('tells what it lets in who is signed in and how to sign out', async () => {
+    render(
+      <AuthGate client={client}>
+        <TopAppBar title="Home">
+          <AccountAction />
+        </TopAppBar>
+      </AuthGate>,
+    )
+    mocks.listener!(user)
+    fireEvent.click(await screen.findByRole('button', { name: 'Account' }))
+    expect(screen.getByText('a@example.com')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    expect(mocks.signOut).toHaveBeenCalledOnce()
+    mocks.listener!(null)
+    expect(await screen.findByRole('button', { name: /sign in with google/i })).toBeInTheDocument()
   })
 })
