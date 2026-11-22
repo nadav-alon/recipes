@@ -25,11 +25,13 @@ import {
   emptyDraft,
   emptyIngredient,
   emptyStep,
+  fieldId,
+  fieldProblems,
   linkedTo,
   UNLINKED,
   ASSUMED,
   moved,
-  problems,
+  type Problem,
   recipeOf,
   UNITS,
   updated,
@@ -73,14 +75,23 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   const seed = initial ?? entry?.recipe
   const [draft, setDraft] = useState<RecipeDraft>(() => (seed ? draftOf(seed) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
-  const [blockers, setBlockers] = useState<string[]>([])
+  const [blockers, setBlockers] = useState<Problem[]>([])
   const [items, setItems] = useState<readonly WatchedItem[] | null>(null)
   const [itemsFailed, setItemsFailed] = useState(false)
   // Save sits in the top app bar, far from the messages at the foot of the form, so each refusal moves focus to them.
   const [refusals, setRefusals] = useState(0)
   const messages = useRef<HTMLDivElement>(null)
+  // A refusal about a field takes you to the first such field; one about no field goes to the messages.
   useEffect(() => {
-    if (refusals > 0) messages.current?.focus()
+    if (refusals === 0) return
+    const field = blockers.find((problem) => problem.field !== undefined)?.field
+    const target = field === undefined ? null : document.getElementById(field)
+    if (target) {
+      target.scrollIntoView?.({ block: 'center' })
+      target.focus()
+    } else {
+      messages.current?.focus()
+    }
   }, [refusals])
   const form = useRef<HTMLFormElement>(null)
   // A new Recipe starts in Title so the keyboard is up; an existing one leaves focus where it is.
@@ -91,14 +102,15 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   useEffect(() => {
     if (addedKey !== null) form.current?.querySelector<HTMLElement>(`[data-row-key="${addedKey}"]`)?.focus()
   }, [addedKey])
+  const errorOf = (field: string) => blockers.filter((problem) => problem.field === field).map((problem) => problem.message).join(' ') || undefined
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
   const save = (event: Event) => {
     event.preventDefault()
     const recipe = recipeOf(draft, seed)
-    const found = problems(draft)
-    if (found.length === 0) found.push(...schemaProblems(recipe))
+    const found = fieldProblems(draft)
+    if (found.length === 0) found.push(...schemaProblems(recipe).map((message) => ({ message })))
     setBlockers(found)
     if (found.length > 0) {
       setRefusals((n) => n + 1)
@@ -152,9 +164,11 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
         </TopAppBarActions>
         <form id={FORM_ID} ref={form} onSubmit={save}>
           <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
-          <TextField label="Title" data-autofocus value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
+          <TextField label="Title" id={fieldId.title} error={errorOf(fieldId.title)} data-autofocus value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
           <TextField
             label="Servings"
+            id={fieldId.servings}
+            error={errorOf(fieldId.servings)}
             inputMode="numeric"
             value={draft.servings}
             onInput={(e) => change({ servings: e.currentTarget.value })}
@@ -173,6 +187,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
               <IngredientRow
                 key={ingredient.key}
                 ingredient={ingredient}
+                errorOf={errorOf}
                 items={items}
                 position={i + 1}
                 last={i === draft.ingredients.length - 1}
@@ -195,14 +210,14 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
               Add Ingredient
             </Button>
           </fieldset>
-          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} onAddedKey={setAddedKey} />
-          <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} onAddedKey={setAddedKey} />
+          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} idOf={fieldId.prepStep} errorOf={errorOf} onChange={(prepSteps) => change({ prepSteps })} onAddedKey={setAddedKey} />
+          <StepList label="Step" legend="Steps" steps={draft.steps} idOf={fieldId.step} errorOf={errorOf} onChange={(steps) => change({ steps })} onAddedKey={setAddedKey} />
           <div ref={messages} tabIndex={-1}>
             {blockers.length > 0 && (
               <div>
                 <p>This Recipe cannot be saved yet:</p>
-                {blockers.map((reason, index) => (
-                  <FieldError key={reason} id={`recipe-problem-${index}`} error={reason} />
+                {blockers.map(({ message }, index) => (
+                  <FieldError key={message} id={`recipe-problem-${index}`} error={message} />
                 ))}
               </div>
             )}
@@ -221,6 +236,8 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
 
 interface IngredientRowProps {
   readonly ingredient: IngredientDraft
+  /** The message of the problem a field, by id, was refused for; absent when it has none. */
+  readonly errorOf: (field: string) => string | undefined
   /** Every Item the Catalogue has, or null until they have arrived. */
   readonly items: readonly WatchedItem[] | null
   readonly position: number
@@ -232,7 +249,7 @@ interface IngredientRowProps {
   readonly onRemove: () => void
 }
 
-function IngredientRow({ ingredient, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
+function IngredientRow({ ingredient, errorOf, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
   const link = linkStatus(ingredient.link, items)
   const assumed = ingredient.link.kind === 'assumed'
@@ -243,11 +260,16 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
   }
   return (
     <div role="group" aria-label={row}>
-      <TextField label="Name" aria-label={`${row} name`} data-row-key={ingredient.key} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
+      <TextField label="Name" aria-label={`${row} name`} data-row-key={ingredient.key}
+        id={fieldId.ingredient(ingredient, 'name')}
+        error={errorOf(fieldId.ingredient(ingredient, 'name'))}
+        value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
       <div class="quantity-unit">
         <TextField
           label="Quantity"
           aria-label={`${row} quantity`}
+          id={fieldId.ingredient(ingredient, 'quantity')}
+          error={errorOf(fieldId.ingredient(ingredient, 'quantity'))}
           inputMode="decimal"
           value={ingredient.quantity}
           onInput={(e) => onChange({ quantity: e.currentTarget.value })}
@@ -255,6 +277,8 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         <Select
           label="Unit"
           aria-label={`${row} unit`}
+          id={fieldId.ingredient(ingredient, 'unit')}
+          error={errorOf(fieldId.ingredient(ingredient, 'unit'))}
           value={ingredient.unit}
           onChange={(e) => onChange({ unit: e.currentTarget.value as IngredientUnit | '' })}
         >
@@ -439,13 +463,16 @@ interface StepListProps {
   readonly label: string
   readonly legend: string
   readonly steps: readonly StepDraft[]
+  /** The id of a row's text field, and the message of the problem a field was refused for. */
+  readonly idOf: (step: StepDraft) => string
+  readonly errorOf: (field: string) => string | undefined
   readonly onChange: (steps: StepDraft[]) => void
   /** Called with the key of a step the list has just added, whose first field takes focus. */
   readonly onAddedKey: (key: number) => void
 }
 
 /** An ordered list of Prep Steps or Steps that can be added to, edited, removed and reordered. */
-function StepList({ label, legend, steps, onChange, onAddedKey }: StepListProps) {
+function StepList({ label, legend, steps, idOf, errorOf, onChange, onAddedKey }: StepListProps) {
   return (
     <fieldset>
       <legend>{legend}</legend>
@@ -457,6 +484,8 @@ function StepList({ label, legend, steps, onChange, onAddedKey }: StepListProps)
               label="Text"
               aria-label={`${row} text`}
               data-row-key={step.key}
+              id={idOf(step)}
+              error={errorOf(idOf(step))}
               value={step.text}
               onInput={(e) => {
                 const text = e.currentTarget.value
