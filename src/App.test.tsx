@@ -97,6 +97,43 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
   })
 
+  it('goes back from a just-saved new Recipe to Home, not into the editor', async () => {
+    location.hash = HOME_HREF
+    render(<App recipeStore={fakeRecipeStore()} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'New Recipe' }))
+    fireEvent.input(await screen.findByLabelText('Title'), { target: { value: 'Pancakes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+  })
+
+  it('goes back from a just-saved edit to Home, not into the editor', async () => {
+    location.hash = HOME_HREF
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Omelette' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }))
+    await waitFor(() => expect(location.hash).toBe(editRecipeHref(r1)))
+    fireEvent.click(await screen.findByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+  })
+
+  it('goes back from an editor left without saving to the Recipe, and from there to Home', async () => {
+    location.hash = HOME_HREF
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Omelette' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }))
+    await waitFor(() => expect(location.hash).toBe(editRecipeHref(r1)))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+  })
+
   it('returns to the new Recipe\'s view while the server has not acknowledged its write', async () => {
     const inner = fakeRecipeStore()
     // Like the real store offline: the id comes back once the write is issued; the server's

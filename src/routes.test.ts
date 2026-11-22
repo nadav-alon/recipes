@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { recipes } from 'data-platform'
 import { catalogueReturnHref, editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, parseRoute, recipeHref } from './routes.ts'
 
@@ -27,5 +27,16 @@ describe('routes', () => {
     for (const hash of ['', '#', '#/', '#/nope', '#/recipes', '#/recipes/', '#/recipes/r1/x', '#/recipes/%E0%A4%A']) {
       expect(parseRoute(hash)).toEqual({ screen: 'home' })
     }
+  })
+
+  it('does not count replacing the current entry as a screen to go back to, but counts navigating', async () => {
+    vi.resetModules()
+    const fresh = await import('./routes.ts')
+    expect(fresh.canGoBack()).toBe(false)
+    fresh.navigateInPlace(NEW_RECIPE_HREF)
+    expect(fresh.canGoBack()).toBe(false)
+    fresh.navigate(HOME_HREF)
+    expect(fresh.canGoBack()).toBe(true)
+    history.replaceState(null, '', location.pathname)
   })
 })

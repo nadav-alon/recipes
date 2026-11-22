@@ -10,7 +10,7 @@ import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
 import type { Recipe, RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
 import { linkUnlinkedIngredient } from './recipes/link-ingredient.ts'
-import { editRecipeHref, HOME_HREF, navigate, NEW_RECIPE_HREF, recipeHref, useRoute } from './routes.ts'
+import { editRecipeHref, HOME_HREF, navigate, NEW_RECIPE_HREF, navigateInPlace, recipeHref, returnTo, useRoute } from './routes.ts'
 
 export interface AppProps {
   recipeStore: RecipeStore
@@ -320,7 +320,7 @@ function EditScreen({
       initial={held ?? undefined}
       onSaved={() => {
         onHeldCleared()
-        navigate(recipeHref(id))
+        returnTo(recipeHref(id))
       }}
       onSaveFailed={onSaveFailed}
       onDeleted={() => navigate(HOME_HREF)}
@@ -351,7 +351,7 @@ function NewRecipeScreen({
       initial={held ?? undefined}
       onCreated={(id) => {
         onHeldCleared()
-        navigate(recipeHref(id))
+        navigateInPlace(recipeHref(id))
       }}
       onSaveFailed={onSaveFailed}
     />
