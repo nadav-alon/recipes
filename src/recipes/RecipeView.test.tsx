@@ -46,6 +46,31 @@ describe('RecipeView ingredients', () => {
     expect(within(line('Flour')).queryByText(/missing|running low|assumed/i)).toBeNull()
   })
 
+  it.each([
+    [3, 'piece', '3 pieces'],
+    [2, 'cup', '2 cups'],
+    [0.5, 'cup', '0.5 cups'],
+    [1, 'piece', '1 piece'],
+    [1, 'cup', '1 cup'],
+    [500, 'g', '500 g'],
+    [2, 'tbsp', '2 tbsp'],
+    [2, 'ml', '2 ml'],
+    [0, 'cup', '0 cups'],
+  ] as const)('writes %s %s as "%s"', (quantity, unit, text) => {
+    render(
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Thing', quantity, unit }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+    )
+    expect(line('Thing')).toHaveTextContent(new RegExp(`${text}\\b`))
+  })
+
+  it('writes an amount with no unit as the quantity alone', () => {
+    render(
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Thing', quantity: 3 }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+    )
+    expect(line('Thing')).toHaveTextContent('3')
+    expect(line('Thing')).not.toHaveTextContent(/\b3 \w/)
+  })
+
   it('flags an Unlinked Ingredient as Missing', () => {
     render(<RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Salt' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
     expect(line('Salt')).toHaveTextContent('Missing: Unlinked')
