@@ -9,6 +9,7 @@ import {
 } from 'data-platform/client'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
+import { CentredCard } from 'household-ui/ui/CentredCard.tsx'
 import { MemberContext, SignOutButton } from './account.tsx'
 import { catalogueUrl } from '../catalogue-url.ts'
 
@@ -75,7 +76,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
     case 'signed-out':
       return (
         <TopAppBar title="Sign in">
-          <main class="sign-in">
+          <main class="screen sign-in">
             <p>Recipes: what you can cook from what's at home.</p>
             <Button variant="filled" onClick={() => void auth.signIn()}>
               Sign in with Google
@@ -86,44 +87,38 @@ export function AuthGate({ client, children }: AuthGateProps) {
 
     case 'unclaimed':
       return (
-        <TopAppBar title="Household not claimed">
-          <main>
-            <p>No one has claimed this Household yet. Claim it through the Catalogue.</p>
-            <CatalogueLink />
-            <SignOutButton onClick={signOut} />
-          </main>
-        </TopAppBar>
+        <CentredCard appName="Recipes" title="Household not claimed">
+          <p>No one has claimed this Household yet. Claim it through the Catalogue.</p>
+          <CatalogueLink />
+          <SignOutButton onClick={signOut} />
+        </CentredCard>
       )
 
     case 'non-member':
       return (
-        <TopAppBar title="Not a Member">
-          <main>
-            <p>Signed in as {state.user.email}, who is not a Member of this Household.</p>
-            <p>Join through the Catalogue, then come back.</p>
-            <CatalogueLink />
-            <SignOutButton onClick={signOut} />
-          </main>
-        </TopAppBar>
+        <CentredCard appName="Recipes" title="Not a Member">
+          <p>Signed in as {state.user.email}, who is not a Member of this Household.</p>
+          <p>Join through the Catalogue, then come back.</p>
+          <CatalogueLink />
+          <SignOutButton onClick={signOut} />
+        </CentredCard>
       )
 
     case 'unreachable':
       return (
-        <TopAppBar title={"Couldn't reach your Household"}>
-          <main>
-            <p>Check your connection and try again.</p>
-            <Button
-              variant="filled"
-              onClick={() => {
-                setState({ status: 'checking' })
-                void resolveMembership(state.user)
-              }}
-            >
-              Retry
-            </Button>
-            <SignOutButton onClick={signOut} />
-          </main>
-        </TopAppBar>
+        <CentredCard appName="Recipes" title="Couldn't reach your Household">
+          <p>Check your connection and try again.</p>
+          <Button
+            variant="filled"
+            onClick={() => {
+              setState({ status: 'checking' })
+              void resolveMembership(state.user)
+            }}
+          >
+            Retry
+          </Button>
+          <SignOutButton onClick={signOut} />
+        </CentredCard>
       )
 
     case 'member':
@@ -137,9 +132,8 @@ export function AuthGate({ client, children }: AuthGateProps) {
 
 function CatalogueLink() {
   return (
-    <p>
-      <a href={catalogueUrl()}>Open the Catalogue</a>
-    </p>
+    <a href={catalogueUrl()} class="ui-button ui-button--filled">
+      Open the Catalogue
+    </a>
   )
 }
-

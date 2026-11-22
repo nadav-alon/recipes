@@ -42,7 +42,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
 
   return (
     <TopAppBar title="Recipes">
-      <main>
+      <main class="screen">
         <AccountAction />
         {wide ? (
           <TopAppBarActions>

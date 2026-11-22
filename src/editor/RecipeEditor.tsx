@@ -164,7 +164,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
             Save
           </Button>
         </TopAppBarActions>
-        <form id={FORM_ID} ref={form} onSubmit={save}>
+        <form class="screen" id={FORM_ID} ref={form} onSubmit={save}>
           <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} dirty={dirty} />
           <TextField label="Title" {...fieldProps(fieldId.title)} data-autofocus value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
           <TextField
