@@ -44,6 +44,18 @@ describe('Catalogue hand-off in the editor', () => {
   })
 })
 
+describe('floating button and snackbar placement', () => {
+  it('declares no bottom bar and no side rail, so household-ui places them for an app without either', () => {
+    expect(rule(':root')).toMatch(/--shell-bar-height:\s*0(rem)?\s*;/)
+    expect(rule(':root')).toMatch(/--shell-rail-width:\s*0(rem)?\s*;/)
+  })
+
+  it('loads the override after household-ui tokens so it wins', () => {
+    const main = readFileSync('src/main.tsx', 'utf8')
+    expect(main.indexOf('household-ui/ui/tokens.css')).toBeLessThan(main.indexOf('./screens.css'))
+  })
+})
+
 describe('sign-in screen', () => {
   it('centres its content and makes the sign-in button at least 48px tall', () => {
     expect(rule('main\\.sign-in')).toMatch(/align-items:\s*center/)

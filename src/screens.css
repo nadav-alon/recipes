@@ -14,6 +14,13 @@ form {
   overflow-wrap: anywhere;
 }
 
+/* recipes has no bottom bar and no side rail, so household-ui's floating button and snackbar, which place themselves
+   around those two, are told they take no room. */
+:root {
+  --shell-bar-height: 0rem;
+  --shell-rail-width: 0rem;
+}
+
 /* Room under the last row for the floating New Recipe button, which only the narrow layout has: from 45rem it is a bar action. */
 @media not all and (min-width: 45rem) {
   main {
