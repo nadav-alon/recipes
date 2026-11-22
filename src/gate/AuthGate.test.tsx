@@ -98,7 +98,8 @@ describe('AuthGate', () => {
     renderGate()
     mocks.listener!(user)
     const title = await screen.findByRole('heading', { name: /not claimed/i })
-    expect(screen.getByRole('banner')).toContainElement(title)
+    expect(screen.getByRole('main')).toContainElement(title)
+    expect(screen.queryByRole('banner')).toBeNull()
     expect(screen.getByRole('link', { name: /catalogue/i })).toHaveAttribute('href', '/home-catalogue/')
     expect(mocks.isHouseholdMember).not.toHaveBeenCalled()
   })
@@ -116,6 +117,21 @@ describe('AuthGate', () => {
     renderGate()
     mocks.listener!(user)
     expect(await screen.findByRole('button', { name: 'Retry' })).toHaveClass('ui-button', 'ui-button--filled')
+  })
+})
+
+describe('AuthGate screens before a Household is open', () => {
+  it.each([
+    ['unclaimed', () => mocks.householdExists.mockResolvedValue(false), /not claimed/i],
+    ['non-Member', () => mocks.isHouseholdMember.mockResolvedValue(false), /not a member/i],
+    ['unreachable', () => mocks.householdExists.mockRejectedValue(new Error('offline')), /couldn't reach/i],
+  ])('sit on a CentredCard, with no top app bar, when %s', async (_name, arrange, heading) => {
+    arrange()
+    renderGate()
+    mocks.listener!(user)
+    const title = await screen.findByRole('heading', { name: heading })
+    expect(title.closest('.ui-centred-card')).not.toBeNull()
+    expect(screen.queryByRole('banner')).toBeNull()
   })
 })
 
