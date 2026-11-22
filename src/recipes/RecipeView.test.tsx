@@ -224,7 +224,7 @@ describe('RecipeView actually out', () => {
     )
 
   const flour: recipes.Ingredient = { name: 'Flour', itemId: id('flour') }
-  const actuallyOut = (name = 'Flour') => within(line(name)).getByRole('button', { name: 'Actually out' })
+  const actuallyOut = (name = 'Flour') => within(line(name)).getByRole('button', { name: `${name} is actually out` })
 
   it('offers "actually out" on a Linked Ingredient whose Item is not out, and sets it out', async () => {
     const port = fakeItemsPort([watched('enough')])
@@ -237,7 +237,7 @@ describe('RecipeView actually out', () => {
     renderWith(fakeItemsPort([watched('enough')]), flour)
     await click(actuallyOut())
     expect(line('Flour')).toHaveTextContent('Missing: out')
-    expect(within(line('Flour')).queryByRole('button', { name: 'Actually out' })).toBeNull()
+    expect(within(line('Flour')).queryByRole('button', { name: /is actually out/ })).toBeNull()
   })
 
   it('offers it on a running low Item too', () => {
@@ -247,27 +247,27 @@ describe('RecipeView actually out', () => {
 
   it('does not offer it when the Item is already out', () => {
     renderWith(fakeItemsPort([watched('out')]), flour)
-    expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /is actually out/ })).toBeNull()
   })
 
   it('does not offer it on an Unlinked Ingredient', () => {
     renderWith(fakeItemsPort([]), { name: 'Salt' })
-    expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /is actually out/ })).toBeNull()
   })
 
   it('does not offer it on an Assumed Ingredient', () => {
     renderWith(fakeItemsPort([]), { name: 'Water', assumed: true })
-    expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /is actually out/ })).toBeNull()
   })
 
   it('does not offer it when the Item is soft-deleted', () => {
     renderWith(fakeItemsPort([watched('enough', 'flour', true)]), flour)
-    expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /is actually out/ })).toBeNull()
   })
 
   it('does not offer it when the Item id is not among the Items', () => {
     renderWith(fakeItemsPort([watched('enough', 'other')]), flour)
-    expect(screen.queryByRole('button', { name: 'Actually out' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /is actually out/ })).toBeNull()
   })
 
   it('restores the previous State on Undo', async () => {
