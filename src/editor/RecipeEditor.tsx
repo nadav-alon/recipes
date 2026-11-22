@@ -53,7 +53,7 @@ export interface RecipeEditorProps {
   /** Called with the new Recipe's id once the store has applied creating it, offline too; never called when editing. */
   readonly onCreated?: (id: RecipeId) => void
   /**
-   * Called once the Recipe is Soft deleted and the Undo offer has ended unused (dismissed or timed out), so a
+   * Called once the Recipe is Soft deleted and the Undo offer has ended unused (timed out or replaced by another message), so a
    * parent that closes the editor here does not take Undo with it. Not called when Undo is used.
    */
   readonly onDeleted?: () => void
