@@ -60,6 +60,19 @@ describe('RecipeEditor top app bar', () => {
   })
 })
 
+describe('RecipeEditor Save placement', () => {
+  it('puts Save in the top app bar, outside the form, and it still submits the form', async () => {
+    const onCreated = vi.fn()
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onCreated={onCreated} />)
+    const save = screen.getByRole('button', { name: 'Save' })
+    expect(save.closest('header')).not.toBeNull()
+    expect(save.closest('form')).toBeNull()
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+    fireEvent.click(save)
+    await waitFor(() => expect(onCreated).toHaveBeenCalled())
+  })
+})
+
 describe('RecipeEditor creating', () => {
   it('reports the new Recipe\'s id once the store has created it', async () => {
     const store = fakeRecipeStore()

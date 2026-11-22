@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
-import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { Dialog } from 'household-ui/ui/Dialog.tsx'
 import { FieldError } from 'household-ui/ui/FieldError.tsx'
@@ -64,6 +64,9 @@ export interface RecipeEditorProps {
 }
 
 /** The form that creates a Recipe, or edits `entry`. */
+/** The editor's form, which Save in the top app bar submits from outside it. */
+const FORM_ID = 'recipe-editor-form'
+
 export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
   const seed = initial ?? entry?.recipe
   const [draft, setDraft] = useState<RecipeDraft>(() => (seed ? draftOf(seed) : emptyDraft()))
@@ -118,7 +121,12 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   return (
     <>
       <TopAppBar title={entry ? 'Edit Recipe' : 'New Recipe'}>
-        <form onSubmit={save}>
+        <TopAppBarActions>
+          <Button type="submit" form={FORM_ID}>
+            Save
+          </Button>
+        </TopAppBarActions>
+        <form id={FORM_ID} onSubmit={save}>
           <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
           <TextField label="Title" value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
           <TextField
@@ -167,9 +175,6 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
             </div>
           )}
           <FieldError id="recipe-failure" error={failure ?? undefined} />
-          <Button type="submit">
-            Save
-          </Button>
           {entry && (
             <Button variant="text" destructive onClick={softDelete}>
               Delete Recipe
