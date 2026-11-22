@@ -47,7 +47,16 @@ describe('AuthGate', () => {
   it('shows a Google sign-in screen when signed out', async () => {
     renderGate()
     mocks.listener!(null)
-    fireEvent.click(await screen.findByRole('button', { name: /sign in with google/i }))
+    await screen.findByRole('button', { name: /sign in with google/i })
+    expect(screen.getByText(/what you can cook/i)).toBeInTheDocument()
+  })
+
+  it('signs in from a household-ui filled Button', async () => {
+    renderGate()
+    mocks.listener!(null)
+    const button = await screen.findByRole('button', { name: /sign in with google/i })
+    expect(button).toHaveClass('ui-button', 'ui-button--filled')
+    fireEvent.click(button)
     expect(mocks.signIn).toHaveBeenCalled()
     expect(screen.queryByText('the app')).toBeNull()
   })
@@ -96,5 +105,25 @@ describe('AuthGate', () => {
     mocks.listener!(user)
     fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
     await waitFor(() => expect(screen.getByText('the app')).toBeInTheDocument())
+  })
+
+  it('shows Retry as a household-ui filled Button', async () => {
+    mocks.householdExists.mockRejectedValue(new Error('offline'))
+    renderGate()
+    mocks.listener!(user)
+    expect(await screen.findByRole('button', { name: 'Retry' })).toHaveClass('ui-button', 'ui-button--filled')
+  })
+})
+
+describe('AuthGate Sign out', () => {
+  it.each([
+    ['unclaimed', () => mocks.householdExists.mockResolvedValue(false)],
+    ['non-Member', () => mocks.isHouseholdMember.mockResolvedValue(false)],
+    ['unreachable', () => mocks.householdExists.mockRejectedValue(new Error('offline'))],
+  ])('is a household-ui Button when %s', async (_name, arrange) => {
+    arrange()
+    renderGate()
+    mocks.listener!(user)
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toHaveClass('ui-button')
   })
 })

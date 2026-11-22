@@ -8,6 +8,7 @@ import {
   type FirebaseClient,
 } from 'data-platform/client'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { Button } from 'household-ui/ui/Button.tsx'
 import { catalogueUrl } from '../catalogue-url.ts'
 
 export type AuthGateProps = {
@@ -72,8 +73,11 @@ export function AuthGate({ client, children }: AuthGateProps) {
     case 'signed-out':
       return (
         <TopAppBar title="Sign in">
-          <main>
-            <button onClick={() => void auth.signIn()}>Sign in with Google</button>
+          <main class="sign-in">
+            <p>Recipes: what you can cook from what's at home.</p>
+            <Button variant="filled" onClick={() => void auth.signIn()}>
+              Sign in with Google
+            </Button>
           </main>
         </TopAppBar>
       )
@@ -106,14 +110,15 @@ export function AuthGate({ client, children }: AuthGateProps) {
         <TopAppBar title={"Couldn't reach your Household"}>
           <main>
             <p>Check your connection and try again.</p>
-            <button
+            <Button
+              variant="filled"
               onClick={() => {
                 setState({ status: 'checking' })
                 void resolveMembership(state.user)
               }}
             >
               Retry
-            </button>
+            </Button>
             <SignOutButton onClick={() => void auth.signOut()} />
           </main>
         </TopAppBar>
@@ -133,5 +138,5 @@ function CatalogueLink() {
 }
 
 function SignOutButton({ onClick }: { onClick: () => void }) {
-  return <button onClick={onClick}>Sign out</button>
+  return <Button variant="tonal" onClick={onClick}>Sign out</Button>
 }
