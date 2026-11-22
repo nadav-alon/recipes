@@ -28,6 +28,10 @@ function line(name: string): HTMLElement {
   return screen.getByText(name, { selector: '.ui-list-row__headline' }).closest('li')!
 }
 
+function expectBefore(first: HTMLElement, second: HTMLElement): void {
+  expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+}
+
 describe('RecipeView ingredients', () => {
   it('shows each Ingredient with its quantity, unit and prep note', () => {
     render(
@@ -119,9 +123,35 @@ describe('RecipeView sections', () => {
     )
     const prep = screen.getByRole('heading', { name: 'Prep Steps' })
     const steps = screen.getByRole('heading', { name: 'Steps' })
-    expect(prep.compareDocumentPosition(steps) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expectBefore(prep, steps)
     expect(screen.getByText('Sift the flour')).toBeInTheDocument()
     expect(screen.getAllByRole('listitem').map((el) => el.textContent)).toEqual(['Sift the flour', 'Whisk', 'Fry'])
+  })
+
+  it('heads the Ingredients above the list, before the Prep Steps', () => {
+    render(
+      <RecipeView
+        recipeId={rid}
+        recipe={recipe({ ingredients: [{ name: 'Flour', itemId: id('flour') }], prepSteps: ['Sift'], steps: ['Fry'] })}
+        items={items}
+        itemsPort={fakeItemsPort([])}
+        editHref="#/edit"
+      />,
+    )
+    const heading = screen.getByRole('heading', { name: 'Ingredients' })
+    expect(heading.tagName).toBe('H2')
+    expectBefore(heading, line('Flour'))
+    expectBefore(heading, screen.getByRole('heading', { name: 'Prep Steps' }))
+  })
+
+  it('leaves out the Ingredients section when there are none', () => {
+    render(<RecipeView recipeId={rid} recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    expect(screen.queryByRole('heading', { name: 'Ingredients' })).toBeNull()
+  })
+
+  it('leaves out the Steps section when there are none', () => {
+    render(<RecipeView recipeId={rid} recipe={recipe({ prepSteps: ['Sift'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    expect(screen.queryByRole('heading', { name: 'Steps' })).toBeNull()
   })
 
   it('leaves out the Prep Steps section when there are none', () => {
