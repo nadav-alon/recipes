@@ -4,11 +4,15 @@ import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { Dialog } from 'household-ui/ui/Dialog.tsx'
 import { FieldError } from 'household-ui/ui/FieldError.tsx'
+import { IconButton } from 'household-ui/ui/IconButton.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import { Select } from 'household-ui/ui/Select.tsx'
 import { showSnackbar } from 'household-ui/ui/Snackbar.tsx'
 import { TextArea } from 'household-ui/ui/TextArea.tsx'
 import { TextField } from 'household-ui/ui/TextField.tsx'
+import ArrowDownward from '~icons/material-symbols/arrow-downward'
+import ArrowUpward from '~icons/material-symbols/arrow-upward'
+import Delete from '~icons/material-symbols/delete'
 import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { BackButton } from '../shell/BackButton.tsx'
@@ -410,19 +414,18 @@ interface RowControlsProps {
   readonly onRemove: () => void
 }
 
-/** Move up, Move down and Remove for one row of an ordered list. */
+/** Move up, Move down and Remove for one row of an ordered list, as icon buttons named for the row; a lone row has nowhere to move, so it gets no Move. */
 function RowControls({ label, first, last, onMove, onRemove }: RowControlsProps) {
+  const lone = first && last
   return (
-    <>
-      <Button variant="text" disabled={first} onClick={() => onMove(-1)}>
-        Move {label} up
-      </Button>
-      <Button variant="text" disabled={last} onClick={() => onMove(1)}>
-        Move {label} down
-      </Button>
-      <Button variant="text" onClick={onRemove}>
-        Remove {label}
-      </Button>
-    </>
+    <div class="row-controls">
+      {!lone && (
+        <>
+          <IconButton symbol={ArrowUpward} label={`Move ${label} up`} disabled={first} onClick={() => onMove(-1)} />
+          <IconButton symbol={ArrowDownward} label={`Move ${label} down`} disabled={last} onClick={() => onMove(1)} />
+        </>
+      )}
+      <IconButton symbol={Delete} label={`Remove ${label}`} onClick={onRemove} />
+    </div>
   )
 }
