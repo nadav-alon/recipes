@@ -106,6 +106,30 @@ describe('RecipeEditor Ingredients', () => {
     expect(row?.contains(field('Ingredient 1 name'))).toBe(false)
   })
 
+  it("shows short visible labels on an Ingredient's fields and keeps the row in their accessible names", () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onSaved={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    const row = within(screen.getByRole('group', { name: 'Ingredient 1' }))
+    for (const [visible, accessible] of [
+      ['Name', 'Ingredient 1 name'],
+      ['Quantity', 'Ingredient 1 quantity'],
+      ['Unit', 'Ingredient 1 unit'],
+      ['Prep note', 'Ingredient 1 prep note'],
+    ]) {
+      expect(row.getByText(visible, { selector: 'label' })).toHaveAttribute('for', row.getByLabelText(accessible).id)
+    }
+  })
+
+  it.each([
+    ['Prep Step', 'Add Prep Step'],
+    ['Step', 'Add Step'],
+  ])("shows no row number in a %s textarea's visible label but keeps it in the accessible name", (kind, addButton) => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onSaved={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: addButton }))
+    const row = within(screen.getByRole('group', { name: `${kind} 1` }))
+    expect(row.getByText('Text', { selector: 'label' })).toHaveAttribute('for', row.getByRole('textbox', { name: `${kind} 1 text` }).id)
+  })
+
   it('adds Ingredients with a quantity, a unit from the fixed set and a prep note', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
@@ -460,6 +484,12 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     return stored(store)[0].recipe.ingredients
   }
+
+  it("shows Unlink and Choose Item as the visible text of buttons that still name the row", () => {
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.getByRole('button', { name: 'Unlink Ingredient 1' })).toHaveTextContent(/^Unlink$/)
+    expect(screen.getByRole('button', { name: 'Choose Item for Ingredient 1' })).toHaveTextContent(/^Choose Item$/)
+  })
 
   it('unlinks an Ingredient, keeping the rest of the line', async () => {
     const store = fakeRecipeStore([entry])

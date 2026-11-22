@@ -199,16 +199,18 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
   const link = linkStatus(ingredient.link, items)
   return (
     <div role="group" aria-label={row}>
-      <TextField label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
+      <TextField label="Name" aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
       <div class="quantity-unit">
         <TextField
-          label={`${row} quantity`}
+          label="Quantity"
+          aria-label={`${row} quantity`}
           inputMode="decimal"
           value={ingredient.quantity}
           onInput={(e) => onChange({ quantity: e.currentTarget.value })}
         />
         <Select
-          label={`${row} unit`}
+          label="Unit"
+          aria-label={`${row} unit`}
           value={ingredient.unit}
           onChange={(e) => onChange({ unit: e.currentTarget.value as IngredientUnit | '' })}
         >
@@ -221,7 +223,8 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         </Select>
       </div>
       <TextField
-        label={`${row} prep note`}
+        label="Prep note"
+        aria-label={`${row} prep note`}
         value={ingredient.prepNote}
         onInput={(e) => onChange({ prepNote: e.currentTarget.value })}
       />
@@ -238,8 +241,8 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         </p>
       )}
       {ingredient.link.kind === 'linked' && (
-        <Button variant="text" onClick={() => onChange({ link: UNLINKED })}>
-          Unlink {row}
+        <Button variant="text" aria-label={`Unlink ${row}`} onClick={() => onChange({ link: UNLINKED })}>
+          Unlink
         </Button>
       )}
       {ingredient.link.kind === 'unlinked' && catalogueHref !== undefined && (
@@ -320,8 +323,8 @@ function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
   }
   return (
     <>
-      <Button variant="tonal" onClick={() => setOpen(true)}>
-        Choose Item for {row}
+      <Button variant="tonal" aria-label={`Choose Item for ${row}`} onClick={() => setOpen(true)}>
+        Choose Item
       </Button>
       <Dialog open={open} title={`${row} Item`} onClose={close} closable>
         <TextField
@@ -370,7 +373,8 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
         return (
           <div key={step.key} class="step-row" role="group" aria-label={row}>
             <TextArea
-              label={`${row} text`}
+              label="Text"
+              aria-label={`${row} text`}
               value={step.text}
               onInput={(e) => {
                 const text = e.currentTarget.value
