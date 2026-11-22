@@ -102,12 +102,26 @@ addEventListener('hashchange', () => {
 /** Whether Back would return to an earlier screen of this app, rather than leave it (a deep link, a shared URL, a fresh launch). */
 export const canGoBack = () => routed
 
-/** Goes to `href`, adding a history entry. */
+/**
+ * Leaves the current screen for `href`: returns to the history entry before it when `navigate` recorded
+ * that entry as `href`, so the screen left and the one returned to do not both stay in history; otherwise
+ * replaces the current entry.
+ */
+export function returnTo(href: string): void {
+  if ((history.state as { from?: string } | null)?.from === href) history.back()
+  else replace(href)
+}
+
+/** Goes to `href`, adding a history entry that remembers the screen it was left from, for `returnTo`. */
 export function navigate(href: string): void {
-  location.hash = href
+  history.pushState({ from: location.hash }, '', href)
+  // pushState raises no hashchange of its own, and the router follows that event.
+  dispatchEvent(new HashChangeEvent('hashchange'))
 }
 
 /** Goes to `href` in place of the current history entry, so Back skips the screen being left. */
 export function replace(href: string): void {
-  location.replace(href)
+  history.replaceState(history.state, '', href)
+  // replaceState raises no hashchange of its own, and the router follows that event.
+  dispatchEvent(new HashChangeEvent('hashchange'))
 }
