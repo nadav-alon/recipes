@@ -441,6 +441,11 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     ])
   })
 
+  it('explains Assumed under its checkbox', () => {
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.getAllByText('Always at hand, e.g. water — never checked')).toHaveLength(2)
+  })
+
   it('linking an Assumed Ingredient to an Item removes the mark', async () => {
     const store = fakeRecipeStore([entry])
     const onSaved = vi.fn()

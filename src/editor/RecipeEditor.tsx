@@ -246,6 +246,7 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
       <ul>
         <ListRow
           headline="Assumed"
+          supporting="Always at hand, e.g. water — never checked"
           control={
             <input
               type="checkbox"
