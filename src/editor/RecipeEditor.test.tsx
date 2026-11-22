@@ -849,3 +849,69 @@ describe('RecipeEditor validation in place', () => {
     expect(field('Servings')).toHaveFocus()
   })
 })
+
+describe('RecipeEditor leaving with unsaved changes', () => {
+  const pancakes = (): RecipeEntry => ({
+    id: recipes.recipeId('r1'),
+    recipe: { title: 'Pancakes', ingredients: [], prepSteps: [], steps: [] },
+  })
+  const appBarBack = () => fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Back' }))
+  const dialog = () => screen.getByRole('dialog', { name: 'Discard changes?' })
+  const modal = () => document.querySelector('dialog')!
+  const answer = (name: 'Discard' | 'Cancel') => fireEvent.click(within(dialog()).getByRole('button', { name }))
+  const routed = () => dispatchEvent(new HashChangeEvent('hashchange'))
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])('app bar Back from a clean editor of %s leaves at once', (_name, editing) => {
+    routed()
+    const back = vi.spyOn(history, 'back').mockImplementation(() => {})
+    const store = fakeRecipeStore([pancakes()])
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />)
+    appBarBack()
+    expect(back).toHaveBeenCalledOnce()
+    expect(modal()).not.toHaveAttribute('open')
+  })
+
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])('app bar Back from a dirty editor of %s asks, and Cancel stays with the edits', (_name, editing) => {
+    routed()
+    const back = vi.spyOn(history, 'back').mockImplementation(() => {})
+    const store = fakeRecipeStore([pancakes()])
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />)
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    appBarBack()
+    expect(modal()).toHaveAttribute('open')
+    expect(back).not.toHaveBeenCalled()
+    answer('Cancel')
+    expect(modal()).not.toHaveAttribute('open')
+    expect(back).not.toHaveBeenCalled()
+    expect(field('Title')).toHaveValue('Waffles')
+  })
+
+  it('Discard leaves', () => {
+    routed()
+    const back = vi.spyOn(history, 'back').mockImplementation(() => {})
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    appBarBack()
+    answer('Discard')
+    expect(back).toHaveBeenCalledOnce()
+  })
+
+  it('treats a form edited back to what it opened on as clean', () => {
+    routed()
+    const back = vi.spyOn(history, 'back').mockImplementation(() => {})
+    const store = fakeRecipeStore([pancakes()])
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={stored(store)[0]} />)
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    fireEvent.input(field('Title'), { target: { value: 'Pancakes' } })
+    appBarBack()
+    expect(back).toHaveBeenCalledOnce()
+  })
+})
