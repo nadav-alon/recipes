@@ -5,6 +5,7 @@ import { fakeItemsPort } from '../items/fake-items-port.ts'
 import { fakeRecipeStore } from '../recipes/fake-recipe-store.ts'
 import type { ItemsPort } from '../items/items-port.ts'
 import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
+import { AccountContext } from '../gate/account.tsx'
 import { HomeScreen } from './HomeScreen.tsx'
 
 const item = (id: string, state: core.State, deleted = false) => ({
@@ -39,6 +40,16 @@ describe('HomeScreen', () => {
     const bar = within(screen.getByRole('banner'))
     expect(bar.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     expect(bar.queryByRole('button')).toBeNull()
+  })
+
+  it('opens the signed-in account from the top app bar, showing its email', () => {
+    render(
+      <AccountContext.Provider value={{ email: 'a@example.com', signOut: () => {} }}>
+        <HomeScreen recipeStore={store()} itemsPort={itemsPort()} />
+      </AccountContext.Provider>,
+    )
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Account' }))
+    expect(screen.getByText('a@example.com')).toBeInTheDocument()
   })
 
   it('shows Makeable, then Almost makeable with what is Missing, then every other Recipe', () => {
