@@ -8,8 +8,8 @@ on:
     branches: [main]
 
 jobs:
-  test-typecheck:
-    name: Test and typecheck
+  test-typecheck-build:
+    name: Test, typecheck and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
