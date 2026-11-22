@@ -161,7 +161,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
   const markOut = (marking: MarkedOut) =>
     setItemState(marking.itemId, 'out', () =>
       showSnackbar({
-        text: `${marking.ingredientName}'s Item marked out.`,
+        text: `${marking.ingredientName} marked as out`,
         action: {
           label: 'Undo',
           // Undo only restores while the Item is still the `out` this view set; a newer State is left alone.
