@@ -107,3 +107,16 @@ describe('AuthGate', () => {
     await waitFor(() => expect(screen.getByText('the app')).toBeInTheDocument())
   })
 })
+
+describe('AuthGate Sign out', () => {
+  it.each([
+    ['unclaimed', () => mocks.householdExists.mockResolvedValue(false)],
+    ['non-Member', () => mocks.isHouseholdMember.mockResolvedValue(false)],
+    ['unreachable', () => mocks.householdExists.mockRejectedValue(new Error('offline'))],
+  ])('is a household-ui Button when %s', async (_name, arrange) => {
+    arrange()
+    renderGate()
+    mocks.listener!(user)
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toHaveClass('ui-button')
+  })
+})

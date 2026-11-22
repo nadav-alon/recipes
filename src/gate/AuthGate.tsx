@@ -110,14 +110,14 @@ export function AuthGate({ client, children }: AuthGateProps) {
         <TopAppBar title={"Couldn't reach your Household"}>
           <main>
             <p>Check your connection and try again.</p>
-            <button
+            <Button
               onClick={() => {
                 setState({ status: 'checking' })
                 void resolveMembership(state.user)
               }}
             >
               Retry
-            </button>
+            </Button>
             <SignOutButton onClick={() => void auth.signOut()} />
           </main>
         </TopAppBar>
@@ -137,5 +137,5 @@ function CatalogueLink() {
 }
 
 function SignOutButton({ onClick }: { onClick: () => void }) {
-  return <button onClick={onClick}>Sign out</button>
+  return <Button variant="tonal" onClick={onClick}>Sign out</Button>
 }
