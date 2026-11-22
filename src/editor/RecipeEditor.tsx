@@ -257,7 +257,9 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
           }
         />
       </ul>
-      <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
+      {ingredient.link.kind !== 'assumed' && (
+        <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
+      )}
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
   )

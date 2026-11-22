@@ -446,6 +446,15 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     expect(screen.getAllByText('Always at hand, e.g. water — never checked')).toHaveLength(2)
   })
 
+  it('hides Choose Item while Assumed is ticked', () => {
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.queryByRole('button', { name: 'Choose Item for Ingredient 2' })).toBeNull()
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    expect(screen.queryByRole('button', { name: 'Choose Item for Ingredient 1' })).toBeNull()
+    fireEvent.click(screen.getByLabelText('Ingredient 2 assumed'))
+    expect(screen.getByRole('button', { name: 'Choose Item for Ingredient 2' })).toBeTruthy()
+  })
+
   it('linking an Assumed Ingredient to an Item removes the mark', async () => {
     const store = fakeRecipeStore([entry])
     const onSaved = vi.fn()
