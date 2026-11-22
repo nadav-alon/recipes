@@ -46,15 +46,22 @@ function flag(status: IngredientStatus): string | null {
   }
 }
 
-/** Units whose name changes with the quantity; the rest are abbreviations and stay as they are. */
-const PLURAL_UNIT: Partial<Record<recipes.IngredientUnit, string>> = {
+/** How each unit is written after a quantity other than 1; abbreviations stay as they are. */
+const PLURAL_UNIT: Record<recipes.IngredientUnit, string> = {
+  g: 'g',
+  kg: 'kg',
+  ml: 'ml',
+  l: 'l',
+  tsp: 'tsp',
+  tbsp: 'tbsp',
   cup: 'cups',
   piece: 'pieces',
 }
 
-/** The unit as it reads after `quantity`: plural unless the quantity is exactly 1. */
-function unitFor(unit: recipes.IngredientUnit | undefined, quantity: number): string | undefined {
-  return unit !== undefined && quantity !== 1 ? (PLURAL_UNIT[unit] ?? unit) : unit
+/** The unit as written after `quantity`: plural unless the quantity is exactly 1; nothing without a quantity or a unit. */
+function unitText(unit: recipes.IngredientUnit | undefined, quantity: number | undefined): string | undefined {
+  if (unit === undefined || quantity === undefined) return undefined
+  return quantity === 1 ? unit : PLURAL_UNIT[unit]
 }
 
 /** The parts that are present, joined for a row's text. */
@@ -90,7 +97,7 @@ function IngredientLine({
   const status = classifyIngredient(ingredient, items)
   const flagged = flag(status)
   const item = ingredient.itemId === undefined ? undefined : items.get(ingredient.itemId)
-  const amount = joinParts([ingredient.quantity, ingredient.quantity === undefined ? undefined : unitFor(ingredient.unit, ingredient.quantity)], ' ')
+  const amount = joinParts([ingredient.quantity, unitText(ingredient.unit, ingredient.quantity)], ' ')
   return (
     <ListRow
       headline={ingredient.name}
