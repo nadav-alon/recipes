@@ -170,18 +170,23 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
             <a href={recipe.sourceUrl}>Source</a>
           </p>
         )}
-        <ul>
-          {recipe.ingredients.map((ingredient, index) => (
-            <IngredientLine
-              key={index}
-              ingredient={ingredient}
-              catalogueHref={ingredient.name.trim() === '' ? undefined : addToCatalogueHref(recipeId, index, ingredient.name.trim())}
-              items={items}
-              busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
-              onActuallyOut={markOut}
-            />
-          ))}
-        </ul>
+        {recipe.ingredients.length > 0 && (
+          <section>
+            <h2>Ingredients</h2>
+            <ul>
+              {recipe.ingredients.map((ingredient, index) => (
+                <IngredientLine
+                  key={index}
+                  ingredient={ingredient}
+                  catalogueHref={ingredient.name.trim() === '' ? undefined : addToCatalogueHref(recipeId, index, ingredient.name.trim())}
+                  items={items}
+                  busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
+                  onActuallyOut={markOut}
+                />
+              ))}
+            </ul>
+          </section>
+        )}
         {recipe.prepSteps.length > 0 && (
           <section>
             <h2>Prep Steps</h2>

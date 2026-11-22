@@ -99,6 +99,27 @@ describe('RecipeView sections', () => {
     expect(screen.getAllByRole('listitem').map((el) => el.textContent)).toEqual(['Sift the flour', 'Whisk', 'Fry'])
   })
 
+  it('heads the Ingredients above the list, before the Prep Steps', () => {
+    render(
+      <RecipeView
+        recipeId={rid}
+        recipe={recipe({ ingredients: [{ name: 'Flour', itemId: id('flour') }], prepSteps: ['Sift'], steps: ['Fry'] })}
+        items={items}
+        itemsPort={fakeItemsPort([])}
+        editHref="#/edit"
+      />,
+    )
+    const heading = screen.getByRole('heading', { name: 'Ingredients' })
+    expect(heading.tagName).toBe('H2')
+    expect(heading.compareDocumentPosition(line('Flour')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(heading.compareDocumentPosition(screen.getByRole('heading', { name: 'Prep Steps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('leaves out the Ingredients section when there are none', () => {
+    render(<RecipeView recipeId={rid} recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    expect(screen.queryByRole('heading', { name: 'Ingredients' })).toBeNull()
+  })
+
   it('leaves out the Steps section when there are none', () => {
     render(<RecipeView recipeId={rid} recipe={recipe({ prepSteps: ['Sift'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
     expect(screen.queryByRole('heading', { name: 'Steps' })).toBeNull()
