@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { core } from 'data-platform'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { SnackbarHost } from 'household-ui/ui/Snackbar.tsx'
 import type { ItemsPort } from './items/items-port.ts'
 import { useItemsById } from './items/use-items-by-id.ts'
 import { BackButton } from './shell/BackButton.tsx'
@@ -116,6 +117,7 @@ export function App({ recipeStore, itemsPort }: AppProps) {
         />
       )}
       {screen}
+      <SnackbarHost />
     </>
   )
 }

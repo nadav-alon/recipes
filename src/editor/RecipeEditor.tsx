@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
@@ -6,13 +6,13 @@ import { Dialog } from 'household-ui/ui/Dialog.tsx'
 import { FieldError } from 'household-ui/ui/FieldError.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import { Select } from 'household-ui/ui/Select.tsx'
+import { showSnackbar } from 'household-ui/ui/Snackbar.tsx'
 import { TextArea } from 'household-ui/ui/TextArea.tsx'
 import { TextField } from 'household-ui/ui/TextField.tsx'
 import type { ItemsPort, WatchedItem } from '../items/items-port.ts'
 import { InvalidRecipeError, validatedRecipe, type Recipe, type RecipeEntry, type RecipeId, type RecipeStore } from '../recipes/recipe-store.ts'
 import { BackButton } from '../shell/BackButton.tsx'
 import { HOME_HREF, addToCatalogueHref, recipeHref } from '../routes.ts'
-import { Snackbar } from './Snackbar.tsx'
 import {
   draftOf,
   isClean,
@@ -72,9 +72,12 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   const onDeletedRef = useRef(onDeleted)
   onDeletedRef.current = onDeleted
   const deleted = deletion !== 'none'
-  const dismissUndo = useCallback(() => {
-    setDeletion('final')
-    onDeletedRef.current?.()
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
   }, [])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
@@ -106,6 +109,22 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
     if (!entry) return
     store.softDelete(entry.id).catch((error: Error) => setFailure(error.message))
     setDeletion('undoable')
+    showSnackbar({
+      text: `Deleted ${entry.recipe.title}`,
+      action: {
+        label: 'Undo',
+        onAction: () => {
+          store.restore(entry.id).catch((error: Error) => setFailure(error.message))
+          setDeletion('none')
+        },
+      },
+      // The message outlives the editor, so an editor the user has already left does not report the deletion.
+      onDismiss: () => {
+        if (!mounted.current) return
+        setDeletion('final')
+        onDeletedRef.current?.()
+      },
+    })
   }
 
   return (
@@ -170,17 +189,6 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
           )}
         </form>
       </TopAppBar>
-      {entry && deletion === 'undoable' && (
-        <Snackbar
-          message={`Deleted ${entry.recipe.title}`}
-          actionLabel="Undo"
-          onAction={() => {
-            store.restore(entry.id).catch((error: Error) => setFailure(error.message))
-            setDeletion('none')
-          }}
-          onDismiss={dismissUndo}
-        />
-      )}
     </>
   )
 }
