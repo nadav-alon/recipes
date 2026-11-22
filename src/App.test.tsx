@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/preact'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { resetSnackbar } from 'household-ui/ui/Snackbar.tsx'
 import { core, recipes } from 'data-platform'
 import { App } from './App.tsx'
 import { fakeItemsPort } from './items/fake-items-port.ts'
@@ -16,6 +17,7 @@ const store = () =>
   ])
 
 afterEach(() => {
+  resetSnackbar()
   location.hash = ''
   history.replaceState(null, '', location.pathname)
 })
