@@ -28,6 +28,10 @@ function line(name: string): HTMLElement {
   return screen.getByText(name, { selector: '.ui-list-row__headline' }).closest('li')!
 }
 
+function expectBefore(first: HTMLElement, second: HTMLElement): void {
+  expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+}
+
 describe('RecipeView ingredients', () => {
   it('shows each Ingredient with its quantity, unit and prep note', () => {
     render(
@@ -94,7 +98,7 @@ describe('RecipeView sections', () => {
     )
     const prep = screen.getByRole('heading', { name: 'Prep Steps' })
     const steps = screen.getByRole('heading', { name: 'Steps' })
-    expect(prep.compareDocumentPosition(steps) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expectBefore(prep, steps)
     expect(screen.getByText('Sift the flour')).toBeInTheDocument()
     expect(screen.getAllByRole('listitem').map((el) => el.textContent)).toEqual(['Sift the flour', 'Whisk', 'Fry'])
   })
@@ -111,8 +115,8 @@ describe('RecipeView sections', () => {
     )
     const heading = screen.getByRole('heading', { name: 'Ingredients' })
     expect(heading.tagName).toBe('H2')
-    expect(heading.compareDocumentPosition(line('Flour')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(heading.compareDocumentPosition(screen.getByRole('heading', { name: 'Prep Steps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expectBefore(heading, line('Flour'))
+    expectBefore(heading, screen.getByRole('heading', { name: 'Prep Steps' }))
   })
 
   it('leaves out the Ingredients section when there are none', () => {
