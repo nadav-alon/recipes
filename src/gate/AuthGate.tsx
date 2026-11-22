@@ -32,6 +32,7 @@ type GateState =
 export function AuthGate({ client, children }: AuthGateProps) {
   const [state, setState] = useState<GateState>({ status: 'checking' })
   const auth = useMemo(() => authClient(client.app), [client])
+  const signOut = useCallback(() => void auth.signOut(), [auth])
   /** Bumped on every lookup, sign-out and unmount, so only the latest lookup may set state. */
   const generation = useRef(0)
 
@@ -89,7 +90,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
           <main>
             <p>No one has claimed this Household yet. Claim it through the Catalogue.</p>
             <CatalogueLink />
-            <SignOutButton onClick={() => void auth.signOut()} />
+            <SignOutButton onClick={signOut} />
           </main>
         </TopAppBar>
       )
@@ -101,7 +102,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
             <p>Signed in as {state.user.email}, who is not a Member of this Household.</p>
             <p>Join through the Catalogue, then come back.</p>
             <CatalogueLink />
-            <SignOutButton onClick={() => void auth.signOut()} />
+            <SignOutButton onClick={signOut} />
           </main>
         </TopAppBar>
       )
@@ -120,14 +121,14 @@ export function AuthGate({ client, children }: AuthGateProps) {
             >
               Retry
             </Button>
-            <SignOutButton onClick={() => void auth.signOut()} />
+            <SignOutButton onClick={signOut} />
           </main>
         </TopAppBar>
       )
 
     case 'member':
       return (
-        <AccountContext.Provider value={{ email: state.user.email, signOut: () => void auth.signOut() }}>
+        <AccountContext.Provider value={{ email: state.user.email, signOut }}>
           {children}
         </AccountContext.Provider>
       )
