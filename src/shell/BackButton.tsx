@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
-import { Button } from 'household-ui/ui/Button.tsx'
+import { useState } from 'preact/hooks'
 import { IconButton } from 'household-ui/ui/IconButton.tsx'
 import { TopAppBarNavigation } from 'household-ui/shell/TopAppBar.tsx'
-import 'household-ui/ui/Dialog.css'
 import ArrowBack from '~icons/material-symbols/arrow-back'
-import { canGoBack, dropGuard, guardLeaving } from '../routes.ts'
+import { canGoBack, dropGuard } from '../routes.ts'
+import { DiscardDialog } from './DiscardDialog.tsx'
+import { useLeaveGuard } from './useLeaveGuard.ts'
 
 export interface BackButtonProps {
   /** Where Back goes when there is no earlier screen of the app to return to. */
@@ -20,59 +20,12 @@ export interface BackButtonProps {
 export function BackButton({ fallback, dirty = false }: BackButtonProps) {
   const [asking, setAsking] = useState(false)
   const leave = () => dropGuard(() => (canGoBack() ? history.back() : location.replace(fallback)))
-  const guarded = () => guardLeaving(() => setAsking(true))
   // The browser's Back from a dirty screen is caught the same way as the arrow, and asks.
-  useEffect(() => {
-    if (!dirty) return
-    guarded()
-    return () => dropGuard()
-  }, [dirty])
+  useLeaveGuard(dirty, () => setAsking(true))
   return (
     <TopAppBarNavigation>
       <IconButton symbol={ArrowBack} label="Back" onClick={() => (dirty ? setAsking(true) : leave())} />
-      <DiscardDialog open={asking} onDiscard={leave} onCancel={() => {
-          setAsking(false)
-          if (dirty) guarded()
-        }} />
+      <DiscardDialog open={asking} onDiscard={leave} onCancel={() => setAsking(false)} />
     </TopAppBarNavigation>
-  )
-}
-
-interface DiscardDialogProps {
-  readonly open: boolean
-  readonly onDiscard: () => void
-  readonly onCancel: () => void
-}
-
-/** A modal that asks whether to throw the screen's changes away; closing it any other way than Discard is Cancel. */
-function DiscardDialog({ open, onDiscard, onCancel }: DiscardDialogProps) {
-  const ref = useRef<HTMLDialogElement>(null)
-  useLayoutEffect(() => {
-    const dialog = ref.current
-    if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
-    else if (!open && dialog.open) dialog.close()
-  }, [open])
-  return (
-    <dialog
-      ref={ref}
-      class="ui-dialog"
-      aria-label="Discard changes?"
-      onCancel={(event) => {
-        event.preventDefault()
-        onCancel()
-      }}
-      onClose={() => open && onCancel()}
-    >
-      <div class="ui-dialog__header">
-        <h2 class="ui-dialog__title">Discard changes?</h2>
-      </div>
-      <Button variant="text" onClick={onCancel}>
-        Cancel
-      </Button>
-      <Button variant="text" destructive onClick={onDiscard}>
-        Discard
-      </Button>
-    </dialog>
   )
 }

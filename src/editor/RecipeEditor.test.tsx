@@ -903,8 +903,14 @@ describe('RecipeEditor leaving with unsaved changes', () => {
     render_()
   }
 
-  it('Discard from the app bar leaves', async () => {
-    await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])('Discard from the app bar leaves a dirty editor of %s', async (_name, editing) => {
+    const store = fakeRecipeStore([pancakes()])
+    await openedFromElsewhere(() =>
+      render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />),
+    )
     fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
     appBarBack()
     answer('Discard')
@@ -931,11 +937,40 @@ describe('RecipeEditor leaving with unsaved changes', () => {
     expect(location.hash).toBe('#/recipes/new')
   })
 
-  it("Discard after the browser's Back leaves", async () => {
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])("Discard after the browser's Back leaves a dirty editor of %s", async (_name, editing) => {
+    const store = fakeRecipeStore([pancakes()])
+    await openedFromElsewhere(() =>
+      render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />),
+    )
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    history.back()
+    await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    answer('Discard')
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+  })
+
+  it("a second browser Back while the dialog is open stays and keeps asking", async () => {
     await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
     fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
     history.back()
     await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe('#/recipes/new'))
+    expect(modal()).toHaveAttribute('open')
+    expect(field('Title')).toHaveValue('Waffles')
+    answer('Discard')
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+  })
+
+  it('Discard still leaves after a reload left a guard entry in the history state', async () => {
+    await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
+    // What a reload on a guard entry leaves: the entry keeps its mark, the module forgets its guard.
+    history.replaceState({ ...history.state, leaveGuard: 1 }, '')
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    appBarBack()
     answer('Discard')
     await waitFor(() => expect(location.hash).toBe('#/earlier'))
   })
