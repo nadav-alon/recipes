@@ -78,10 +78,10 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   const [blockers, setBlockers] = useState<Problem[]>([])
   const [items, setItems] = useState<readonly WatchedItem[] | null>(null)
   const [itemsFailed, setItemsFailed] = useState(false)
-  // Save sits in the top app bar, far from the messages at the foot of the form, so each refusal moves focus to them.
   const [refusals, setRefusals] = useState(0)
   const messages = useRef<HTMLDivElement>(null)
-  // A refusal about a field takes you to the first such field; one about no field goes to the messages.
+  // Save sits in the top app bar, far from the messages at the foot of the form, so a refusal moves focus:
+  // to the first field with a problem, or, when no field is involved, to the messages.
   useEffect(() => {
     if (refusals === 0) return
     const field = blockers.find((problem) => problem.field !== undefined)?.field

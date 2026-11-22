@@ -32,7 +32,7 @@ function renderWithSnackbar(ui: ComponentChild) {
 }
 
 const field = (name: string) => screen.getByLabelText(name)
-/** The summary above Save that lists every problem a refused save found. */
+/** The summary at the foot of the form that lists every problem a refused save found. */
 const summary = () => within(screen.getByText('This Recipe cannot be saved yet:').parentElement as HTMLElement)
 const SCHEMA_REFUSED = {
   id: recipes.recipeId('odd'),
@@ -355,11 +355,10 @@ describe('RecipeEditor validation', () => {
   })
 
   it('blocks a Recipe the schema refuses, says why and does not report it saved', () => {
-    const odd = SCHEMA_REFUSED
-    const store = fakeRecipeStore([odd])
+    const store = fakeRecipeStore([SCHEMA_REFUSED])
     const update = vi.spyOn(store, 'update')
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={odd} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={SCHEMA_REFUSED} onSaved={onSaved} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(screen.getByRole('alert')).toHaveTextContent('ingredients.0.assumed')
@@ -807,7 +806,8 @@ describe('RecipeEditor validation in place', () => {
     save()
 
     expect(field('Title')).toHaveFocus()
-    expect(scrolled).toHaveBeenCalled()
+    expect(scrolled).toHaveBeenCalledOnce()
+    expect(scrolled.mock.contexts[0]).toBe(field('Title'))
   })
 
   it('still lists every problem in the summary', () => {
