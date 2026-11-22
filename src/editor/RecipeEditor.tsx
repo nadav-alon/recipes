@@ -193,6 +193,12 @@ interface IngredientRowProps {
 function IngredientRow({ ingredient, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
   const link = linkStatus(ingredient.link, items)
+  // The link that ticking Assumed replaced, so unticking before saving gives it back.
+  const [replaced, setReplaced] = useState<IngredientLink>(UNLINKED)
+  const toggleAssumed = (assumed: boolean) => {
+    if (assumed) setReplaced(ingredient.link)
+    onChange({ link: assumed ? ASSUMED : replaced })
+  }
   return (
     <div role="group" aria-label={row}>
       <TextField label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
@@ -252,7 +258,7 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
               type="checkbox"
               aria-label={`${row} assumed`}
               checked={ingredient.link.kind === 'assumed'}
-              onChange={(e) => onChange({ link: e.currentTarget.checked ? ASSUMED : UNLINKED })}
+              onChange={(e) => toggleAssumed(e.currentTarget.checked)}
             />
           }
         />
