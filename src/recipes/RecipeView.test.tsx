@@ -99,6 +99,11 @@ describe('RecipeView sections', () => {
     expect(screen.getAllByRole('listitem').map((el) => el.textContent)).toEqual(['Sift the flour', 'Whisk', 'Fry'])
   })
 
+  it('leaves out the Steps section when there are none', () => {
+    render(<RecipeView recipeId={rid} recipe={recipe({ prepSteps: ['Sift'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    expect(screen.queryByRole('heading', { name: 'Steps' })).toBeNull()
+  })
+
   it('leaves out the Prep Steps section when there are none', () => {
     render(<RecipeView recipeId={rid} recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
     expect(screen.queryByRole('heading', { name: 'Prep Steps' })).toBeNull()

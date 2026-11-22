@@ -188,10 +188,12 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
             <StepList steps={recipe.prepSteps} />
           </section>
         )}
-        <section>
-          <h2>Steps</h2>
-          <StepList steps={recipe.steps} />
-        </section>
+        {recipe.steps.length > 0 && (
+          <section>
+            <h2>Steps</h2>
+            <StepList steps={recipe.steps} />
+          </section>
+        )}
         {recipe.notes !== undefined && (
           <section>
             <h2>Notes</h2>
