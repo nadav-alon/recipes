@@ -477,12 +477,14 @@ describe('App returning from the Catalogue', () => {
     expect(location.search).toBe('')
   })
 
-  it('leaves the Recipe on Back after a return that linked, never re-entering the return', async () => {
-    const s = unlinked()
+  it.each([
+    ['that linked', '?itemId=chives'],
+    ['without an Item id', ''],
+  ])('leaves the Recipe on Back after a return %s, never re-entering the return', async (_what, query) => {
     location.hash = HOME_HREF
     await new Promise((r) => setTimeout(r, 30))
-    history.pushState(null, '', `${location.pathname}?itemId=chives${catalogueReturnHref(r1, 2, 'Chive')}`)
-    render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
+    history.pushState(null, '', `${location.pathname}${query}${catalogueReturnHref(r1, 2, 'Chive')}`)
+    render(<App recipeStore={unlinked()} itemsPort={fakeItemsPort([])} />)
     await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
 
     history.back()
@@ -491,17 +493,17 @@ describe('App returning from the Catalogue', () => {
     expect(location.hash).toBe(HOME_HREF)
   })
 
-  it('leaves the Recipe on Back after a return without an Item id, never re-entering the return', async () => {
-    location.hash = HOME_HREF
+  it('leaves the return on Back too when it exits without an Item id for a Recipe that does not exist', async () => {
+    location.hash = editRecipeHref(r1)
     await new Promise((r) => setTimeout(r, 30))
-    history.pushState(null, '', `${location.pathname}${catalogueReturnHref(r1, 2, 'Chive')}`)
+    history.pushState(null, '', `${location.pathname}${catalogueReturnHref(recipes.recipeId('gone'), 0, 'Chive')}`)
     render(<App recipeStore={unlinked()} itemsPort={fakeItemsPort([])} />)
-    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
 
     history.back()
-    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+    await waitFor(() => expect(location.hash).toBe(editRecipeHref(r1)))
     await new Promise((r) => setTimeout(r, 50))
-    expect(location.hash).toBe(HOME_HREF)
+    expect(location.hash).toBe(editRecipeHref(r1))
   })
 
   it.each([
