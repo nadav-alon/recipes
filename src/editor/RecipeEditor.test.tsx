@@ -75,6 +75,27 @@ describe('RecipeEditor initial focus', () => {
   })
 })
 
+describe('RecipeEditor focus after Add', () => {
+  it('focuses the new Ingredient’s name after Add Ingredient, each time', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    expect(field('Ingredient 1 name')).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    expect(field('Ingredient 2 name')).toHaveFocus()
+  })
+
+  it.each([
+    ['Prep Step', 'Add Prep Step'],
+    ['Step', 'Add Step'],
+  ])('focuses the new %s’s text after %s, each time', (row, add) => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('button', { name: add }))
+    expect(field(`${row} 1 text`)).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: add }))
+    expect(field(`${row} 2 text`)).toHaveFocus()
+  })
+})
+
 describe('RecipeEditor Save placement', () => {
   it('puts Save in the top app bar, outside the form, and it still submits the form', async () => {
     const onCreated = vi.fn()
