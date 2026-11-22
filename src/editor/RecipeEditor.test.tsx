@@ -558,3 +558,17 @@ describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
     expect(screen.getByText(/Ingredient 1 is linked to Old milk, an Item the Catalogue has soft-deleted/)).toBeTruthy()
   })
 })
+
+describe('RecipeEditor step textareas', () => {
+  it('puts every Prep Step and Step textarea in a .step-row, and the Notes textarea outside one', () => {
+    render(
+      <RecipeEditor
+        store={fakeRecipeStore()}
+        itemsPort={itemsPort()}
+        entry={{ id: recipes.recipeId('r1'), recipe: { title: 'X', ingredients: [], prepSteps: ['Cube'], steps: ['Simmer', 'Serve'] } }}
+      />,
+    )
+    for (const name of ['Prep Step 1 text', 'Step 1 text', 'Step 2 text']) expect(field(name).closest('.step-row')).not.toBeNull()
+    expect(field('Notes').closest('.step-row')).toBeNull()
+  })
+})
