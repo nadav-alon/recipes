@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import type { ComponentChildren } from 'preact'
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
@@ -10,6 +11,7 @@ import { Select } from 'household-ui/ui/Select.tsx'
 import { showSnackbar } from 'household-ui/ui/Snackbar.tsx'
 import { TextArea } from 'household-ui/ui/TextArea.tsx'
 import { TextField } from 'household-ui/ui/TextField.tsx'
+import { useUniqueId } from 'household-ui/ui/useUniqueId.ts'
 import ArrowDownward from '~icons/material-symbols/arrow-downward'
 import ArrowUpward from '~icons/material-symbols/arrow-upward'
 import Delete from '~icons/material-symbols/delete'
@@ -272,9 +274,9 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         </Button>
       )}
       {ingredient.link.kind === 'unlinked' && catalogueHref !== undefined && (
-        <a href={catalogueHref} aria-label={`Add ${row} to Catalogue`}>
+        <CatalogueHandOff href={catalogueHref} label={`Add ${row} to Catalogue`}>
           Add to Catalogue
-        </a>
+        </CatalogueHandOff>
       )}
       <ul>
         <ListRow
@@ -291,7 +293,7 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         />
       </ul>
       {!assumed && (
-        <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
+        <ItemPicker label={row} name={ingredient.name.trim()} catalogueHref={ingredient.link.kind === 'unlinked' ? catalogueHref : undefined} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
       )}
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
@@ -325,9 +327,22 @@ function linkStatus(link: IngredientLink, items: readonly WatchedItem[] | null):
   return item.deleted ? { kind: 'soft-deleted', item } : { kind: 'live', item }
 }
 
+/** The link to the Catalogue's add-Item page; `label` is its accessible name where the text alone would not tell rows apart. */
+function CatalogueHandOff({ href, label, children }: { href: string; label?: string; children: ComponentChildren }) {
+  return (
+    <a href={href} aria-label={label}>
+      {children}
+    </a>
+  )
+}
+
 interface ItemPickerProps {
-  /** The Ingredient's name, as in "Ingredient 2". */
-  readonly row: string
+  /** The Ingredient's row label, as in "Ingredient 2". */
+  readonly label: string
+  /** The Ingredient's own name, trimmed; empty while it has none. */
+  readonly name: string
+  /** Where the Catalogue's add-Item hand-off for the Ingredient is; absent when it cannot be offered. */
+  readonly catalogueHref?: string
   readonly items: readonly WatchedItem[]
   /** The Item the Ingredient is already linked to, which is not offered again. */
   readonly linked: core.ItemId | null
@@ -335,12 +350,18 @@ interface ItemPickerProps {
 }
 
 /**
- * A dialog that searches the live Items by name, showing each one's State, and offers each match to link to; it lists
- * nothing until something is typed and closes once an Item is picked.
+ * A dialog that searches the live Items by name, showing each one's State, and offers each match to link to; it opens
+ * with the search filled in with the Ingredient's name (empty, so listing nothing, when it has none) and closes once an
+ * Item is picked. When nothing matches it says so and, if the editor can, offers the Catalogue hand-off.
  */
-function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
+function ItemPicker({ label, name, catalogueHref, items, linked, onPick }: ItemPickerProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const searchId = useUniqueId()
+  // The Dialog shows itself in a layout effect of its own, which runs first, so the field is on screen to take focus.
+  useLayoutEffect(() => {
+    if (open) document.getElementById(searchId)?.focus()
+  }, [open, searchId])
   const needle = query.trim().toLowerCase()
   const matches =
     needle === ''
@@ -350,14 +371,19 @@ function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
     setOpen(false)
     setQuery('')
   }
+  const openWithName = () => {
+    setQuery(name)
+    setOpen(true)
+  }
   return (
     <>
-      <Button variant="tonal" aria-label={`Choose Item for ${row}`} onClick={() => setOpen(true)}>
+      <Button variant="tonal" aria-label={`Choose Item for ${label}`} onClick={openWithName}>
         Choose Item
       </Button>
-      <Dialog open={open} title={`${row} Item`} onClose={close} closable>
+      <Dialog open={open} title={`Choose an Item for ${name === '' ? label : name}`} onClose={close} closable>
         <TextField
-          label={`${row} Item search`}
+          id={searchId}
+          label="Search Items"
           type="search"
           value={query}
           onInput={(e) => setQuery(e.currentTarget.value)}
@@ -366,6 +392,14 @@ function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
             if (e.key === 'Enter') e.preventDefault()
           }}
         />
+        {needle !== '' && matches.length === 0 && (
+          <p>
+            No Items match.{' '}
+            {catalogueHref !== undefined && (
+              <CatalogueHandOff href={catalogueHref}>Add {name} to the Catalogue</CatalogueHandOff>
+            )}
+          </p>
+        )}
         <ul>
           {matches.map((item) => (
             <ListRow
