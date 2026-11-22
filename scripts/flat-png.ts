@@ -28,8 +28,10 @@ export function flatPng(size: number, hex: string): Buffer {
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(size, 0)
   ihdr.writeUInt32BE(size, 4)
+  // bit depth 8, colour type 2 (truecolour RGB), then default compression, filter and interlace
   ihdr.set([8, 2, 0, 0, 0], 8)
   return Buffer.concat([
+    // PNG signature
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk('IHDR', ihdr),
     chunk('IDAT', deflateSync(Buffer.concat(Array.from({ length: size }, () => row)))),
