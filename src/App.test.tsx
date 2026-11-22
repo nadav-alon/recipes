@@ -157,6 +157,27 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
   })
 
+  it('focuses Title when the editor opens at the new-Recipe URL', () => {
+    location.hash = NEW_RECIPE_HREF
+    render(<App recipeStore={fakeRecipeStore()} itemsPort={fakeItemsPort([])} />)
+    expect(screen.getByLabelText('Title')).toHaveFocus()
+  })
+
+  it('focuses Title when a refused new Recipe is reopened in the editor', async () => {
+    const refusing = fakeRecipeStore()
+    refusing.refuseCreates(new Error('Permission denied'))
+    location.hash = NEW_RECIPE_HREF
+    render(<App recipeStore={refusing} itemsPort={fakeItemsPort([])} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    fireEvent.click(await screen.findByRole('link', { name: 'Back to the editor' }))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Pancakes'))
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveFocus())
+  })
+
   it('reports a refused create on the view it navigated to, with a way back to the editor holding the new Recipe', async () => {
     const refusing = fakeRecipeStore()
     refusing.refuseCreates(new Error('Permission denied'))

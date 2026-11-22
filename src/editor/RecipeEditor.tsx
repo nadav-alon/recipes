@@ -82,6 +82,15 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   useEffect(() => {
     if (refusals > 0) messages.current?.focus()
   }, [refusals])
+  const form = useRef<HTMLFormElement>(null)
+  // A new Recipe starts in Title so the keyboard is up; an existing one leaves focus where it is.
+  useEffect(() => {
+    if (!entry) form.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+  }, [])
+  const [addedKey, setAddedKey] = useState<number | null>(null)
+  useEffect(() => {
+    if (addedKey !== null) form.current?.querySelector<HTMLElement>(`[data-row-key="${addedKey}"]`)?.focus()
+  }, [addedKey])
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
@@ -141,9 +150,9 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
             Save
           </Button>
         </TopAppBarActions>
-        <form id={FORM_ID} onSubmit={save}>
+        <form id={FORM_ID} ref={form} onSubmit={save}>
           <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
-          <TextField label="Title" value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
+          <TextField label="Title" data-autofocus value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
           <TextField
             label="Servings"
             inputMode="numeric"
@@ -175,12 +184,19 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
                 onRemove={() => change({ ingredients: without(draft.ingredients, i) })}
               />
             ))}
-            <Button variant="tonal" onClick={() => change({ ingredients: [...draft.ingredients, emptyIngredient()] })}>
+            <Button
+              variant="tonal"
+              onClick={() => {
+                const ingredient = emptyIngredient()
+                change({ ingredients: [...draft.ingredients, ingredient] })
+                setAddedKey(ingredient.key)
+              }}
+            >
               Add Ingredient
             </Button>
           </fieldset>
-          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
-          <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
+          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} onAddedKey={setAddedKey} />
+          <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} onAddedKey={setAddedKey} />
           <div ref={messages} tabIndex={-1}>
             {blockers.length > 0 && (
               <div>
@@ -227,7 +243,7 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
   }
   return (
     <div role="group" aria-label={row}>
-      <TextField label="Name" aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
+      <TextField label="Name" aria-label={`${row} name`} data-row-key={ingredient.key} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
       <div class="quantity-unit">
         <TextField
           label="Quantity"
@@ -424,10 +440,12 @@ interface StepListProps {
   readonly legend: string
   readonly steps: readonly StepDraft[]
   readonly onChange: (steps: StepDraft[]) => void
+  /** Called with the key of a step the list has just added, whose first field takes focus. */
+  readonly onAddedKey: (key: number) => void
 }
 
 /** An ordered list of Prep Steps or Steps that can be added to, edited, removed and reordered. */
-function StepList({ label, legend, steps, onChange }: StepListProps) {
+function StepList({ label, legend, steps, onChange, onAddedKey }: StepListProps) {
   return (
     <fieldset>
       <legend>{legend}</legend>
@@ -438,6 +456,7 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
             <TextArea
               label="Text"
               aria-label={`${row} text`}
+              data-row-key={step.key}
               value={step.text}
               onInput={(e) => {
                 const text = e.currentTarget.value
@@ -454,7 +473,14 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
           </div>
         )
       })}
-      <Button variant="tonal" onClick={() => onChange([...steps, emptyStep()])}>
+      <Button
+        variant="tonal"
+        onClick={() => {
+          const step = emptyStep()
+          onChange([...steps, step])
+          onAddedKey(step.key)
+        }}
+      >
         Add {label}
       </Button>
     </fieldset>
