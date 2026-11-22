@@ -539,6 +539,12 @@ describe('RecipeEditor adding to the Catalogue', () => {
     expect(params.get('return')).toBe(`${location.origin}${location.pathname}#/recipes/r%201/ingredients/1/Sea%20salt`)
   })
 
+  it('explains the button with a line saying the Ingredient is not in the Catalogue yet', () => {
+    const entry = edited([{ name: 'Beef', itemId: core.itemId('beef') }, { name: 'Sea salt' }])
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.getAllByText('Not in the Catalogue yet')).toHaveLength(1)
+  })
+
   it('stops offering it once the draft has unsaved edits, which following it would lose', () => {
     const entry = edited([{ name: 'Sea salt' }])
     render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)

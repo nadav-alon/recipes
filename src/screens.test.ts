@@ -37,6 +37,13 @@ describe('step textareas in the editor', () => {
   })
 })
 
+describe('Catalogue hand-off in the editor', () => {
+  it('is spaced from the field above and makes its button at least 48px tall', () => {
+    expect(rule('\\.catalogue-hand-off')).toMatch(/margin-top:/)
+    expect(rule('\\.catalogue-hand-off \\.ui-button')).toMatch(/min-height:\s*3rem/)
+  })
+})
+
 describe('sign-in screen', () => {
   it('centres its content and makes the sign-in button at least 48px tall', () => {
     expect(rule('main\\.sign-in')).toMatch(/align-items:\s*center/)

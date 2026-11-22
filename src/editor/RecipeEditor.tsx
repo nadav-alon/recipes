@@ -290,9 +290,12 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         </Button>
       )}
       {ingredient.link.kind === 'unlinked' && catalogueHref !== undefined && (
-        <Button variant="text" aria-label={`Add ${row} to Catalogue`} onClick={() => location.assign(catalogueHref)}>
-          Add to Catalogue
-        </Button>
+        <div class="catalogue-hand-off">
+          <p>Not in the Catalogue yet</p>
+          <Button variant="text" aria-label={`Add ${row} to Catalogue`} onClick={() => location.assign(catalogueHref)}>
+            Add to Catalogue
+          </Button>
+        </div>
       )}
       <ul>
         <ListRow
