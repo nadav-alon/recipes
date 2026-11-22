@@ -212,24 +212,26 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
   return (
     <div role="group" aria-label={row}>
       <TextField label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
-      <TextField
-        label={`${row} quantity`}
-        inputMode="decimal"
-        value={ingredient.quantity}
-        onInput={(e) => onChange({ quantity: e.currentTarget.value })}
-      />
-      <Select
-        label={`${row} unit`}
-        value={ingredient.unit}
-        onChange={(e) => onChange({ unit: e.currentTarget.value as IngredientUnit | '' })}
-      >
-        <option value="">No unit</option>
-        {UNITS.map((unit) => (
-          <option key={unit} value={unit}>
-            {unit}
-          </option>
-        ))}
-      </Select>
+      <div class="quantity-unit">
+        <TextField
+          label={`${row} quantity`}
+          inputMode="decimal"
+          value={ingredient.quantity}
+          onInput={(e) => onChange({ quantity: e.currentTarget.value })}
+        />
+        <Select
+          label={`${row} unit`}
+          value={ingredient.unit}
+          onChange={(e) => onChange({ unit: e.currentTarget.value as IngredientUnit | '' })}
+        >
+          <option value="">No unit</option>
+          {UNITS.map((unit) => (
+            <option key={unit} value={unit}>
+              {unit}
+            </option>
+          ))}
+        </Select>
+      </div>
       <TextField
         label={`${row} prep note`}
         value={ingredient.prepNote}
