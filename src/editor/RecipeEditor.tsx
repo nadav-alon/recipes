@@ -364,7 +364,7 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
       {steps.map((step, i) => {
         const row = `${label} ${i + 1}`
         return (
-          <div key={step.key} role="group" aria-label={row}>
+          <div key={step.key} class="step-row" role="group" aria-label={row}>
             <TextArea
               label={`${row} text`}
               value={step.text}
