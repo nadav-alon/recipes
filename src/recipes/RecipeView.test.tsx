@@ -102,6 +102,21 @@ describe('RecipeView ingredients', () => {
     expect(within(line('Eggs')).getByText('2 pieces, beaten')).toBeInTheDocument()
   })
 
+  it('marks a Missing flag as an error, Running low as a warning and Assumed as neither', () => {
+    render(
+      <RecipeView
+        recipeId={rid}
+        recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }, { name: 'Milk', itemId: id('milk') }, { name: 'Water', assumed: true }] })}
+        items={items}
+        itemsPort={fakeItemsPort([])}
+        editHref="#/edit"
+      />,
+    )
+    expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag--missing')
+    expect(within(line('Milk')).getByText('Running low')).toHaveClass('ingredient-flag--low')
+    expect(within(line('Water')).getByText('Assumed')).toHaveClass('ingredient-flag--assumed')
+  })
+
   it('flags an Ingredient whose Item is running low', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Milk', itemId: id('milk') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,

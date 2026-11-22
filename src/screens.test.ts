@@ -27,6 +27,17 @@ describe('pre-Household cards', () => {
   })
 })
 
+describe('Ingredient flag colours', () => {
+  it('colours Missing from the theme error tokens and Running low from its warning tokens, in light and dark through the tokens themselves', () => {
+    expect(rule('\\.ingredient-flag--missing')).toMatch(/background:\s*var\(--md-sys-color-error-container\)[^}]*color:\s*var\(--md-sys-color-on-error-container\)/)
+    expect(rule('\\.ingredient-flag--low')).toMatch(/background:\s*var\(--md-sys-color-warning-container\)[^}]*color:\s*var\(--md-sys-color-on-warning-container\)/)
+  })
+
+  it('writes no colour literal for a flag', () => {
+    expect(css.slice(css.indexOf('.ingredient-flag'))).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i)
+  })
+})
+
 describe('Ingredient quantity and unit row', () => {
   it('lays the two fields side by side, each allowed to shrink so the row cannot overflow', () => {
     expect(rule('\\.quantity-unit')).toMatch(/display:\s*flex/)
