@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
@@ -10,6 +10,7 @@ import { Select } from 'household-ui/ui/Select.tsx'
 import { showSnackbar } from 'household-ui/ui/Snackbar.tsx'
 import { TextArea } from 'household-ui/ui/TextArea.tsx'
 import { TextField } from 'household-ui/ui/TextField.tsx'
+import { useUniqueId } from 'household-ui/ui/useUniqueId.ts'
 import ArrowDownward from '~icons/material-symbols/arrow-downward'
 import ArrowUpward from '~icons/material-symbols/arrow-upward'
 import Delete from '~icons/material-symbols/delete'
@@ -291,7 +292,7 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         />
       </ul>
       {!assumed && (
-        <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
+        <ItemPicker row={row} name={ingredient.name.trim()} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
       )}
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
@@ -328,6 +329,8 @@ function linkStatus(link: IngredientLink, items: readonly WatchedItem[] | null):
 interface ItemPickerProps {
   /** The Ingredient's name, as in "Ingredient 2". */
   readonly row: string
+  /** The Ingredient's own name, trimmed; empty while it has none. */
+  readonly name: string
   readonly items: readonly WatchedItem[]
   /** The Item the Ingredient is already linked to, which is not offered again. */
   readonly linked: core.ItemId | null
@@ -338,9 +341,14 @@ interface ItemPickerProps {
  * A dialog that searches the live Items by name, showing each one's State, and offers each match to link to; it lists
  * nothing until something is typed and closes once an Item is picked.
  */
-function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
+function ItemPicker({ row, name, items, linked, onPick }: ItemPickerProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const searchId = useUniqueId()
+  // The Dialog shows itself in a layout effect of its own, which runs first, so the field is on screen to take focus.
+  useLayoutEffect(() => {
+    if (open) document.getElementById(searchId)?.focus()
+  }, [open, searchId])
   const needle = query.trim().toLowerCase()
   const matches =
     needle === ''
@@ -355,9 +363,10 @@ function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
       <Button variant="tonal" aria-label={`Choose Item for ${row}`} onClick={() => setOpen(true)}>
         Choose Item
       </Button>
-      <Dialog open={open} title={`${row} Item`} onClose={close} closable>
+      <Dialog open={open} title={`Choose an Item for ${name === '' ? row : name}`} onClose={close} closable>
         <TextField
-          label={`${row} Item search`}
+          id={searchId}
+          label="Search Items"
           type="search"
           value={query}
           onInput={(e) => setQuery(e.currentTarget.value)}

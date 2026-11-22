@@ -34,6 +34,7 @@ function renderWithSnackbar(ui: ComponentChild) {
 const field = (name: string) => screen.getByLabelText(name)
 const openPicker = (row: string) => fireEvent.click(screen.getByRole('button', { name: `Choose Item for ${row}` }))
 const pickerRow = (name: string) => screen.getByRole('button', { name })
+const search = () => within(screen.getByRole('dialog')).getByLabelText('Search Items')
 
 function stored(store: ReturnType<typeof fakeRecipeStore>): RecipeEntry[] {
   let entries: readonly RecipeEntry[] = []
@@ -447,9 +448,10 @@ describe('RecipeEditor linking an Ingredient to an Item', () => {
     fireEvent.input(field('Ingredient 1 name'), { target: { value: 'Milk' } })
 
     openPicker('Ingredient 1')
-    expect(screen.getByRole('dialog', { name: 'Ingredient 1 Item' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Choose an Item for Milk' })).toBeInTheDocument()
+    expect(search()).toHaveFocus()
     expect(screen.queryAllByRole('button', { name: /^(Milk|Oat milk) / })).toHaveLength(0)
-    fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'MILK' } })
+    fireEvent.input(search(), { target: { value: 'MILK' } })
     expect(screen.getAllByRole('button', { name: /^(Milk|Oat milk) / }).map((b) => b.textContent)).toEqual([
       'Milkrunning low',
       'Oat milkenough',
@@ -508,7 +510,8 @@ describe('RecipeEditor adding to the Catalogue', () => {
 describe('RecipeEditor unlinking and marking Assumed', () => {
   it('does not offer an Ingredient the Item it is already linked to', () => {
     render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} entry={entryOf('beef')} />)
-    fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'b' } })
+    openPicker('Ingredient 1')
+    fireEvent.input(search(), { target: { value: 'b' } })
     expect(screen.queryByRole('button', { name: /^Link Ingredient 1 to Beef/ })).toBeNull()
   })
 
@@ -593,7 +596,7 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
     fireEvent.click(screen.getByLabelText('Ingredient 2 assumed'))
     openPicker('Ingredient 2')
-    fireEvent.input(field('Ingredient 2 Item search'), { target: { value: 'flour' } })
+    fireEvent.input(search(), { target: { value: 'flour' } })
     fireEvent.click(pickerRow('Flour out'))
     expect(screen.getByText(/^Linked to Flour/)).toBeTruthy()
 
@@ -619,7 +622,7 @@ describe('RecipeEditor Ingredients linked to a soft-deleted Item', () => {
     expect(screen.queryByRole('button', { name: /Old milk/ })).toBeNull()
 
     openPicker('Ingredient 1')
-    fireEvent.input(field('Ingredient 1 Item search'), { target: { value: 'milk' } })
+    fireEvent.input(search(), { target: { value: 'milk' } })
     fireEvent.click(pickerRow('Milk running low'))
     expect(screen.queryByText(says)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
