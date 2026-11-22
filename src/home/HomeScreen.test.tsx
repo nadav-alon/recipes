@@ -26,30 +26,63 @@ const entry = (id: string, title: string, ingredients: { name: string; item?: st
 
 const section = (name: string) => within(screen.getByRole('region', { name }))
 
-const viewport = (wide: boolean) =>
-  vi.stubGlobal('matchMedia', () => ({ matches: wide, addEventListener() {}, removeEventListener() {} }))
+const REM = 16
+const PHONE = 360
+const DESKTOP = 1280
+
+/** Stubs matchMedia to evaluate `(min-width: Nrem)` against a viewport width; `resize` fires the change listeners. */
+function viewport(width: number) {
+  const listeners = new Set<() => void>()
+  const list = (query: string) => ({
+    get matches() {
+      const min = /\(min-width:\s*([\d.]+)rem\)/.exec(query)
+      return min !== null && width >= Number(min[1]) * REM
+    },
+    addEventListener: (_: string, l: () => void) => listeners.add(l),
+    removeEventListener: (_: string, l: () => void) => listeners.delete(l),
+  })
+  vi.stubGlobal('matchMedia', list)
+  return {
+    resize(next: number) {
+      width = next
+      listeners.forEach((l) => l())
+    },
+  }
+}
 
 describe('New Recipe action by viewport', () => {
   afterEach(() => vi.unstubAllGlobals())
   const home = () => render(<HomeScreen recipeStore={fakeRecipeStore()} itemsPort={fakeItemsPort([])} />)
 
-  it('is the icon-only "+" button in the page on a phone, with nothing in the bar', () => {
-    viewport(false)
+  it('is the one icon-only "+" button in the page on a phone, with nothing in the bar', () => {
+    viewport(PHONE)
     home()
     expect(within(screen.getByRole('banner')).queryByRole('button')).toBeNull()
-    const fab = screen.getByRole('button', { name: 'New Recipe' })
-    expect(fab).toHaveClass('ui-fab')
-    expect(fab).not.toHaveTextContent('New Recipe')
+    const buttons = screen.getAllByRole('button', { name: 'New Recipe' })
+    expect(buttons).toHaveLength(1)
+    expect(buttons[0]).not.toHaveTextContent('New Recipe')
   })
 
-  it('is a labelled "New Recipe" button in the top app bar on a wide viewport, and the FAB is gone', () => {
-    viewport(true)
+  it('is the one labelled "New Recipe" button, in the top app bar, at 1280px wide', () => {
+    viewport(DESKTOP)
     home()
+    expect(screen.getAllByRole('button', { name: 'New Recipe' })).toHaveLength(1)
     const button = within(screen.getByRole('banner')).getByRole('button', { name: 'New Recipe' })
     expect(button).toHaveTextContent('New Recipe')
-    expect(document.querySelector('.ui-fab')).toBeNull()
     fireEvent.click(button)
     expect(location.hash).toBe('#/recipes/new')
+  })
+
+  it('moves to the bar as soon as the viewport reaches the 720px column width, not before', () => {
+    const screenSize = viewport(719)
+    home()
+    expect(within(screen.getByRole('banner')).queryByRole('button')).toBeNull()
+    act(() => screenSize.resize(720))
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: 'New Recipe' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'New Recipe' })).toHaveLength(1)
+    act(() => screenSize.resize(PHONE))
+    expect(within(screen.getByRole('banner')).queryByRole('button')).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'New Recipe' })).toHaveLength(1)
   })
 })
 
