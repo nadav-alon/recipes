@@ -56,6 +56,13 @@ textarea {
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/* A Prep Step or Step's textarea starts two lines tall and grows with its text, so nothing scrolls inside it. */
+.step-row textarea {
+  field-sizing: content;
+  min-height: 2lh;
+  overflow-y: hidden;
+}
+
 /* The signed-out screen: the app's line and its one action, centred, with a tap target of at least 48px. */
 main.sign-in {
   align-items: center;

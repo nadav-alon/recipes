@@ -26,6 +26,15 @@ describe('Ingredient quantity and unit row', () => {
   })
 })
 
+describe('step textareas in the editor', () => {
+  it('start one or two lines tall and grow with their text, without scrolling inside', () => {
+    const area = rule('\\.step-row textarea')
+    expect(area).toMatch(/field-sizing:\s*content/)
+    expect(area).toMatch(/min-height:\s*2lh/)
+    expect(area).toMatch(/overflow-y:\s*hidden/)
+  })
+})
+
 describe('sign-in screen', () => {
   it('centres its content and makes the sign-in button at least 48px tall', () => {
     expect(rule('main\\.sign-in')).toMatch(/align-items:\s*center/)
