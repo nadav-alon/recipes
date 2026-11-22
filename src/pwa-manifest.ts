@@ -1,6 +1,14 @@
 import type { ManifestOptions } from 'vite-plugin-pwa'
-import { colourRoleHex, seedColour } from 'household-ui/ui/colourRoles.ts'
+import { readFileSync } from 'node:fs'
 import { SEED } from './seed.ts'
+
+/**
+ * The light scheme's background role, read from the generated `theme.css` (the config is loaded by
+ * plain Node, which cannot load household-ui's TypeScript); `theme.test.ts` pins that file to the seed.
+ */
+const lightBackground = readFileSync('src/theme.css', 'utf8').match(
+  /--md-sys-color-background: (#[0-9a-f]{6});/,
+)![1]
 
 const sizes = [192, 512]
 
@@ -16,7 +24,7 @@ export const manifest: Partial<ManifestOptions> = {
   short_name: 'Recipes',
   description: 'Decide what to cook from what the catalogue says is at home',
   theme_color: SEED,
-  background_color: colourRoleHex(seedColour(SEED), 'background', 'light'),
+  background_color: lightBackground,
   display: 'standalone',
   start_url: '.',
   icons: [...sizes.map((size) => icon(size)), ...sizes.map((size) => icon(size, 'maskable'))],
