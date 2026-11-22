@@ -68,3 +68,14 @@ main.sign-in {
 main.sign-in .ui-button {
   min-height: 3rem;
 }
+
+/* An Ingredient's quantity and unit share a row; each field takes half and may shrink so the row never overflows. */
+.quantity-unit {
+  display: flex;
+  gap: var(--md-sys-spacing-4);
+}
+
+.quantity-unit > * {
+  flex: 1 1 0;
+  min-width: 0;
+}

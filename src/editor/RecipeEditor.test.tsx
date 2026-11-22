@@ -97,6 +97,15 @@ describe('RecipeEditor creating', () => {
 })
 
 describe('RecipeEditor Ingredients', () => {
+  it("puts an Ingredient's quantity and unit in one shared row", () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onSaved={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    const row = field('Ingredient 1 quantity').closest('.quantity-unit')
+    expect(row).not.toBeNull()
+    expect(row?.contains(field('Ingredient 1 unit'))).toBe(true)
+    expect(row?.contains(field('Ingredient 1 name'))).toBe(false)
+  })
+
   it('adds Ingredients with a quantity, a unit from the fixed set and a prep note', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()

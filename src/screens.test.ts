@@ -17,6 +17,14 @@ describe('screen layout', () => {
   })
 })
 
+describe('Ingredient quantity and unit row', () => {
+  it('lays the two fields side by side, each allowed to shrink so the row cannot overflow', () => {
+    expect(rule('\\.quantity-unit')).toMatch(/display:\s*flex/)
+    expect(rule('\\.quantity-unit > \\*')).toMatch(/flex:\s*1 1 0/)
+    expect(rule('\\.quantity-unit > \\*')).toMatch(/min-width:\s*0/)
+  })
+})
+
 describe('sign-in screen', () => {
   it('centres its content and makes the sign-in button at least 48px tall', () => {
     expect(rule('main\\.sign-in')).toMatch(/align-items:\s*center/)
