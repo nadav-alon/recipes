@@ -9,7 +9,7 @@ import {
 } from 'data-platform/client'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
-import { AccountContext } from './account.tsx'
+import { AccountContext, SignOutButton } from './account.tsx'
 import { catalogueUrl } from '../catalogue-url.ts'
 
 export type AuthGateProps = {
@@ -143,6 +143,3 @@ function CatalogueLink() {
   )
 }
 
-function SignOutButton({ onClick }: { onClick: () => void }) {
-  return <Button variant="tonal" onClick={onClick}>Sign out</Button>
-}

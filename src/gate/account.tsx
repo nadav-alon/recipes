@@ -27,10 +27,16 @@ export function AccountAction() {
       <IconButton symbol={AccountCircle} label="Account" onClick={() => setOpen(true)} />
       <Dialog open={open} title="Account" onClose={() => setOpen(false)} closable>
         <p>{account.email}</p>
-        <Button variant="tonal" onClick={account.signOut}>
-          Sign out
-        </Button>
+        <SignOutButton onClick={account.signOut} />
       </Dialog>
     </TopAppBarActions>
+  )
+}
+
+export function SignOutButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="tonal" onClick={onClick}>
+      Sign out
+    </Button>
   )
 }
