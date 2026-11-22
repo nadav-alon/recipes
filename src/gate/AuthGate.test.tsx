@@ -106,6 +106,13 @@ describe('AuthGate', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
     await waitFor(() => expect(screen.getByText('the app')).toBeInTheDocument())
   })
+
+  it('shows Retry as a household-ui filled Button', async () => {
+    mocks.householdExists.mockRejectedValue(new Error('offline'))
+    renderGate()
+    mocks.listener!(user)
+    expect(await screen.findByRole('button', { name: 'Retry' })).toHaveClass('ui-button', 'ui-button--filled')
+  })
 })
 
 describe('AuthGate Sign out', () => {

@@ -75,7 +75,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
         <TopAppBar title="Sign in">
           <main class="sign-in">
             <p>Recipes: what you can cook from what's at home.</p>
-            <Button onClick={() => void auth.signIn()}>
+            <Button variant="filled" onClick={() => void auth.signIn()}>
               Sign in with Google
             </Button>
           </main>
@@ -111,6 +111,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
           <main>
             <p>Check your connection and try again.</p>
             <Button
+              variant="filled"
               onClick={() => {
                 setState({ status: 'checking' })
                 void resolveMembership(state.user)
