@@ -491,6 +491,19 @@ describe('App returning from the Catalogue', () => {
     expect(location.hash).toBe(HOME_HREF)
   })
 
+  it('leaves the Recipe on Back after a return without an Item id, never re-entering the return', async () => {
+    location.hash = HOME_HREF
+    await new Promise((r) => setTimeout(r, 30))
+    history.pushState(null, '', `${location.pathname}${catalogueReturnHref(r1, 2, 'Chive')}`)
+    render(<App recipeStore={unlinked()} itemsPort={fakeItemsPort([])} />)
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+
+    history.back()
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(location.hash).toBe(HOME_HREF)
+  })
+
   it.each([
     ['an Assumed Ingredient', 1, 'Salt'],
     ['an Ingredient already linked', 0, 'Egg'],

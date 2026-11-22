@@ -244,7 +244,7 @@ function CatalogueReturnScreen({
     const clearItemId = () => history.replaceState(null, '', `${location.pathname}${location.hash}`)
     if (itemId === null) {
       clearItemId()
-      return navigate(entry === undefined ? HOME_HREF : recipeHref(id))
+      return navigateInPlace(entry === undefined ? HOME_HREF : recipeHref(id))
     }
     const unlinked = (why: string) => {
       clearItemId()
