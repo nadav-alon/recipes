@@ -39,7 +39,7 @@ describe('HomeScreen', () => {
     render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
     const bar = within(screen.getByRole('banner'))
     expect(bar.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
-    expect(bar.queryByRole('button')).toBeNull()
+    expect(bar.queryByRole('button', { name: /back/i })).toBeNull()
   })
 
   it('opens the signed-in account from the top app bar, showing its email', () => {
