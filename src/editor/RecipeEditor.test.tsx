@@ -515,14 +515,49 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     ])
   })
 
-  it('linking an Assumed Ingredient to an Item removes the mark', async () => {
+  it('explains Assumed under its checkbox', () => {
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    for (const row of ['Ingredient 1', 'Ingredient 2']) {
+      const line = within(screen.getByRole('group', { name: row })).getByText('Always at hand, e.g. water — never checked')
+      expect(line.closest('li')?.textContent).toContain('Assumed')
+    }
+  })
+
+  it('hides Choose Item while Assumed is ticked', () => {
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.queryByRole('button', { name: 'Choose Item for Ingredient 2' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Choose Item for Ingredient 1' })).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    expect(screen.queryByRole('button', { name: 'Choose Item for Ingredient 1' })).toBeNull()
+    fireEvent.click(screen.getByLabelText('Ingredient 2 assumed'))
+    expect(screen.getByRole('button', { name: 'Choose Item for Ingredient 2' })).toBeTruthy()
+  })
+
+  it('unticking Assumed before saving gives back the link it took', async () => {
     const store = fakeRecipeStore([entry])
     const onSaved = vi.fn()
     render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    expect(screen.queryByText(/^Linked to/)).toBeNull()
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    expect(screen.getByText(/^Linked to/)).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    expect(screen.queryByText(/^Linked to/)).toBeNull()
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    expect(screen.getByText(/^Linked to/)).toBeTruthy()
+
+    expect((await save(store, onSaved))[0]).toEqual(beef)
+  })
+
+  it('an Ingredient that was Assumed can be linked to an Item once the mark is removed', async () => {
+    const store = fakeRecipeStore([entry])
+    const onSaved = vi.fn()
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onSaved={onSaved} />)
+    fireEvent.click(screen.getByLabelText('Ingredient 2 assumed'))
     openPicker('Ingredient 2')
     fireEvent.input(field('Ingredient 2 Item search'), { target: { value: 'flour' } })
     fireEvent.click(pickerRow('Flour out'))
-    expect((screen.getByLabelText('Ingredient 2 assumed') as HTMLInputElement).checked).toBe(false)
+    expect(screen.getByText(/^Linked to Flour/)).toBeTruthy()
 
     expect((await save(store, onSaved))[1]).toEqual({ name: 'Water', itemId: 'flour' })
   })

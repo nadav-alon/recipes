@@ -197,6 +197,12 @@ interface IngredientRowProps {
 function IngredientRow({ ingredient, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
   const link = linkStatus(ingredient.link, items)
+  const assumed = ingredient.link.kind === 'assumed'
+  const [linkBeforeAssumed, setLinkBeforeAssumed] = useState<IngredientLink>(UNLINKED)
+  const toggleAssumed = (ticked: boolean) => {
+    if (ticked) setLinkBeforeAssumed(ingredient.link)
+    onChange({ link: ticked ? ASSUMED : linkBeforeAssumed })
+  }
   return (
     <div role="group" aria-label={row}>
       <TextField label="Name" aria-label={`${row} name`} value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
@@ -253,17 +259,20 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
       <ul>
         <ListRow
           headline="Assumed"
+          supporting="Always at hand, e.g. water — never checked"
           control={
             <input
               type="checkbox"
               aria-label={`${row} assumed`}
-              checked={ingredient.link.kind === 'assumed'}
-              onChange={(e) => onChange({ link: e.currentTarget.checked ? ASSUMED : UNLINKED })}
+              checked={assumed}
+              onChange={(e) => toggleAssumed(e.currentTarget.checked)}
             />
           }
         />
       </ul>
-      <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
+      {!assumed && (
+        <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
+      )}
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
   )
