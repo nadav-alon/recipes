@@ -9,7 +9,8 @@ import { SetupScreen } from './gate/SetupScreen.tsx'
 import { App } from './App.tsx'
 import { firestoreItemsPort } from './items/firestore-items-port.ts'
 import { firestoreRecipeStore } from './recipes/recipe-store.ts'
-import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { Button } from 'household-ui/ui/Button.tsx'
+import { CentredCard } from 'household-ui/ui/CentredCard.tsx'
 
 type RootState = Pick<ConfigResolution, 'config' | 'error' | 'proposed'> & { kit: LocalKit | undefined }
 
@@ -29,25 +30,24 @@ export function Root() {
 
   if (proposed !== null) {
     return (
-      <TopAppBar title="Switch Household?">
-        <main>
-          <p>
-            This link carries the config of another Firebase project (<code>{proposed.projectId}</code>).
-            Accepting it also repoints the Catalogue on this device.
-          </p>
-          <button
-            onClick={() => {
-              saveFirebaseWebConfig(proposed)
-              setState({ config: proposed, error: null, proposed: null, kit })
-            }}
-          >
-            Switch to {proposed.projectId}
-          </button>
-          <button onClick={() => setState({ config, error: null, proposed: null, kit })}>
-            Keep the current Household
-          </button>
-        </main>
-      </TopAppBar>
+      <CentredCard appName="Recipes" title="Switch Household?">
+        <p>
+          This link carries the config of another Firebase project (<code>{proposed.projectId}</code>). Accepting it
+          also repoints the Catalogue on this device.
+        </p>
+        <Button
+          variant="filled"
+          onClick={() => {
+            saveFirebaseWebConfig(proposed)
+            setState({ config: proposed, error: null, proposed: null, kit })
+          }}
+        >
+          Switch to {proposed.projectId}
+        </Button>
+        <Button variant="tonal" onClick={() => setState({ config, error: null, proposed: null, kit })}>
+          Keep the current Household
+        </Button>
+      </CentredCard>
     )
   }
 
