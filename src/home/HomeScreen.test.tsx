@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/preact'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { core, recipes } from 'data-platform'
 import { fakeItemsPort } from '../items/fake-items-port.ts'
 import { fakeRecipeStore } from '../recipes/fake-recipe-store.ts'
@@ -42,14 +42,17 @@ describe('HomeScreen', () => {
     expect(bar.queryByRole('button', { name: /back/i })).toBeNull()
   })
 
-  it('opens the signed-in account from the top app bar, showing its email', () => {
+  it('opens the signed-in account from the top app bar, showing its email and signing out', () => {
+    const signOut = vi.fn()
     render(
-      <AccountContext.Provider value={{ email: 'a@example.com', signOut: () => {} }}>
+      <AccountContext.Provider value={{ email: 'a@example.com', signOut }}>
         <HomeScreen recipeStore={store()} itemsPort={itemsPort()} />
       </AccountContext.Provider>,
     )
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Account' }))
     expect(screen.getByText('a@example.com')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    expect(signOut).toHaveBeenCalledOnce()
   })
 
   it('shows Makeable, then Almost makeable with what is Missing, then every other Recipe', () => {
