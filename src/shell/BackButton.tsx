@@ -1,10 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { IconButton } from 'household-ui/ui/IconButton.tsx'
 import { TopAppBarNavigation } from 'household-ui/shell/TopAppBar.tsx'
 import 'household-ui/ui/Dialog.css'
 import ArrowBack from '~icons/material-symbols/arrow-back'
-import { canGoBack } from '../routes.ts'
+import { canGoBack, dropGuard, guardLeaving } from '../routes.ts'
 
 export interface BackButtonProps {
   /** Where Back goes when there is no earlier screen of the app to return to. */
@@ -19,11 +19,21 @@ export interface BackButtonProps {
  */
 export function BackButton({ fallback, dirty = false }: BackButtonProps) {
   const [asking, setAsking] = useState(false)
-  const leave = () => (canGoBack() ? history.back() : location.replace(fallback))
+  const leave = () => dropGuard(() => (canGoBack() ? history.back() : location.replace(fallback)))
+  const guarded = () => guardLeaving(() => setAsking(true))
+  // The browser's Back from a dirty screen is caught the same way as the arrow, and asks.
+  useEffect(() => {
+    if (!dirty) return
+    guarded()
+    return () => dropGuard()
+  }, [dirty])
   return (
     <TopAppBarNavigation>
       <IconButton symbol={ArrowBack} label="Back" onClick={() => (dirty ? setAsking(true) : leave())} />
-      <DiscardDialog open={asking} onDiscard={leave} onCancel={() => setAsking(false)} />
+      <DiscardDialog open={asking} onDiscard={leave} onCancel={() => {
+          setAsking(false)
+          if (dirty) guarded()
+        }} />
     </TopAppBarNavigation>
   )
 }

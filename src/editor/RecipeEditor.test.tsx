@@ -894,14 +894,57 @@ describe('RecipeEditor leaving with unsaved changes', () => {
     expect(field('Title')).toHaveValue('Waffles')
   })
 
-  it('Discard leaves', () => {
-    routed()
-    const back = vi.spyOn(history, 'back').mockImplementation(() => {})
-    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+  /** Opens the editor on top of an earlier screen, as navigating to it would. */
+  const openedFromElsewhere = async (render_: () => void) => {
+    location.hash = '#/earlier'
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+    location.hash = '#/recipes/new'
+    await waitFor(() => expect(location.hash).toBe('#/recipes/new'))
+    render_()
+  }
+
+  it('Discard from the app bar leaves', async () => {
+    await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
     fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
     appBarBack()
     answer('Discard')
-    expect(back).toHaveBeenCalledOnce()
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+  })
+
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])("the browser's Back from a dirty editor of %s asks, and Cancel stays, and the next Back asks again", async (_name, editing) => {
+    const store = fakeRecipeStore([pancakes()])
+    await openedFromElsewhere(() =>
+      render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />),
+    )
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    history.back()
+    await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    expect(location.hash).toBe('#/recipes/new')
+    answer('Cancel')
+    expect(modal()).not.toHaveAttribute('open')
+    expect(field('Title')).toHaveValue('Waffles')
+    history.back()
+    await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    expect(location.hash).toBe('#/recipes/new')
+  })
+
+  it("Discard after the browser's Back leaves", async () => {
+    await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    history.back()
+    await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    answer('Discard')
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+  })
+
+  it("the browser's Back from a clean editor leaves without asking", async () => {
+    await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+    expect(modal()).not.toHaveAttribute('open')
   })
 
   it('treats a form edited back to what it opened on as clean', () => {
@@ -911,6 +954,7 @@ describe('RecipeEditor leaving with unsaved changes', () => {
     render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={stored(store)[0]} />)
     fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
     fireEvent.input(field('Title'), { target: { value: 'Pancakes' } })
+    back.mockClear() // whatever the browser's Back guard did while the form was dirty
     appBarBack()
     expect(back).toHaveBeenCalledOnce()
   })

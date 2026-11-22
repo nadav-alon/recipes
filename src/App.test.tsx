@@ -205,6 +205,10 @@ describe('App', () => {
       await act(() => {
         fireEvent.click(screen.getByRole('button', { name: 'Save' }))
       })
+      // Leaving the dirty editor first takes its Back guard's history entry off, which the browser does asynchronously.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10)
+      })
       expect(location.hash).toMatch(/^#\/recipes\/fake-/)
       await act(() => {
         location.hash = NEW_RECIPE_HREF
@@ -351,7 +355,7 @@ describe('App', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Omelette')
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Frittata' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(location.hash).toBe(recipeHref(r1))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
     fireEvent(window, new HashChangeEvent('hashchange'))
     expect(await screen.findByRole('heading', { name: 'Frittata' })).toBeInTheDocument()
   })
@@ -362,7 +366,7 @@ describe('App', () => {
     render(<App recipeStore={rejecting} itemsPort={fakeItemsPort([])} />)
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Frittata' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(location.hash).toBe(recipeHref(r1))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
     fireEvent(window, new HashChangeEvent('hashchange'))
     expect(await screen.findByRole('alert')).toHaveTextContent('Your edit to Frittata was not saved: Permission denied')
     expect(await screen.findByRole('heading', { name: 'Omelette' })).toBeInTheDocument()
@@ -380,6 +384,7 @@ describe('App', () => {
     render(<App recipeStore={rejectingFirst} itemsPort={fakeItemsPort([])} />)
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Frittata' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
     fireEvent(window, new HashChangeEvent('hashchange'))
     expect(await screen.findByRole('alert')).toHaveTextContent('Your edit to Frittata was not saved')
     location.hash = editRecipeHref(r2)

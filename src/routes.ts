@@ -117,18 +117,65 @@ function announceRouteChange(addedEntry: boolean): void {
   }
 }
 
+/** Marks the history entry a leave guard pushed. */
+const GUARD_MARK = 'leaveGuard'
+
+/** The leave guard in force, if any; see `guardLeaving`. */
+let guard: { readonly onPopped: () => void } | null = null
+
+const isGuardEntry = () => Boolean((history.state as Record<string, unknown> | null)?.[GUARD_MARK])
+
+const onGuardPop = () => {
+  const armed = guard
+  if (armed === null || isGuardEntry()) return
+  guard = null
+  removeEventListener('popstate', onGuardPop)
+  armed.onPopped()
+}
+
+/**
+ * Catches the browser's Back from the current screen: pushes a history entry on the same URL, so Back lands
+ * on this screen again rather than leaving it, and then calls `onPopped`; the guard is spent by then, so it
+ * is armed again to keep catching Back. Does nothing while a guard is already in force.
+ * The navigation functions below, and `dropGuard`, take the guard's entry off before they go anywhere.
+ */
+export function guardLeaving(onPopped: () => void): void {
+  if (guard !== null) return
+  guard = { onPopped }
+  history.pushState({ ...(history.state as object | null), [GUARD_MARK]: true }, '')
+  addEventListener('popstate', onGuardPop)
+}
+
+/** Takes the guard off, popping its history entry if Back has not, then runs `then`; runs it at once when there is no guard. */
+export function dropGuard(then: () => void = () => {}): void {
+  if (guard === null) return then()
+  guard = null
+  removeEventListener('popstate', onGuardPop)
+  if (!isGuardEntry()) return then()
+  // A popstate still on the guard's entry is an earlier traversal landing, not this one.
+  const landed = () => {
+    if (isGuardEntry()) return
+    removeEventListener('popstate', landed)
+    then()
+  }
+  addEventListener('popstate', landed)
+  history.back()
+}
+
 /**
  * Leaves the current screen for `href`: returns to the history entry before it when `navigate` recorded
  * that entry as `href`, so the screen left and the one returned to do not both stay in history; otherwise
  * replaces the current entry.
  */
 export function returnTo(href: string): void {
+  if (guard !== null) return dropGuard(() => returnTo(href))
   if ((history.state as RouteHistoryState | null)?.from === href) history.back()
   else navigateInPlace(href)
 }
 
 /** Goes to `href`, adding a history entry that remembers the screen it was left from, for `returnTo`. */
 export function navigate(href: string): void {
+  if (guard !== null) return dropGuard(() => navigate(href))
   const state: RouteHistoryState = { from: location.hash }
   history.pushState(state, '', href)
   announceRouteChange(true)
@@ -136,6 +183,7 @@ export function navigate(href: string): void {
 
 /** Goes to `href` in place of the current history entry, so Back skips the screen being left. */
 export function navigateInPlace(href: string): void {
+  if (guard !== null) return dropGuard(() => navigateInPlace(href))
   history.replaceState(history.state, '', href)
   announceRouteChange(false)
 }
@@ -145,6 +193,7 @@ export function navigateInPlace(href: string): void {
  * one too, so Back from `href` reaches neither screen.
  */
 export function replaceRoutes(href: string, previous: string): void {
+  if (guard !== null) return dropGuard(() => replaceRoutes(href, previous))
   if ((history.state as RouteHistoryState | null)?.from !== previous) return navigateInPlace(href)
   // A popstate still on the screen being left is an earlier traversal landing, not this one.
   const leaving = location.hash
