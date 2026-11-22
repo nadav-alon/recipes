@@ -85,11 +85,10 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   useEffect(() => {
     if (!entry) form.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
   }, [])
-  // The key of the row just added, whose first field takes focus so it can be typed into at once.
-  const [added, setAdded] = useState<number | null>(null)
+  const [addedKey, setAddedKey] = useState<number | null>(null)
   useEffect(() => {
-    if (added !== null) form.current?.querySelector<HTMLElement>(`[data-row-key="${added}"]`)?.focus()
-  }, [added])
+    if (addedKey !== null) form.current?.querySelector<HTMLElement>(`[data-row-key="${addedKey}"]`)?.focus()
+  }, [addedKey])
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
@@ -188,14 +187,14 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
               onClick={() => {
                 const ingredient = emptyIngredient()
                 change({ ingredients: [...draft.ingredients, ingredient] })
-                setAdded(ingredient.key)
+                setAddedKey(ingredient.key)
               }}
             >
               Add Ingredient
             </Button>
           </fieldset>
-          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} onAdded={setAdded} />
-          <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} onAdded={setAdded} />
+          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} onAddedKey={setAddedKey} />
+          <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} onAddedKey={setAddedKey} />
           <div ref={messages} tabIndex={-1}>
             {blockers.length > 0 && (
               <div>
@@ -407,12 +406,12 @@ interface StepListProps {
   readonly legend: string
   readonly steps: readonly StepDraft[]
   readonly onChange: (steps: StepDraft[]) => void
-  /** Called with the key of a step the list has just added. */
-  readonly onAdded: (key: number) => void
+  /** Called with the key of a step the list has just added, whose first field takes focus. */
+  readonly onAddedKey: (key: number) => void
 }
 
 /** An ordered list of Prep Steps or Steps that can be added to, edited, removed and reordered. */
-function StepList({ label, legend, steps, onChange, onAdded }: StepListProps) {
+function StepList({ label, legend, steps, onChange, onAddedKey }: StepListProps) {
   return (
     <fieldset>
       <legend>{legend}</legend>
@@ -445,7 +444,7 @@ function StepList({ label, legend, steps, onChange, onAdded }: StepListProps) {
         onClick={() => {
           const step = emptyStep()
           onChange([...steps, step])
-          onAdded(step.key)
+          onAddedKey(step.key)
         }}
       >
         Add {label}
