@@ -116,17 +116,18 @@ describe('RecipeEditor Ingredients', () => {
       ['Unit', 'Ingredient 1 unit'],
       ['Prep note', 'Ingredient 1 prep note'],
     ]) {
-      expect(row.getByText(visible, { selector: 'label' })).toBeInTheDocument()
-      expect(row.getByLabelText(accessible)).toBeInTheDocument()
+      expect(row.getByText(visible, { selector: 'label' })).toHaveAttribute('for', row.getByLabelText(accessible).id)
     }
   })
 
-  it("shows no row number in a Step textarea's visible label but keeps it in the accessible name", () => {
+  it.each([
+    ['Prep Step', 'Add Prep Step'],
+    ['Step', 'Add Step'],
+  ])("shows no row number in a %s textarea's visible label but keeps it in the accessible name", (kind, addButton) => {
     render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onSaved={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Add Prep Step' }))
-    const row = within(screen.getByRole('group', { name: 'Prep Step 1' }))
-    expect(row.getByText('Text', { selector: 'label' })).toBeInTheDocument()
-    expect(row.getByRole('textbox', { name: 'Prep Step 1 text' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: addButton }))
+    const row = within(screen.getByRole('group', { name: `${kind} 1` }))
+    expect(row.getByText('Text', { selector: 'label' })).toHaveAttribute('for', row.getByRole('textbox', { name: `${kind} 1 text` }).id)
   })
 
   it('adds Ingredients with a quantity, a unit from the fixed set and a prep note', async () => {
