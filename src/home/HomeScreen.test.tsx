@@ -5,7 +5,7 @@ import { fakeItemsPort } from '../items/fake-items-port.ts'
 import { fakeRecipeStore } from '../recipes/fake-recipe-store.ts'
 import type { ItemsPort } from '../items/items-port.ts'
 import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
-import { AccountContext } from '../gate/account.tsx'
+import { MemberContext } from '../gate/account.tsx'
 import { HomeScreen } from './HomeScreen.tsx'
 
 const item = (id: string, state: core.State, deleted = false) => ({
@@ -45,9 +45,9 @@ describe('HomeScreen', () => {
   it('opens the signed-in account from the top app bar, showing its email and signing out', () => {
     const signOut = vi.fn()
     render(
-      <AccountContext.Provider value={{ email: 'a@example.com', signOut }}>
+      <MemberContext.Provider value={{ email: 'a@example.com', signOut }}>
         <HomeScreen recipeStore={store()} itemsPort={itemsPort()} />
-      </AccountContext.Provider>,
+      </MemberContext.Provider>,
     )
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Account' }))
     expect(screen.getByText('a@example.com')).toBeInTheDocument()

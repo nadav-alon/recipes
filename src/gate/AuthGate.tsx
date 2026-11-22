@@ -9,7 +9,7 @@ import {
 } from 'data-platform/client'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
-import { AccountContext, SignOutButton } from './account.tsx'
+import { MemberContext, SignOutButton } from './account.tsx'
 import { catalogueUrl } from '../catalogue-url.ts'
 
 export type AuthGateProps = {
@@ -128,9 +128,9 @@ export function AuthGate({ client, children }: AuthGateProps) {
 
     case 'member':
       return (
-        <AccountContext.Provider value={{ email: state.user.email, signOut }}>
+        <MemberContext.Provider value={{ email: state.user.email, signOut }}>
           {children}
-        </AccountContext.Provider>
+        </MemberContext.Provider>
       )
   }
 }
