@@ -46,13 +46,18 @@ describe('Catalogue hand-off in the editor', () => {
 
 describe('floating button and snackbar placement', () => {
   it('declares no bottom bar and no side rail, so household-ui places them for an app without either', () => {
-    expect(rule(':root')).toMatch(/--shell-bar-height:\s*0(rem)?\s*;/)
-    expect(rule(':root')).toMatch(/--shell-rail-width:\s*0(rem)?\s*;/)
+    const root = rule(':root')
+    expect(root).toMatch(/--shell-bar-height:\s*0(rem)?\s*;/)
+    expect(root).toMatch(/--shell-rail-width:\s*0(rem)?\s*;/)
   })
 
   it('loads the override after household-ui tokens so it wins', () => {
-    const main = readFileSync('src/main.tsx', 'utf8')
-    expect(main.indexOf('household-ui/ui/tokens.css')).toBeLessThan(main.indexOf('./screens.css'))
+    const entrySource = readFileSync('src/main.tsx', 'utf8')
+    const tokens = entrySource.indexOf('household-ui/ui/tokens.css')
+    const screens = entrySource.indexOf('./screens.css')
+    expect(tokens).toBeGreaterThanOrEqual(0)
+    expect(screens).toBeGreaterThanOrEqual(0)
+    expect(tokens).toBeLessThan(screens)
   })
 })
 
