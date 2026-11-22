@@ -509,7 +509,16 @@ const entryOf = (id: string): RecipeEntry => ({
   recipe: { title: 'X', ingredients: [{ name: 'Beef', itemId: core.itemId(id) }], prepSteps: [], steps: [] },
 })
 
+/** Replaces `location.assign` for the test, since jsdom cannot leave the page; returns the spy. */
+function stubAssign() {
+  const assign = vi.fn()
+  vi.stubGlobal('location', { ...location, origin: location.origin, pathname: location.pathname, assign })
+  return assign
+}
+
 describe('RecipeEditor adding to the Catalogue', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
   const edited = (ingredients: RecipeEntry['recipe']['ingredients']): RecipeEntry => ({
     id: recipes.recipeId('r 1'),
     recipe: { title: 'X', ingredients, prepSteps: [], steps: [] },
@@ -519,8 +528,10 @@ describe('RecipeEditor adding to the Catalogue', () => {
     const entry = edited([{ name: 'Beef', itemId: core.itemId('beef') }, { name: 'Sea salt' }])
     render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
 
-    expect(screen.queryByRole('link', { name: 'Add Ingredient 1 to Catalogue' })).toBeNull()
-    const href = screen.getByRole('link', { name: 'Add Ingredient 2 to Catalogue' }).getAttribute('href')!
+    const assign = stubAssign()
+    expect(screen.queryByRole('button', { name: 'Add Ingredient 1 to Catalogue' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient 2 to Catalogue' }))
+    const href = assign.mock.calls[0][0] as string
     const handOff = new URL(href, location.origin)
     expect(handOff.pathname).toBe('/home-catalogue/')
     const params = new URLSearchParams(handOff.hash.replace('#/items?', ''))
@@ -531,16 +542,16 @@ describe('RecipeEditor adding to the Catalogue', () => {
   it('stops offering it once the draft has unsaved edits, which following it would lose', () => {
     const entry = edited([{ name: 'Sea salt' }])
     render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
-    expect(screen.getByRole('link', { name: 'Add Ingredient 1 to Catalogue' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add Ingredient 1 to Catalogue' })).toBeTruthy()
 
     fireEvent.input(field('Title'), { target: { value: 'Y' } })
-    expect(screen.queryByRole('link', { name: /to Catalogue$/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /to Catalogue$/ })).toBeNull()
   })
 
   it('does not offer it for an Assumed Ingredient', () => {
     const entry = edited([{ name: 'Water', assumed: true }])
     render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
-    expect(screen.queryByRole('link', { name: /to Catalogue$/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /to Catalogue$/ })).toBeNull()
   })
 })
 
@@ -741,8 +752,10 @@ describe('RecipeEditor item picker with no match', () => {
     openPicker('Ingredient 1')
     fireEvent.input(search(), { target: { value: 'zzz' } })
     expect(screen.getByText(/No Items match/)).toBeInTheDocument()
+    const assign = stubAssign()
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient 1 to Catalogue' }))
     const href = screen.getByRole('link', { name: 'Add Sea salt to the Catalogue' }).getAttribute('href')
-    expect(href).toBe(screen.getByRole('link', { name: 'Add Ingredient 1 to Catalogue' }).getAttribute('href'))
+    expect(assign).toHaveBeenCalledWith(href)
   })
 
   it('says it without the hand-off where the editor cannot offer it', () => {

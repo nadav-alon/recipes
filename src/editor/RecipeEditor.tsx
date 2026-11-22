@@ -290,9 +290,9 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         </Button>
       )}
       {ingredient.link.kind === 'unlinked' && catalogueHref !== undefined && (
-        <CatalogueHandOff href={catalogueHref} label={`Add ${row} to Catalogue`}>
+        <Button variant="text" aria-label={`Add ${row} to Catalogue`} onClick={() => location.assign(catalogueHref)}>
           Add to Catalogue
-        </CatalogueHandOff>
+        </Button>
       )}
       <ul>
         <ListRow
@@ -343,13 +343,9 @@ function linkStatus(link: IngredientLink, items: readonly WatchedItem[] | null):
   return item.deleted ? { kind: 'soft-deleted', item } : { kind: 'live', item }
 }
 
-/** The link to the Catalogue's add-Item page; `label` is its accessible name where the text alone would not tell rows apart. */
-function CatalogueHandOff({ href, label, children }: { href: string; label?: string; children: ComponentChildren }) {
-  return (
-    <a href={href} aria-label={label}>
-      {children}
-    </a>
-  )
+/** The link to the Catalogue's add-Item page. */
+function CatalogueHandOff({ href, children }: { href: string; children: ComponentChildren }) {
+  return <a href={href}>{children}</a>
 }
 
 interface ItemPickerProps {
