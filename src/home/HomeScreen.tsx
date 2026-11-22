@@ -38,6 +38,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
     )
   if (entries === null || items === null) return null
   const sections = homeSections(entries, items)
+  const newRecipe = () => navigate(NEW_RECIPE_HREF)
 
   return (
     <TopAppBar title="Recipes">
@@ -45,12 +46,12 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
         <AccountAction />
         {wide ? (
           <TopAppBarActions>
-            <Button variant="tonal" onClick={() => navigate(NEW_RECIPE_HREF)}>
+            <Button variant="tonal" onClick={newRecipe}>
               New Recipe
             </Button>
           </TopAppBarActions>
         ) : (
-          <Fab symbol={Add} label="New Recipe" onClick={() => navigate(NEW_RECIPE_HREF)} />
+          <Fab symbol={Add} label="New Recipe" onClick={newRecipe} />
         )}
         <Section title="Makeable" list={sections.makeable} empty="Nothing is makeable from what is at home right now." />
         <Section
