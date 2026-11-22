@@ -1,14 +1,16 @@
 import type { ManifestOptions } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { SEED } from './seed.ts'
 
 /**
  * The light scheme's background role, read from the generated `theme.css` (the config is loaded by
  * plain Node, which cannot load household-ui's TypeScript); `theme.test.ts` pins that file to the seed.
  */
-const lightBackground = readFileSync('src/theme.css', 'utf8').match(
+const lightBackground = readFileSync(join(import.meta.dirname, 'theme.css'), 'utf8').match(
   /--md-sys-color-background: (#[0-9a-f]{6});/,
-)![1]
+)?.[1]
+if (!lightBackground) throw new Error('theme.css has no --md-sys-color-background')
 
 const sizes = [192, 512]
 
