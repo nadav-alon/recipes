@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact'
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
@@ -273,9 +274,9 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         </Button>
       )}
       {ingredient.link.kind === 'unlinked' && catalogueHref !== undefined && (
-        <a href={catalogueHref} aria-label={`Add ${row} to Catalogue`}>
+        <CatalogueHandOff href={catalogueHref} label={`Add ${row} to Catalogue`}>
           Add to Catalogue
-        </a>
+        </CatalogueHandOff>
       )}
       <ul>
         <ListRow
@@ -292,7 +293,7 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         />
       </ul>
       {!assumed && (
-        <ItemPicker row={row} name={ingredient.name.trim()} catalogueHref={catalogueHref} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
+        <ItemPicker label={row} name={ingredient.name.trim()} catalogueHref={ingredient.link.kind === 'unlinked' ? catalogueHref : undefined} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
       )}
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
@@ -326,9 +327,18 @@ function linkStatus(link: IngredientLink, items: readonly WatchedItem[] | null):
   return item.deleted ? { kind: 'soft-deleted', item } : { kind: 'live', item }
 }
 
+/** The link to the Catalogue's add-Item page; `label` is its accessible name where the text alone would not tell rows apart. */
+function CatalogueHandOff({ href, label, children }: { href: string; label?: string; children: ComponentChildren }) {
+  return (
+    <a href={href} aria-label={label}>
+      {children}
+    </a>
+  )
+}
+
 interface ItemPickerProps {
-  /** The Ingredient's name, as in "Ingredient 2". */
-  readonly row: string
+  /** The Ingredient's row label, as in "Ingredient 2". */
+  readonly label: string
   /** The Ingredient's own name, trimmed; empty while it has none. */
   readonly name: string
   /** Where the Catalogue's add-Item hand-off for the Ingredient is; absent when it cannot be offered. */
@@ -344,7 +354,7 @@ interface ItemPickerProps {
  * with the search filled in with the Ingredient's name (empty, so listing nothing, when it has none) and closes once an
  * Item is picked. When nothing matches it says so and, if the editor can, offers the Catalogue hand-off.
  */
-function ItemPicker({ row, name, catalogueHref, items, linked, onPick }: ItemPickerProps) {
+function ItemPicker({ label, name, catalogueHref, items, linked, onPick }: ItemPickerProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const searchId = useUniqueId()
@@ -361,15 +371,16 @@ function ItemPicker({ row, name, catalogueHref, items, linked, onPick }: ItemPic
     setOpen(false)
     setQuery('')
   }
+  const openWithName = () => {
+    setQuery(name)
+    setOpen(true)
+  }
   return (
     <>
-      <Button variant="tonal" aria-label={`Choose Item for ${row}`} onClick={() => {
-          setQuery(name)
-          setOpen(true)
-        }}>
+      <Button variant="tonal" aria-label={`Choose Item for ${label}`} onClick={openWithName}>
         Choose Item
       </Button>
-      <Dialog open={open} title={`Choose an Item for ${name === '' ? row : name}`} onClose={close} closable>
+      <Dialog open={open} title={`Choose an Item for ${name === '' ? label : name}`} onClose={close} closable>
         <TextField
           id={searchId}
           label="Search Items"
@@ -384,7 +395,9 @@ function ItemPicker({ row, name, catalogueHref, items, linked, onPick }: ItemPic
         {needle !== '' && matches.length === 0 && (
           <p>
             No Items match.{' '}
-            {catalogueHref !== undefined && <a href={catalogueHref}>Add to Catalogue</a>}
+            {catalogueHref !== undefined && (
+              <CatalogueHandOff href={catalogueHref}>Add {name} to the Catalogue</CatalogueHandOff>
+            )}
           </p>
         )}
         <ul>

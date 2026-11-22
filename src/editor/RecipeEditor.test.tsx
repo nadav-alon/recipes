@@ -705,7 +705,7 @@ describe('RecipeEditor item picker with no match', () => {
     openPicker('Ingredient 1')
     fireEvent.input(search(), { target: { value: 'zzz' } })
     expect(screen.getByText(/No Items match/)).toBeInTheDocument()
-    const href = screen.getByRole('link', { name: 'Add to Catalogue' }).getAttribute('href')
+    const href = screen.getByRole('link', { name: 'Add Sea salt to the Catalogue' }).getAttribute('href')
     expect(href).toBe(screen.getByRole('link', { name: 'Add Ingredient 1 to Catalogue' }).getAttribute('href'))
   })
 
@@ -715,6 +715,15 @@ describe('RecipeEditor item picker with no match', () => {
     openPicker('Ingredient 1')
     fireEvent.input(search(), { target: { value: 'zzz' } })
     expect(screen.getByText(/No Items match/)).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Add to Catalogue' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /to the Catalogue$/ })).toBeNull()
+  })
+
+  it('says it without the hand-off for an Ingredient that is already linked', () => {
+    const linked = entryOf('beef')
+    render(<RecipeEditor store={fakeRecipeStore([linked])} itemsPort={itemsPort()} entry={linked} />)
+    openPicker('Ingredient 1')
+    fireEvent.input(search(), { target: { value: 'zzz' } })
+    expect(screen.getByText(/No Items match/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /to the Catalogue$/ })).toBeNull()
   })
 })
