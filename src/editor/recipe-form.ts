@@ -92,29 +92,49 @@ function isPositiveDecimal(text: string): boolean {
   return /^\d+(\.\d+)?$/.test(text) && Number.isFinite(Number(text)) && Number(text) > 0
 }
 
-/** Why a draft cannot be saved, in the words the form shows; empty when it can. */
-export function problems(draft: RecipeDraft): string[] {
-  const found: string[] = []
-  if (draft.title.trim() === '') found.push('Give the Recipe a title.')
+/** The ids of the form's fields, which a problem names and the editor puts on the inputs. */
+export const fieldId = {
+  title: 'recipe-field-title',
+  servings: 'recipe-field-servings',
+  ingredient: (ingredient: IngredientDraft, part: 'name' | 'quantity') => `recipe-field-ingredient-${ingredient.key}-${part}`,
+  prepStep: (step: StepDraft) => `recipe-field-prep-step-${step.key}`,
+  step: (step: StepDraft) => `recipe-field-step-${step.key}`,
+}
+
+/** Why a draft cannot be saved, in the words the form shows; `field` is the id of the field it is about, if one. */
+export interface Problem {
+  readonly message: string
+  readonly field?: string
+}
+
+/** What stops a draft being saved, in the order the fields appear on the form; empty when it can be. */
+export function fieldProblems(draft: RecipeDraft): Problem[] {
+  const found: Problem[] = []
+  if (draft.title.trim() === '') found.push({ message: 'Give the Recipe a title.', field: fieldId.title })
   const servings = draft.servings.trim()
   if (servings !== '' && !(Number.isInteger(Number(servings)) && Number(servings) > 0)) {
-    found.push('Servings must be a whole number above zero.')
+    found.push({ message: 'Servings must be a whole number above zero.', field: fieldId.servings })
   }
   draft.ingredients.forEach((ingredient, i) => {
     const row = `Ingredient ${i + 1}`
     const quantity = ingredient.quantity.trim()
-    if (ingredient.name.trim() === '') found.push(`${row} needs a name.`)
-    if (quantity !== '' && !isPositiveDecimal(quantity)) found.push(`${row}: the quantity must be a number above zero.`)
-    if (ingredient.unit !== '' && quantity === '') found.push(`${row}: a unit needs a quantity.`)
+    if (ingredient.name.trim() === '') found.push({ message: `${row} needs a name.`, field: fieldId.ingredient(ingredient, 'name') })
+    if (quantity !== '' && !isPositiveDecimal(quantity)) {
+      found.push({ message: `${row}: the quantity must be a number above zero.`, field: fieldId.ingredient(ingredient, 'quantity') })
+    }
+    if (ingredient.unit !== '' && quantity === '') {
+      found.push({ message: `${row}: a unit needs a quantity.`, field: fieldId.ingredient(ingredient, 'quantity') })
+    }
   })
   draft.prepSteps.forEach((step, i) => {
-    if (step.text.trim() === '') found.push(`Prep Step ${i + 1} is empty.`)
+    if (step.text.trim() === '') found.push({ message: `Prep Step ${i + 1} is empty.`, field: fieldId.prepStep(step) })
   })
   draft.steps.forEach((step, i) => {
-    if (step.text.trim() === '') found.push(`Step ${i + 1} is empty.`)
+    if (step.text.trim() === '') found.push({ message: `Step ${i + 1} is empty.`, field: fieldId.step(step) })
   })
   return found
 }
+
 
 /** The link to `id`; as an Assumed Ingredient has no Item, linking clears an Assumed mark. */
 export function linkedTo(id: core.ItemId): IngredientLink {

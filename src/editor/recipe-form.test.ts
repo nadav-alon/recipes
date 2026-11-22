@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { core } from 'data-platform'
 import { validatedRecipe, type Recipe } from '../recipes/recipe-store.ts'
-import { draftOf, emptyDraft, emptyIngredient, emptyStep, moved, problems, recipeOf } from './recipe-form.ts'
+import { draftOf, emptyDraft, emptyIngredient, emptyStep, fieldId, fieldProblems, moved, recipeOf } from './recipe-form.ts'
 
 const stew: Recipe = {
   title: 'Stew',
@@ -16,45 +16,45 @@ const stew: Recipe = {
   notes: 'Better next day',
 }
 
-describe('problems', () => {
+describe('fieldProblems', () => {
   it('has none for a titled Recipe', () => {
-    expect(problems({ ...emptyDraft(), title: 'Soup' })).toEqual([])
+    expect(fieldProblems({ ...emptyDraft(), title: 'Soup' })).toEqual([])
   })
 
-  it('says a title is missing', () => {
-    expect(problems(emptyDraft())).toEqual(['Give the Recipe a title.'])
+  it('says a title is missing, about the title field', () => {
+    expect(fieldProblems(emptyDraft())).toEqual([{ message: 'Give the Recipe a title.', field: fieldId.title }])
   })
 
-  it.each(['Infinity', '1e400', '0x10', '1e2', '-1', '0', 'abc'])('rejects the quantity %s', (quantity) => {
-    const draft = { ...emptyDraft(), title: 'Soup', ingredients: [{ ...emptyIngredient(), name: 'Salt', quantity }] }
-    expect(problems(draft)).toEqual(['Ingredient 1: the quantity must be a number above zero.'])
+  it.each(['Infinity', '1e400', '0x10', '1e2', '-1', '0', 'abc'])('rejects the quantity %s, about the quantity field', (quantity) => {
+    const ingredient = { ...emptyIngredient(), name: 'Salt', quantity }
+    expect(fieldProblems({ ...emptyDraft(), title: 'Soup', ingredients: [ingredient] })).toEqual([
+      { message: 'Ingredient 1: the quantity must be a number above zero.', field: fieldId.ingredient(ingredient, 'quantity') },
+    ])
   })
 
   it.each(['2', '0.5', '12.25'])('accepts the quantity %s', (quantity) => {
     const draft = { ...emptyDraft(), title: 'Soup', ingredients: [{ ...emptyIngredient(), name: 'Salt', quantity }] }
-    expect(problems(draft)).toEqual([])
+    expect(fieldProblems(draft)).toEqual([])
   })
 
-  it('says a unit needs a quantity', () => {
-    const draft = { ...emptyDraft(), title: 'Soup', ingredients: [{ ...emptyIngredient(), name: 'Salt', unit: 'g' as const }] }
-    expect(problems(draft)).toEqual(['Ingredient 1: a unit needs a quantity.'])
+  it('says a unit needs a quantity, about the quantity field', () => {
+    const ingredient = { ...emptyIngredient(), name: 'Salt', unit: 'g' as const }
+    expect(fieldProblems({ ...emptyDraft(), title: 'Soup', ingredients: [ingredient] })).toEqual([
+      { message: 'Ingredient 1: a unit needs a quantity.', field: fieldId.ingredient(ingredient, 'quantity') },
+    ])
   })
 
-  it('says an Ingredient needs a name, a quantity must be positive, and Servings a whole number', () => {
-    const draft = {
-      ...emptyDraft(),
-      title: 'Soup',
-      servings: '1.5',
-      ingredients: [{ ...emptyIngredient(), quantity: '-2' }],
-      steps: [emptyStep('  ')],
-      prepSteps: [emptyStep('')],
-    }
-    expect(problems(draft)).toEqual([
-      'Servings must be a whole number above zero.',
-      'Ingredient 1 needs a name.',
-      'Ingredient 1: the quantity must be a number above zero.',
-      'Prep Step 1 is empty.',
-      'Step 1 is empty.',
+  it('names the field of each problem, in the order the fields appear on the form', () => {
+    const ingredient = { ...emptyIngredient(), quantity: '-2' }
+    const step = emptyStep('  ')
+    const prepStep = emptyStep('')
+    const draft = { ...emptyDraft(), title: 'Soup', servings: '1.5', ingredients: [ingredient], steps: [step], prepSteps: [prepStep] }
+    expect(fieldProblems(draft)).toEqual([
+      { message: 'Servings must be a whole number above zero.', field: fieldId.servings },
+      { message: 'Ingredient 1 needs a name.', field: fieldId.ingredient(ingredient, 'name') },
+      { message: 'Ingredient 1: the quantity must be a number above zero.', field: fieldId.ingredient(ingredient, 'quantity') },
+      { message: 'Prep Step 1 is empty.', field: fieldId.prepStep(prepStep) },
+      { message: 'Step 1 is empty.', field: fieldId.step(step) },
     ])
   })
 })

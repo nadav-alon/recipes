@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/preact'
 import type { ComponentChild } from 'preact'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { resetSnackbar, SnackbarHost } from 'household-ui/ui/Snackbar.tsx'
 import { core, recipes } from 'data-platform'
 import { fakeItemsPort } from '../items/fake-items-port.ts'
@@ -32,6 +32,12 @@ function renderWithSnackbar(ui: ComponentChild) {
 }
 
 const field = (name: string) => screen.getByLabelText(name)
+/** The summary at the foot of the form that lists every problem a refused save found. */
+const summary = () => within(screen.getByText('This Recipe cannot be saved yet:').parentElement as HTMLElement)
+const SCHEMA_REFUSED = {
+  id: recipes.recipeId('odd'),
+  recipe: { title: 'Odd', ingredients: [{ name: 'Salt', assumed: false }], prepSteps: [], steps: [] },
+} as unknown as RecipeEntry
 const openPicker = (row: string) => fireEvent.click(screen.getByRole('button', { name: `Choose Item for ${row}` }))
 const pickerRow = (name: string) => screen.getByRole('button', { name })
 const search = () => within(screen.getByRole('dialog')).getByLabelText('Search Items')
@@ -111,8 +117,8 @@ describe('RecipeEditor Save placement', () => {
 })
 
 describe('RecipeEditor refused saves', () => {
-  it('moves focus to the messages when a save is blocked, then again on the next blocked save', () => {
-    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+  it('moves focus to the messages when a save is blocked by no field, then again on the next blocked save', () => {
+    render(<RecipeEditor store={fakeRecipeStore([SCHEMA_REFUSED])} itemsPort={itemsPort()} entry={SCHEMA_REFUSED} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     const alert = screen.getByRole('alert')
     expect(alert.closest('[tabindex]')).toHaveFocus()
@@ -315,7 +321,7 @@ describe('RecipeEditor validation', () => {
   it('shows each problem as a household-ui field error', () => {
     render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByRole('alert')).toHaveClass('ui-field__error')
+    expect(summary().getByRole('alert')).toHaveClass('ui-field__error')
   })
 
   it('blocks saving a Recipe with no title and says why', () => {
@@ -324,7 +330,7 @@ describe('RecipeEditor validation', () => {
     render(<RecipeEditor store={store} itemsPort={itemsPort()} onSaved={onSaved} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Give the Recipe a title.')
+    expect(summary().getByRole('alert')).toHaveTextContent('Give the Recipe a title.')
     expect(onSaved).not.toHaveBeenCalled()
     expect(stored(store)).toEqual([])
   })
@@ -339,7 +345,7 @@ describe('RecipeEditor validation', () => {
     fireEvent.change(screen.getByLabelText('Ingredient 1 unit'), { target: { value: 'g' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Ingredient 1: a unit needs a quantity.')
+    expect(summary().getByRole('alert')).toHaveTextContent('Ingredient 1: a unit needs a quantity.')
     expect(onSaved).not.toHaveBeenCalled()
 
     fireEvent.input(screen.getByLabelText('Ingredient 1 quantity'), { target: { value: '5' } })
@@ -349,14 +355,10 @@ describe('RecipeEditor validation', () => {
   })
 
   it('blocks a Recipe the schema refuses, says why and does not report it saved', () => {
-    const odd = {
-      id: recipes.recipeId('odd'),
-      recipe: { title: 'Odd', ingredients: [{ name: 'Salt', assumed: false }], prepSteps: [], steps: [] },
-    } as unknown as RecipeEntry
-    const store = fakeRecipeStore([odd])
+    const store = fakeRecipeStore([SCHEMA_REFUSED])
     const update = vi.spyOn(store, 'update')
     const onSaved = vi.fn()
-    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={odd} onSaved={onSaved} />)
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={SCHEMA_REFUSED} onSaved={onSaved} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(screen.getByRole('alert')).toHaveTextContent('ingredients.0.assumed')
@@ -777,5 +779,73 @@ describe('RecipeEditor item picker with no match', () => {
     fireEvent.input(search(), { target: { value: 'zzz' } })
     expect(screen.getByText(/No Items match/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /to the Catalogue$/ })).toBeNull()
+  })
+})
+
+describe('RecipeEditor validation in place', () => {
+  const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  it('marks each field a problem is about, with its message beneath it', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.input(field('Servings'), { target: { value: 'abc' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    fireEvent.input(field('Ingredient 1 name'), { target: { value: 'Salt' } })
+    fireEvent.input(field('Ingredient 1 quantity'), { target: { value: 'lots' } })
+    save()
+
+    expect(field('Title')).toBeInvalid()
+    expect(field('Title')).toHaveAccessibleDescription('Give the Recipe a title.')
+    expect(field('Servings')).toHaveAccessibleDescription('Servings must be a whole number above zero.')
+    expect(field('Ingredient 1 quantity')).toBeInvalid()
+    expect(field('Ingredient 1 quantity')).toHaveAccessibleDescription('Ingredient 1: the quantity must be a number above zero.')
+    expect(field('Ingredient 1 name')).not.toBeInvalid()
+  })
+
+  it('marks and focuses an empty Step', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.input(field('Title'), { target: { value: 'Soup' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Step' }))
+    save()
+
+    expect(field('Step 1 text')).toBeInvalid()
+    expect(field('Step 1 text')).toHaveFocus()
+  })
+
+  it('focuses the first field with a problem, scrolling to it', () => {
+    const scrolled = vi.fn()
+    Element.prototype.scrollIntoView = scrolled
+    onTestFinished(() => {
+      delete (Element.prototype as Partial<Element>).scrollIntoView
+    })
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.input(field('Servings'), { target: { value: 'abc' } })
+    save()
+
+    expect(field('Title')).toHaveFocus()
+    expect(scrolled).toHaveBeenCalledOnce()
+    expect(scrolled.mock.contexts[0]).toBe(field('Title'))
+  })
+
+  it('still lists every problem in the summary', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.input(field('Servings'), { target: { value: 'abc' } })
+    save()
+
+    expect(summary().getAllByRole('alert').map((a) => a.textContent)).toEqual([
+      'Give the Recipe a title.',
+      'Servings must be a whole number above zero.',
+    ])
+  })
+
+  it('leaves the error state of a field corrected and saved again', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.input(field('Servings'), { target: { value: 'abc' } })
+    save()
+    fireEvent.input(field('Title'), { target: { value: 'Soup' } })
+    save()
+
+    expect(field('Title')).not.toBeInvalid()
+    expect(field('Servings')).toBeInvalid()
+    expect(field('Servings')).toHaveFocus()
   })
 })
