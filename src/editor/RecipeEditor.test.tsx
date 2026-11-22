@@ -106,6 +106,21 @@ describe('RecipeEditor Ingredients', () => {
     expect(row?.contains(field('Ingredient 1 name'))).toBe(false)
   })
 
+  it("shows short visible labels on an Ingredient's fields and keeps the row in their accessible names", () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onSaved={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    const row = within(screen.getByRole('group', { name: 'Ingredient 1' }))
+    for (const [visible, accessible] of [
+      ['Name', 'Ingredient 1 name'],
+      ['Quantity', 'Ingredient 1 quantity'],
+      ['Unit', 'Ingredient 1 unit'],
+      ['Prep note', 'Ingredient 1 prep note'],
+    ]) {
+      expect(row.getByText(visible, { selector: 'label' })).toBeInTheDocument()
+      expect(row.getByLabelText(accessible)).toBeInTheDocument()
+    }
+  })
+
   it('adds Ingredients with a quantity, a unit from the fixed set and a prep note', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()
