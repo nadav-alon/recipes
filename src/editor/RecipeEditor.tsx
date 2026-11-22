@@ -96,13 +96,15 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
 
   const softDelete = () => {
     if (!entry) return
-    store.softDelete(entry.id).catch((error: Error) => setFailure(error.message))
+    // The editor is gone by the time these reject, so they are shown on the snackbar, which outlives it.
+    const reported = (what: string) => (error: Error) => showSnackbar({ text: `${what}: ${error.message}` })
+    store.softDelete(entry.id).catch(reported(`${entry.recipe.title} was not deleted`))
     showSnackbar({
       text: `Deleted ${entry.recipe.title}`,
       action: {
         label: 'Undo',
         onAction: () => {
-          store.restore(entry.id).catch((error: Error) => setFailure(error.message))
+          store.restore(entry.id).catch(reported(`${entry.recipe.title} was not restored`))
         },
       },
     })

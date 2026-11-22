@@ -139,3 +139,20 @@ export function navigateInPlace(href: string): void {
   history.replaceState(history.state, '', href)
   announceRouteChange(false)
 }
+
+/**
+ * Goes to `href` in place of the current history entry and, when the entry before it is `previous`, in place of that
+ * one too, so Back from `href` reaches neither screen.
+ */
+export function replaceRoutes(href: string, previous: string): void {
+  if ((history.state as RouteHistoryState | null)?.from !== previous) return navigateInPlace(href)
+  // A popstate still on the screen being left is an earlier traversal landing, not this one.
+  const leaving = location.hash
+  const landed = () => {
+    if (location.hash === leaving) return
+    removeEventListener('popstate', landed)
+    navigateInPlace(href)
+  }
+  addEventListener('popstate', landed)
+  history.back()
+}
