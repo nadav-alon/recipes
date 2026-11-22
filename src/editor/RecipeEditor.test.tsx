@@ -432,6 +432,12 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     return stored(store)[0].recipe.ingredients
   }
 
+  it("shows Unlink and Choose Item as the visible text of buttons that still name the row", () => {
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.getByRole('button', { name: 'Unlink Ingredient 1' })).toHaveTextContent(/^Unlink$/)
+    expect(screen.getByRole('button', { name: 'Choose Item for Ingredient 1' })).toHaveTextContent(/^Choose Item$/)
+  })
+
   it('unlinks an Ingredient, keeping the rest of the line', async () => {
     const store = fakeRecipeStore([entry])
     const onSaved = vi.fn()

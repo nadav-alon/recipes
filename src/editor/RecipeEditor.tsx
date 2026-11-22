@@ -237,8 +237,8 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         </p>
       )}
       {ingredient.link.kind === 'linked' && (
-        <Button variant="text" onClick={() => onChange({ link: UNLINKED })}>
-          Unlink {row}
+        <Button variant="text" aria-label={`Unlink ${row}`} onClick={() => onChange({ link: UNLINKED })}>
+          Unlink
         </Button>
       )}
       {ingredient.link.kind === 'unlinked' && catalogueHref !== undefined && (
@@ -319,8 +319,8 @@ function ItemPicker({ row, items, linked, onPick }: ItemPickerProps) {
   }
   return (
     <>
-      <Button variant="tonal" onClick={() => setOpen(true)}>
-        Choose Item for {row}
+      <Button variant="tonal" aria-label={`Choose Item for ${row}`} onClick={() => setOpen(true)}>
+        Choose Item
       </Button>
       <Dialog open={open} title={`${row} Item`} onClose={close} closable>
         <TextField
