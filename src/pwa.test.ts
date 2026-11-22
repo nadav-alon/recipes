@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { manifest } from './pwa-manifest.ts'
+import { SEED } from './seed.ts'
 
 describe('PWA manifest', () => {
   it('is installable: standalone with a 192 and a 512 icon that exist', () => {
@@ -23,6 +24,7 @@ describe('production build', () => {
     execFileSync('npx', ['vite', 'build', '--outDir', outDir, '--emptyOutDir'], { stdio: 'pipe' })
     const html = readFileSync(join(outDir, 'index.html'), 'utf8')
     expect(html).toContain('/recipes/assets/')
+    expect(html).toContain(`<meta name="theme-color" content="${SEED}">`)
     expect(readdirSync(outDir)).toContain('manifest.webmanifest')
     const sw = readFileSync(join(outDir, 'sw.js'), 'utf8')
     expect(sw).toContain('index.html')

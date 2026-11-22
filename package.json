@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "firebase emulators:exec --only firestore --project demo-recipes \"vitest run --no-file-parallelism\"",
     "theme": "node scripts/theme.mjs",
+    "icons": "node scripts/icons.mjs",
     "ux": "node scripts/ux/run.ts",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run --exclude '**/*.emulator.test.ts' --exclude '**/node_modules/**'"
