@@ -105,6 +105,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   const errorOf = (field: string) => blockers.filter((problem) => problem.field === field).map((problem) => problem.message).join(' ') || undefined
   const fieldProps = (id: string): FieldProps => ({ id, error: errorOf(id) })
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
+  const dirty = !isClean(draft, entry?.recipe)
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
   const save = (event: Event) => {
@@ -164,7 +165,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
           </Button>
         </TopAppBarActions>
         <form id={FORM_ID} ref={form} onSubmit={save}>
-          <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
+          <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} dirty={dirty} />
           <TextField label="Title" {...fieldProps(fieldId.title)} data-autofocus value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
           <TextField
             label="Servings"

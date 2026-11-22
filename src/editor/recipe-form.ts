@@ -81,10 +81,10 @@ export function draftOf(recipe: Recipe): RecipeDraft {
   }
 }
 
-/** Whether `draft` holds no edits to `recipe`, the Recipe it was drawn from. */
-export function isClean(draft: RecipeDraft, recipe: Recipe): boolean {
+/** Whether `draft` holds no edits to `recipe`, the Recipe it was drawn from; with no `recipe`, none to an empty draft. */
+export function isClean(draft: RecipeDraft, recipe?: Recipe): boolean {
   const withoutKeys = (value: RecipeDraft) => JSON.stringify(value, (name, v) => (name === 'key' ? undefined : v))
-  return withoutKeys(draft) === withoutKeys(draftOf(recipe))
+  return withoutKeys(draft) === withoutKeys(recipe ? draftOf(recipe) : emptyDraft())
 }
 
 /** Plain decimal text (no exponent, hex or `Infinity`) that is finite and above zero. */

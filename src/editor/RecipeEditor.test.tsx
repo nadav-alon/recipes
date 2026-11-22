@@ -849,3 +849,148 @@ describe('RecipeEditor validation in place', () => {
     expect(field('Servings')).toHaveFocus()
   })
 })
+
+describe('RecipeEditor leaving with unsaved changes', () => {
+  const pancakes = (): RecipeEntry => ({
+    id: recipes.recipeId('r1'),
+    recipe: { title: 'Pancakes', ingredients: [], prepSteps: [], steps: [] },
+  })
+  const appBarBack = () => fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Back' }))
+  const dialog = () => screen.getByRole('dialog', { name: 'Discard changes?' })
+  const modal = () => document.querySelector('dialog')!
+  const answer = (name: 'Discard' | 'Cancel') => fireEvent.click(within(dialog()).getByRole('button', { name }))
+  const routed = () => dispatchEvent(new HashChangeEvent('hashchange'))
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])('app bar Back from a clean editor of %s leaves at once', (_name, editing) => {
+    routed()
+    const back = vi.spyOn(history, 'back').mockImplementation(() => {})
+    const store = fakeRecipeStore([pancakes()])
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />)
+    appBarBack()
+    expect(back).toHaveBeenCalledOnce()
+    expect(modal()).not.toHaveAttribute('open')
+  })
+
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])('app bar Back from a dirty editor of %s asks, and Cancel stays with the edits', (_name, editing) => {
+    routed()
+    const back = vi.spyOn(history, 'back').mockImplementation(() => {})
+    const store = fakeRecipeStore([pancakes()])
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />)
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    appBarBack()
+    expect(modal()).toHaveAttribute('open')
+    expect(back).not.toHaveBeenCalled()
+    answer('Cancel')
+    expect(modal()).not.toHaveAttribute('open')
+    expect(back).not.toHaveBeenCalled()
+    expect(field('Title')).toHaveValue('Waffles')
+  })
+
+  /** Opens the editor on top of an earlier screen, as navigating to it would. */
+  const openedFromElsewhere = async (render_: () => void) => {
+    location.hash = '#/earlier'
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+    location.hash = '#/recipes/new'
+    await waitFor(() => expect(location.hash).toBe('#/recipes/new'))
+    render_()
+  }
+
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])('Discard from the app bar leaves a dirty editor of %s', async (_name, editing) => {
+    const store = fakeRecipeStore([pancakes()])
+    await openedFromElsewhere(() =>
+      render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />),
+    )
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    appBarBack()
+    answer('Discard')
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+  })
+
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])("the browser's Back from a dirty editor of %s asks, and Cancel stays, and the next Back asks again", async (_name, editing) => {
+    const store = fakeRecipeStore([pancakes()])
+    await openedFromElsewhere(() =>
+      render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />),
+    )
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    history.back()
+    await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    expect(location.hash).toBe('#/recipes/new')
+    answer('Cancel')
+    expect(modal()).not.toHaveAttribute('open')
+    expect(field('Title')).toHaveValue('Waffles')
+    history.back()
+    await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    expect(location.hash).toBe('#/recipes/new')
+  })
+
+  it.each([
+    ['a Recipe being edited', true],
+    ['a new Recipe', false],
+  ])("Discard after the browser's Back leaves a dirty editor of %s", async (_name, editing) => {
+    const store = fakeRecipeStore([pancakes()])
+    await openedFromElsewhere(() =>
+      render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={editing ? stored(store)[0] : undefined} />),
+    )
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    history.back()
+    await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    answer('Discard')
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+  })
+
+  it("a second browser Back while the dialog is open stays and keeps asking", async () => {
+    await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    history.back()
+    await waitFor(() => expect(modal()).toHaveAttribute('open'))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe('#/recipes/new'))
+    expect(modal()).toHaveAttribute('open')
+    expect(field('Title')).toHaveValue('Waffles')
+    answer('Discard')
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+  })
+
+  it('Discard still leaves after a reload left a guard entry in the history state', async () => {
+    await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
+    // What a reload on a guard entry leaves: the entry keeps its mark, the module forgets its guard.
+    history.replaceState({ ...history.state, leaveGuard: 1 }, '')
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    appBarBack()
+    answer('Discard')
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+  })
+
+  it("the browser's Back from a clean editor leaves without asking", async () => {
+    await openedFromElsewhere(() => render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe('#/earlier'))
+    expect(modal()).not.toHaveAttribute('open')
+  })
+
+  it('treats a form edited back to what it opened on as clean', () => {
+    routed()
+    const back = vi.spyOn(history, 'back').mockImplementation(() => {})
+    const store = fakeRecipeStore([pancakes()])
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={stored(store)[0]} />)
+    fireEvent.input(field('Title'), { target: { value: 'Waffles' } })
+    fireEvent.input(field('Title'), { target: { value: 'Pancakes' } })
+    back.mockClear() // whatever the browser's Back guard did while the form was dirty
+    appBarBack()
+    expect(back).toHaveBeenCalledOnce()
+  })
+})
