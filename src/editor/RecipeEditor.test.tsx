@@ -799,7 +799,9 @@ describe('RecipeEditor validation in place', () => {
   it('focuses the first field with a problem, scrolling to it', () => {
     const scrolled = vi.fn()
     Element.prototype.scrollIntoView = scrolled
-    onTestFinished(() => delete (Element.prototype as Partial<Element>).scrollIntoView)
+    onTestFinished(() => {
+      delete (Element.prototype as Partial<Element>).scrollIntoView
+    })
     render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
     fireEvent.input(field('Servings'), { target: { value: 'abc' } })
     save()
