@@ -478,6 +478,35 @@ describe('App returning from the Catalogue', () => {
   })
 
   it.each([
+    ['that linked', '?itemId=chives'],
+    ['without an Item id', ''],
+  ])('leaves the Recipe on Back after a return %s, never re-entering the return', async (_what, query) => {
+    location.hash = HOME_HREF
+    await new Promise((r) => setTimeout(r, 30))
+    history.pushState(null, '', `${location.pathname}${query}${catalogueReturnHref(r1, 2, 'Chive')}`)
+    render(<App recipeStore={unlinked()} itemsPort={fakeItemsPort([])} />)
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+
+    history.back()
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(location.hash).toBe(HOME_HREF)
+  })
+
+  it('leaves the return on Back too when it exits without an Item id for a Recipe that does not exist', async () => {
+    location.hash = editRecipeHref(r1)
+    await new Promise((r) => setTimeout(r, 30))
+    history.pushState(null, '', `${location.pathname}${catalogueReturnHref(recipes.recipeId('gone'), 0, 'Chive')}`)
+    render(<App recipeStore={unlinked()} itemsPort={fakeItemsPort([])} />)
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+
+    history.back()
+    await waitFor(() => expect(location.hash).toBe(editRecipeHref(r1)))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(location.hash).toBe(editRecipeHref(r1))
+  })
+
+  it.each([
     ['an Assumed Ingredient', 1, 'Salt'],
     ['an Ingredient already linked', 0, 'Egg'],
     ['a line that is no longer called that', 2, 'Parsley'],

@@ -10,7 +10,7 @@ import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
 import type { Recipe, RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
 import { linkUnlinkedIngredient } from './recipes/link-ingredient.ts'
-import { editRecipeHref, HOME_HREF, navigate, NEW_RECIPE_HREF, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
+import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
 
 export interface AppProps {
   recipeStore: RecipeStore
@@ -244,7 +244,7 @@ function CatalogueReturnScreen({
     const clearItemId = () => history.replaceState(null, '', `${location.pathname}${location.hash}`)
     if (itemId === null) {
       clearItemId()
-      return navigate(entry === undefined ? HOME_HREF : recipeHref(id))
+      return navigateInPlace(entry === undefined ? HOME_HREF : recipeHref(id))
     }
     const unlinked = (why: string) => {
       clearItemId()
@@ -256,7 +256,7 @@ function CatalogueReturnScreen({
     recipeStore.update(id, recipe).then(
       () => {
         clearItemId()
-        navigate(recipeHref(id))
+        navigateInPlace(recipeHref(id))
       },
       (error: Error) => setNotice(`The Catalogue added the Item ${itemId}, but it could not be linked: ${error.message}`),
     )
