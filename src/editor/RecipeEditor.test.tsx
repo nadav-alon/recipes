@@ -276,59 +276,18 @@ describe('RecipeEditor deleting', () => {
     expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
-  it('keeps Delete and Save off while the Recipe is Soft deleted, and on again after Undo', async () => {
-    const store = fakeRecipeStore([entry])
-    renderWithSnackbar(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
-    expect(screen.getByRole('button', { name: 'Delete Recipe' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
-    expect(screen.getByRole('button', { name: 'Delete Recipe' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
-  })
-
-  it('tells the parent only once the Undo offer ends unused, so closing the editor then loses nothing', async () => {
-    vi.useFakeTimers()
-    try {
-      const store = fakeRecipeStore([entry])
-      const onDeleted = vi.fn()
-      renderWithSnackbar(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onDeleted={onDeleted} />)
-      fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
-      expect(onDeleted).not.toHaveBeenCalled()
-
-      await vi.advanceTimersByTimeAsync(6000)
-      expect(onDeleted).toHaveBeenCalledTimes(1)
-      expect(screen.getByRole('button', { name: 'Delete Recipe' })).toBeDisabled()
-      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('does not tell the parent about a deletion that Undo took back', async () => {
+  it('tells the parent at once, leaving Delete and Save usable, and Undo does not take it back', async () => {
     const store = fakeRecipeStore([entry])
     const onDeleted = vi.fn()
     renderWithSnackbar(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onDeleted={onDeleted} />)
     fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+    expect(onDeleted).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Delete Recipe' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     await waitFor(() => expect(stored(store).map((e) => e.id)).toEqual(['stew']))
-    expect(onDeleted).not.toHaveBeenCalled()
-  })
-
-  it('does not tell the parent once the editor is gone before the Undo offer ends', async () => {
-    vi.useFakeTimers()
-    try {
-      const store = fakeRecipeStore([entry])
-      const onDeleted = vi.fn()
-      const { unmount } = renderWithSnackbar(<RecipeEditor store={store} itemsPort={itemsPort()} entry={entry} onDeleted={onDeleted} />)
-      fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
-      unmount()
-      await vi.advanceTimersByTimeAsync(6000)
-      expect(onDeleted).not.toHaveBeenCalled()
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(onDeleted).toHaveBeenCalledTimes(1)
   })
 
   it('still restores the Recipe on Undo after the editor is gone', async () => {

@@ -367,23 +367,18 @@ describe('App', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Your edit to Frittata was not saved')
   })
 
-  it('returns to Home once the Undo offer for a deleted Recipe ends', async () => {
-    vi.useFakeTimers()
-    try {
-      location.hash = editRecipeHref(r1)
-      render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
-      await act(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
-      })
-      expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
-      expect(location.hash).toBe(editRecipeHref(r1))
-      await act(() => {
-        vi.advanceTimersByTime(9000)
-      })
-      expect(location.hash).toBe(HOME_HREF)
-    } finally {
-      vi.useRealTimers()
-    }
+  it('goes Home at once when a Recipe is deleted, with its Undo there, and Undo restores it', async () => {
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+    expect(location.hash).toBe(HOME_HREF)
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(screen.queryByRole('button', { name: 'Delete Recipe' })).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Deleted Omelette')
+    expect(screen.queryByRole('link', { name: /Omelette/ })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(await screen.findByRole('link', { name: /Omelette/ })).toBeInTheDocument()
   })
 })
 
