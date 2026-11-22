@@ -1,7 +1,8 @@
 import { act, render, screen, within } from '@testing-library/preact'
 import { fireEvent } from '@testing-library/preact'
 import { useEffect, useState } from 'preact/hooks'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { resetSnackbar, SnackbarHost } from 'household-ui/ui/Snackbar.tsx'
 import { recipes, type core } from 'data-platform'
 import { fakeItemsPort, type FakeItemsPort } from '../items/fake-items-port.ts'
 import type { WatchedItem } from '../items/items-port.ts'
@@ -133,6 +134,8 @@ describe('RecipeView sections', () => {
 })
 
 describe('RecipeView actually out', () => {
+  afterEach(resetSnackbar)
+
   const watched = (state: core.State, itemId = 'flour', deleted = false): WatchedItem => ({
     id: id(itemId),
     name: itemId,
@@ -158,7 +161,12 @@ describe('RecipeView actually out', () => {
   }
 
   const renderWith = (port: FakeItemsPort, ...ingredients: recipes.Ingredient[]) =>
-    render(<Live port={port} ingredients={ingredients} />)
+    render(
+      <>
+        <Live port={port} ingredients={ingredients} />
+        <SnackbarHost />
+      </>,
+    )
 
   const flour: recipes.Ingredient = { name: 'Flour', itemId: id('flour') }
   const actuallyOut = (name = 'Flour') => within(line(name)).getByRole('button', { name: 'Actually out' })
@@ -212,30 +220,30 @@ describe('RecipeView actually out', () => {
     renderWith(port, flour)
     await click(actuallyOut())
     expect(screen.getByRole('status')).toHaveTextContent("Flour's Item marked out.")
-    await click(screen.getByRole('button', { name: 'Undo Flour' }))
+    await click(screen.getByRole('button', { name: 'Undo' }))
     expect(port.stateHistory(id('flour'))).toEqual(['out', 'running low'])
     expect(screen.queryByRole('button', { name: /Undo/ })).toBeNull()
   })
 
-  it('keeps an Undo for each Item marked out', async () => {
+  it('offers Undo for the latest Item marked out, as the snackbar shows one message at a time', async () => {
     const port = fakeItemsPort([watched('enough'), watched('running low', 'milk')])
     renderWith(port, flour, { name: 'Milk', itemId: id('milk') })
     await click(actuallyOut('Flour'))
     await click(actuallyOut('Milk'))
-    await click(screen.getByRole('button', { name: 'Undo Flour' }))
-    expect(port.stateHistory(id('flour'))).toEqual(['out', 'enough'])
-    await click(screen.getByRole('button', { name: 'Undo Milk' }))
+    expect(screen.getByRole('status')).toHaveTextContent("Milk's Item marked out.")
+    await click(screen.getByRole('button', { name: 'Undo' }))
     expect(port.stateHistory(id('milk'))).toEqual(['out', 'running low'])
+    expect(port.stateHistory(id('flour'))).toEqual(['out'])
   })
 
-  it('drops Undo, and leaves a newer State alone, once the Item is no longer out', async () => {
+  it('leaves a newer State alone when Undo is pressed after the Item is no longer out', async () => {
     const port = fakeItemsPort([watched('enough')])
     renderWith(port, flour)
     await click(actuallyOut())
     await act(async () => {
       await port.setItemState(id('flour'), 'enough')
     })
-    expect(screen.queryByRole('button', { name: /Undo/ })).toBeNull()
+    await click(screen.getByRole('button', { name: 'Undo' }))
     expect(port.stateHistory(id('flour'))).toEqual(['out', 'enough'])
   })
 
