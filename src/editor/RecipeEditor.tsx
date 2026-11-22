@@ -80,6 +80,11 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   useEffect(() => {
     if (refusals > 0) messages.current?.focus()
   }, [refusals])
+  const form = useRef<HTMLFormElement>(null)
+  // A new Recipe starts in Title so the keyboard is up; an existing one leaves focus where it is.
+  useEffect(() => {
+    if (!entry) form.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+  }, [])
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
@@ -139,9 +144,9 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
             Save
           </Button>
         </TopAppBarActions>
-        <form id={FORM_ID} onSubmit={save}>
+        <form id={FORM_ID} ref={form} onSubmit={save}>
           <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
-          <TextField label="Title" value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
+          <TextField label="Title" data-autofocus value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
           <TextField
             label="Servings"
             inputMode="numeric"

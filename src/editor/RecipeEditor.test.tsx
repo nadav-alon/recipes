@@ -60,6 +60,21 @@ describe('RecipeEditor top app bar', () => {
   })
 })
 
+describe('RecipeEditor initial focus', () => {
+  it('focuses Title when creating a new Recipe', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    expect(field('Title')).toHaveFocus()
+  })
+
+  it('moves focus nowhere when editing an existing Recipe', () => {
+    const store = fakeRecipeStore([
+      { id: recipes.recipeId('r1'), recipe: { title: 'Pancakes', ingredients: [], prepSteps: [], steps: [] } },
+    ])
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} entry={stored(store)[0]} />)
+    expect(document.body).toHaveFocus()
+  })
+})
+
 describe('RecipeEditor Save placement', () => {
   it('puts Save in the top app bar, outside the form, and it still submits the form', async () => {
     const onCreated = vi.fn()
