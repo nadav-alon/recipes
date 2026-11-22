@@ -520,12 +520,27 @@ describe('RecipeEditor adding to the Catalogue', () => {
     render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
 
     expect(screen.queryByRole('link', { name: 'Add Ingredient 1 to Catalogue' })).toBeNull()
-    const href = screen.getByRole('link', { name: 'Add Ingredient 2 to Catalogue' }).getAttribute('href')!
+    const href = screen.getByRole('link', { name: 'Add Ingredient 2 to Catalogue' }).getAttribute('href') as string
     const handOff = new URL(href, location.origin)
     expect(handOff.pathname).toBe('/home-catalogue/')
     const params = new URLSearchParams(handOff.hash.replace('#/items?', ''))
     expect(params.get('add')).toBe('Sea salt')
     expect(params.get('return')).toBe(`${location.origin}${location.pathname}#/recipes/r%201/ingredients/1/Sea%20salt`)
+  })
+
+  it('explains the button with a line saying the Ingredient is not in the Catalogue yet', () => {
+    const entry = edited([{ name: 'Beef', itemId: core.itemId('beef') }, { name: 'Sea salt' }])
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    expect(screen.getAllByText('Not in the Catalogue yet')).toHaveLength(1)
+    expect(screen.getByRole('link', { name: 'Add Ingredient 2 to Catalogue' })).toHaveAccessibleDescription('Not in the Catalogue yet')
+  })
+
+  it('themes the hand-off as a household-ui text button inside the spaced hand-off wrapper', () => {
+    const entry = edited([{ name: 'Sea salt' }])
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    const link = screen.getByRole('link', { name: 'Add Ingredient 1 to Catalogue' })
+    expect(link).toHaveClass('ui-button', 'ui-button--text', 'catalogue-hand-off-link')
+    expect(link.parentElement).toHaveClass('catalogue-hand-off')
   })
 
   it('stops offering it once the draft has unsaved edits, which following it would lose', () => {
@@ -741,8 +756,9 @@ describe('RecipeEditor item picker with no match', () => {
     openPicker('Ingredient 1')
     fireEvent.input(search(), { target: { value: 'zzz' } })
     expect(screen.getByText(/No Items match/)).toBeInTheDocument()
-    const href = screen.getByRole('link', { name: 'Add Sea salt to the Catalogue' }).getAttribute('href')
-    expect(href).toBe(screen.getByRole('link', { name: 'Add Ingredient 1 to Catalogue' }).getAttribute('href'))
+    const handOff = screen.getByRole('link', { name: 'Add Sea salt to the Catalogue' })
+    expect(handOff).toHaveClass('ui-button', 'ui-button--text')
+    expect(handOff.getAttribute('href')).toBe(screen.getByRole('link', { name: 'Add Ingredient 1 to Catalogue' }).getAttribute('href'))
   })
 
   it('says it without the hand-off where the editor cannot offer it', () => {

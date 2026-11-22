@@ -1,4 +1,4 @@
-import type { ComponentChildren } from 'preact'
+import type { ComponentChildren, JSX } from 'preact'
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
@@ -234,6 +234,7 @@ interface IngredientRowProps {
 
 function IngredientRow({ ingredient, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
+  const handOffNoteId = useUniqueId()
   const link = linkStatus(ingredient.link, items)
   const assumed = ingredient.link.kind === 'assumed'
   const [linkBeforeAssumed, setLinkBeforeAssumed] = useState<IngredientLink>(UNLINKED)
@@ -290,9 +291,12 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
         </Button>
       )}
       {ingredient.link.kind === 'unlinked' && catalogueHref !== undefined && (
-        <CatalogueHandOff href={catalogueHref} label={`Add ${row} to Catalogue`}>
-          Add to Catalogue
-        </CatalogueHandOff>
+        <div class="catalogue-hand-off">
+          <p id={handOffNoteId}>Not in the Catalogue yet</p>
+          <CatalogueHandOff href={catalogueHref} aria-label={`Add ${row} to Catalogue`} aria-describedby={handOffNoteId}>
+            Add to Catalogue
+          </CatalogueHandOff>
+        </div>
       )}
       <ul>
         <ListRow
@@ -343,10 +347,14 @@ function linkStatus(link: IngredientLink, items: readonly WatchedItem[] | null):
   return item.deleted ? { kind: 'soft-deleted', item } : { kind: 'live', item }
 }
 
-/** The link to the Catalogue's add-Item page; `label` is its accessible name where the text alone would not tell rows apart. */
-function CatalogueHandOff({ href, label, children }: { href: string; label?: string; children: ComponentChildren }) {
+/** The editor's one Catalogue hand-off: a real link to the Catalogue's add-Item page, themed as a household-ui text button. */
+function CatalogueHandOff({
+  href,
+  children,
+  ...rest
+}: { href: string; children: ComponentChildren } & Pick<JSX.AnchorHTMLAttributes<HTMLAnchorElement>, 'aria-label' | 'aria-describedby'>) {
   return (
-    <a href={href} aria-label={label}>
+    <a {...rest} href={href} class="ui-button ui-button--text catalogue-hand-off-link">
       {children}
     </a>
   )
