@@ -16,3 +16,10 @@ describe('screen layout', () => {
     expect(column).toMatch(/overflow-wrap:\s*anywhere/)
   })
 })
+
+describe('sign-in screen', () => {
+  it('centres its content and makes the sign-in button at least 48px tall', () => {
+    expect(rule('main\\.sign-in')).toMatch(/align-items:\s*center/)
+    expect(rule('main\\.sign-in \\.ui-button')).toMatch(/min-height:\s*3rem/)
+  })
+})

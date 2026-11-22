@@ -55,3 +55,13 @@ textarea {
   min-width: 1.5rem;
   color: var(--md-sys-color-on-surface-variant);
 }
+
+/* The signed-out screen: the app's line and its one action, centred, with a tap target of at least 48px. */
+main.sign-in {
+  align-items: center;
+  text-align: center;
+}
+
+main.sign-in .ui-button {
+  min-height: 3rem;
+}
