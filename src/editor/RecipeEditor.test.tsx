@@ -693,3 +693,28 @@ describe('RecipeEditor item picker without an Ingredient name', () => {
     expect(screen.queryAllByRole('button', { name: /enough|running low|out/ })).toHaveLength(0)
   })
 })
+
+describe('RecipeEditor item picker with no match', () => {
+  const entry: RecipeEntry = {
+    id: recipes.recipeId('r'),
+    recipe: { title: 'X', ingredients: [{ name: 'Sea salt' }], prepSteps: [], steps: [] },
+  }
+
+  it('says no Items match and offers the Catalogue hand-off', () => {
+    render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
+    openPicker('Ingredient 1')
+    fireEvent.input(search(), { target: { value: 'zzz' } })
+    expect(screen.getByText(/No Items match/)).toBeInTheDocument()
+    const href = screen.getByRole('link', { name: 'Add to Catalogue' }).getAttribute('href')
+    expect(href).toBe(screen.getByRole('link', { name: 'Add Ingredient 1 to Catalogue' }).getAttribute('href'))
+  })
+
+  it('says it without the hand-off where the editor cannot offer it', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    openPicker('Ingredient 1')
+    fireEvent.input(search(), { target: { value: 'zzz' } })
+    expect(screen.getByText(/No Items match/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Add to Catalogue' })).toBeNull()
+  })
+})
