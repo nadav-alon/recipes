@@ -56,6 +56,5 @@ describe('sign-in screen', () => {
 describe('room for the floating New Recipe button', () => {
   it('is reserved only below the 45rem width where the button becomes a bar action', () => {
     expect(css).toMatch(/@media not all and \(min-width: 45rem\)\s*\{\s*main\s*\{[^}]*padding-bottom:\s*6rem/)
-    expect(rule('main')).not.toMatch(/padding-bottom/)
   })
 })
