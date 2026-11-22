@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'preact/hooks'
 
-/** The width at which the screen column centres beside the side rail: the column plus the rail. */
-export const WIDE_VIEWPORT_QUERY = '(min-width: 51.5rem)'
+/**
+ * The width at which the screen column centres: household-ui's `--shell-content-width` (720px), the
+ * `max-width` `src/screens.css` gives `main`. A media query cannot read a custom property, so keep
+ * this in step with that token. recipes renders no side rail, so the rail width is not added.
+ */
+export const WIDE_VIEWPORT_QUERY = '(min-width: 45rem)'
 
 /** Whether the viewport is wide enough for the centred column; false where the browser cannot match media. */
 export function useWideViewport(): boolean {
-  const query = typeof matchMedia === 'function' ? matchMedia(WIDE_VIEWPORT_QUERY) : null
+  const [query] = useState(() => (typeof matchMedia === 'function' ? matchMedia(WIDE_VIEWPORT_QUERY) : null))
   const [wide, setWide] = useState(query?.matches ?? false)
   useEffect(() => {
     if (query === null) return
@@ -13,6 +17,6 @@ export function useWideViewport(): boolean {
     update()
     query.addEventListener('change', update)
     return () => query.removeEventListener('change', update)
-  }, [])
+  }, [query])
   return wide
 }
