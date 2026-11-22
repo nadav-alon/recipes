@@ -100,7 +100,9 @@ describe('AuthGate', () => {
     const title = await screen.findByRole('heading', { name: /not claimed/i })
     expect(screen.getByRole('main')).toContainElement(title)
     expect(screen.queryByRole('banner')).toBeNull()
-    expect(screen.getByRole('link', { name: /catalogue/i })).toHaveAttribute('href', '/home-catalogue/')
+    const link = screen.getByRole('link', { name: /catalogue/i })
+    expect(link).toHaveAttribute('href', '/home-catalogue/')
+    expect(link).toHaveClass('ui-button', 'ui-button--filled')
     expect(mocks.isHouseholdMember).not.toHaveBeenCalled()
   })
 

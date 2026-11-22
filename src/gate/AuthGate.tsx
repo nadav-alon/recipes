@@ -131,5 +131,9 @@ export function AuthGate({ client, children }: AuthGateProps) {
 }
 
 function CatalogueLink() {
-  return <a href={catalogueUrl()}>Open the Catalogue</a>
+  return (
+    <a href={catalogueUrl()} class="ui-button ui-button--filled">
+      Open the Catalogue
+    </a>
+  )
 }
