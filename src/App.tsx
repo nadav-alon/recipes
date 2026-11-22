@@ -256,7 +256,7 @@ function CatalogueReturnScreen({
     recipeStore.update(id, recipe).then(
       () => {
         clearItemId()
-        navigate(recipeHref(id))
+        navigateInPlace(recipeHref(id))
       },
       (error: Error) => setNotice(`The Catalogue added the Item ${itemId}, but it could not be linked: ${error.message}`),
     )
