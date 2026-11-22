@@ -32,15 +32,16 @@ interface MarkedOut {
 }
 
 const MISSING_REASON: Record<MissingReason, string> = {
-  unlinked: 'Unlinked',
-  'item out': 'out',
-  'item soft-deleted': 'deleted in the Catalogue',
+  unlinked: 'Not in the Catalogue',
+  'item out': 'Out',
+  'item soft-deleted': 'Deleted in the Catalogue',
 }
 
+/** An Ingredient's flag in the words of someone cooking; null when there is nothing to flag. */
 function flag(status: IngredientStatus): string | null {
   switch (status.kind) {
     case 'missing':
-      return `Missing: ${MISSING_REASON[status.reason]}`
+      return MISSING_REASON[status.reason]
     case 'assumed':
       return 'Assumed'
     case 'at home':
@@ -100,23 +101,30 @@ function IngredientLine({
   const flagged = flag(status)
   const item = ingredient.itemId === undefined ? undefined : items.get(ingredient.itemId)
   const amount = joinParts([ingredient.quantity, unitText(ingredient.unit, ingredient.quantity)], ' ')
+  const action =
+    status.kind === 'at home' && ingredient.itemId !== undefined && item !== undefined ? (
+      <IconButton
+        symbol={RemoveShoppingCart}
+        label={`${ingredient.name.trim()} is actually out`}
+        disabled={busy}
+        onClick={() => onActuallyOut({ ingredientName: ingredient.name, itemId: ingredient.itemId!, previous: item.state })}
+      />
+    ) : status.kind === 'missing' && status.reason === 'unlinked' && catalogueHref !== undefined ? (
+      <a href={catalogueHref} aria-label={`Add ${ingredient.name.trim()} to Catalogue`}>
+        Add to Catalogue
+      </a>
+    ) : undefined
   return (
     <ListRow
       headline={ingredient.name}
-      supporting={joinParts([amount, ingredient.prepNote, flagged], ', ') || undefined}
+      supporting={joinParts([amount, ingredient.prepNote], ', ') || undefined}
       muted={status.kind === 'missing'}
       trailing={
-        status.kind === 'at home' && ingredient.itemId !== undefined && item !== undefined ? (
-          <IconButton
-            symbol={RemoveShoppingCart}
-            label={`${ingredient.name.trim()} is actually out`}
-            disabled={busy}
-            onClick={() => onActuallyOut({ ingredientName: ingredient.name, itemId: ingredient.itemId!, previous: item.state })}
-          />
-        ) : status.kind === 'missing' && status.reason === 'unlinked' && catalogueHref !== undefined ? (
-          <a href={catalogueHref} aria-label={`Add ${ingredient.name.trim()} to Catalogue`}>
-            Add to Catalogue
-          </a>
+        flagged !== null || action !== undefined ? (
+          <div class="ingredient-trailing">
+            {flagged !== null && <span class="ingredient-flag">{flagged}</span>}
+            {action}
+          </div>
         ) : undefined
       }
     />
