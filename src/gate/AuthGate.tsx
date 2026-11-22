@@ -76,7 +76,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
     case 'signed-out':
       return (
         <TopAppBar title="Sign in">
-          <main class="sign-in">
+          <main class="screen sign-in">
             <p>Recipes: what you can cook from what's at home.</p>
             <Button variant="filled" onClick={() => void auth.signIn()}>
               Sign in with Google

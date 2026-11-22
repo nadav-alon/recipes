@@ -207,7 +207,7 @@ function RecipeNotFound() {
   return (
     <TopAppBar title="Recipe not found">
       <BackButton fallback={HOME_HREF} />
-      <main>
+      <main class="screen">
         <p role="alert">This Recipe does not exist.</p>
       </main>
     </TopAppBar>
@@ -265,7 +265,7 @@ function CatalogueReturnScreen({
   if (failed) return <LoadFailed />
   if (notice !== null) {
     return (
-      <main>
+      <main class="screen">
         <p role="alert">{notice}</p>
         <a href={entry === undefined ? HOME_HREF : recipeHref(id)}>{entry === undefined ? 'Back to Recipes' : 'Back to the Recipe'}</a>
       </main>

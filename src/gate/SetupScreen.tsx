@@ -30,7 +30,7 @@ export function SetupScreen({ onConfigured, initialError = null }: SetupScreenPr
   return (
     <CentredCard appName="Recipes" title="Set up">
       <p>Paste your Household's Firebase web config, or open a device-transfer link from the Catalogue.</p>
-      <form onSubmit={handleSubmit}>
+      <form class="stack" onSubmit={handleSubmit}>
         <TextArea
           label="Firebase web config"
           value={text}

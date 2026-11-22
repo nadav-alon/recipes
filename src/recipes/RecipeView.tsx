@@ -175,7 +175,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
 
   return (
     <TopAppBar title={recipe.title}>
-      <article>
+      <article class="screen">
         <BackButton fallback={HOME_HREF} />
         <TopAppBarActions>
           <Button variant="text" onClick={() => navigate(editHref)}>

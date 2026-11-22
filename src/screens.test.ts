@@ -5,15 +5,25 @@ const css = readFileSync('src/screens.css', 'utf8')
 const rule = (selector: string) => new RegExp(`${selector}\\s*\\{[^}]*\\}`).exec(css)?.[0] ?? ''
 
 describe('screen layout', () => {
+  it('styles no bare main, article or form, which would fight household-ui\'s CentredCard', () => {
+    expect(css).not.toMatch(/^(main|article|form)\s*[,{]/m)
+  })
+
   it('lets a fieldset shrink below its content so no screen scrolls sideways at phone width', () => {
     expect(rule('fieldset')).toMatch(/min-width:\s*0/)
   })
 
   it('keeps the screen column inside the viewport and wraps long text', () => {
-    const column = rule('main,\\s*article,\\s*form')
+    const column = rule('\\.screen')
     expect(column).toMatch(/max-width:\s*var\(--shell-content-width\)/)
     expect(column).toMatch(/min-width:\s*0/)
     expect(column).toMatch(/overflow-wrap:\s*anywhere/)
+  })
+})
+
+describe('pre-Household cards', () => {
+  it('wrap long text so a 360px screen does not scroll sideways', () => {
+    expect(rule('\\.ui-centred-card')).toMatch(/overflow-wrap:\s*anywhere/)
   })
 })
 
@@ -63,15 +73,15 @@ describe('floating button and snackbar placement', () => {
 
 describe('sign-in screen', () => {
   it('centres its content and makes the sign-in button at least 48px tall', () => {
-    expect(rule('main\\.sign-in')).toMatch(/align-items:\s*center/)
-    expect(rule('main\\.sign-in')).toMatch(/justify-content:\s*center/)
-    expect(rule('main\\.sign-in')).toMatch(/min-height:\s*calc\(100dvh/)
-    expect(rule('main\\.sign-in \\.ui-button')).toMatch(/min-height:\s*3rem/)
+    expect(rule('main\\.screen\\.sign-in')).toMatch(/align-items:\s*center/)
+    expect(rule('main\\.screen\\.sign-in')).toMatch(/justify-content:\s*center/)
+    expect(rule('main\\.screen\\.sign-in')).toMatch(/min-height:\s*calc\(100dvh/)
+    expect(rule('main\\.screen\\.sign-in \\.ui-button')).toMatch(/min-height:\s*3rem/)
   })
 })
 
 describe('room for the floating New Recipe button', () => {
   it('is reserved only below the 45rem width where the button becomes a bar action', () => {
-    expect(css).toMatch(/@media not all and \(min-width: 45rem\)\s*\{\s*main\s*\{[^}]*padding-bottom:\s*6rem/)
+    expect(css).toMatch(/@media not all and \(min-width: 45rem\)\s*\{\s*\.screen\s*\{[^}]*padding-bottom:\s*6rem/)
   })
 })

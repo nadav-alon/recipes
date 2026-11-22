@@ -1,7 +1,5 @@
-/* Layout shared by the screens, written for a 360px phone first: one centred column that never outgrows the viewport. */
-main,
-article,
-form {
+/* Layout shared by the screens inside the app's top app bar (the pre-Household screens sit on household-ui's CentredCard instead), written for a 360px phone first: one centred column that never outgrows the viewport. */
+.screen {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -14,6 +12,13 @@ form {
   overflow-wrap: anywhere;
 }
 
+/* A column of controls inside a card, which pads itself. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-4);
+}
+
 /* recipes has no bottom bar and no side rail, so household-ui's floating button and snackbar, which place themselves
    around those two, are told they take no room. */
 :root {
@@ -23,7 +28,7 @@ form {
 
 /* Room under the last row for the floating New Recipe button, which only the narrow layout has: from 45rem it is a bar action. */
 @media not all and (min-width: 45rem) {
-  main {
+  .screen {
     padding-bottom: 6rem;
   }
 }
@@ -97,7 +102,7 @@ textarea {
 }
 
 /* The signed-out screen: the app's line and its one action, centred, with a tap target of at least 48px. */
-main.sign-in {
+main.screen.sign-in {
   align-items: center;
   justify-content: center;
   min-height: calc(100dvh - 4rem); /* the viewport less the TopAppBar */
@@ -105,7 +110,7 @@ main.sign-in {
   text-align: center;
 }
 
-main.sign-in .ui-button {
+main.screen.sign-in .ui-button {
   min-height: 3rem;
 }
 
@@ -125,4 +130,9 @@ main.sign-in .ui-button {
 .row-controls {
   display: flex;
   gap: var(--md-sys-spacing-2);
+}
+
+/* A long project id or error on a pre-Household card wraps instead of pushing the card past a 360px viewport. */
+.ui-centred-card {
+  overflow-wrap: anywhere;
 }
