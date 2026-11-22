@@ -14,9 +14,11 @@ form {
   overflow-wrap: anywhere;
 }
 
-/* Room under the last row for the floating New Recipe button. */
-main {
-  padding-bottom: 6rem;
+/* Room under the last row for the floating New Recipe button, which only the narrow layout has: from 45rem it is a bar action. */
+@media not all and (min-width: 45rem) {
+  main {
+    padding-bottom: 6rem;
+  }
 }
 
 /* A fieldset's default minimum width is its content's, which would push a long field past the viewport. */
