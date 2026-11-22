@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import type { core, recipes } from 'data-platform'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
+import { IconButton } from 'household-ui/ui/IconButton.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import { showSnackbar } from 'household-ui/ui/Snackbar.tsx'
+import RemoveShoppingCart from '~icons/material-symbols/remove-shopping-cart'
 import type { ItemsPort } from '../items/items-port.ts'
 import { BackButton } from '../shell/BackButton.tsx'
 import { HOME_HREF, addToCatalogueHref, navigate } from '../routes.ts'
@@ -105,13 +107,12 @@ function IngredientLine({
       muted={status.kind === 'missing'}
       trailing={
         status.kind === 'at home' && ingredient.itemId !== undefined && item !== undefined ? (
-          <Button
-            variant="tonal"
+          <IconButton
+            symbol={RemoveShoppingCart}
+            label={`${ingredient.name.trim()} is actually out`}
             disabled={busy}
             onClick={() => onActuallyOut({ ingredientName: ingredient.name, itemId: ingredient.itemId!, previous: item.state })}
-          >
-            Actually out
-          </Button>
+          />
         ) : status.kind === 'missing' && status.reason === 'unlinked' && catalogueHref !== undefined ? (
           <a href={catalogueHref} aria-label={`Add ${ingredient.name.trim()} to Catalogue`}>
             Add to Catalogue
