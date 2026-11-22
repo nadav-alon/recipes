@@ -193,11 +193,11 @@ interface IngredientRowProps {
 function IngredientRow({ ingredient, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
   const link = linkStatus(ingredient.link, items)
-  // The link that ticking Assumed replaced, so unticking before saving gives it back.
-  const [replaced, setReplaced] = useState<IngredientLink>(UNLINKED)
-  const toggleAssumed = (assumed: boolean) => {
-    if (assumed) setReplaced(ingredient.link)
-    onChange({ link: assumed ? ASSUMED : replaced })
+  const assumed = ingredient.link.kind === 'assumed'
+  const [linkBeforeAssumed, setLinkBeforeAssumed] = useState<IngredientLink>(UNLINKED)
+  const toggleAssumed = (ticked: boolean) => {
+    if (ticked) setLinkBeforeAssumed(ingredient.link)
+    onChange({ link: ticked ? ASSUMED : linkBeforeAssumed })
   }
   return (
     <div role="group" aria-label={row}>
@@ -257,13 +257,13 @@ function IngredientRow({ ingredient, items, position, last, catalogueHref, onCha
             <input
               type="checkbox"
               aria-label={`${row} assumed`}
-              checked={ingredient.link.kind === 'assumed'}
+              checked={assumed}
               onChange={(e) => toggleAssumed(e.currentTarget.checked)}
             />
           }
         />
       </ul>
-      {ingredient.link.kind !== 'assumed' && (
+      {!assumed && (
         <ItemPicker row={row} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
       )}
       <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />

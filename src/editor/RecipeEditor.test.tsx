@@ -443,12 +443,16 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
 
   it('explains Assumed under its checkbox', () => {
     render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
-    expect(screen.getAllByText('Always at hand, e.g. water — never checked')).toHaveLength(2)
+    for (const row of ['Ingredient 1', 'Ingredient 2']) {
+      const line = within(screen.getByRole('group', { name: row })).getByText('Always at hand, e.g. water — never checked')
+      expect(line.closest('li')?.textContent).toContain('Assumed')
+    }
   })
 
   it('hides Choose Item while Assumed is ticked', () => {
     render(<RecipeEditor store={fakeRecipeStore([entry])} itemsPort={itemsPort()} entry={entry} />)
     expect(screen.queryByRole('button', { name: 'Choose Item for Ingredient 2' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Choose Item for Ingredient 1' })).toBeTruthy()
     fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
     expect(screen.queryByRole('button', { name: 'Choose Item for Ingredient 1' })).toBeNull()
     fireEvent.click(screen.getByLabelText('Ingredient 2 assumed'))
@@ -475,7 +479,7 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     openPicker('Ingredient 2')
     fireEvent.input(field('Ingredient 2 Item search'), { target: { value: 'flour' } })
     fireEvent.click(pickerRow('Flour out'))
-    expect((screen.getByLabelText('Ingredient 2 assumed') as HTMLInputElement).checked).toBe(false)
+    expect(screen.getByText(/^Linked to Flour/)).toBeTruthy()
 
     expect((await save(store, onSaved))[1]).toEqual({ name: 'Water', itemId: 'flour' })
   })
