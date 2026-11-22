@@ -103,6 +103,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
     if (addedKey !== null) form.current?.querySelector<HTMLElement>(`[data-row-key="${addedKey}"]`)?.focus()
   }, [addedKey])
   const errorOf = (field: string) => blockers.filter((problem) => problem.field === field).map((problem) => problem.message).join(' ') || undefined
+  const fieldProps = (id: string): FieldProps => ({ id, error: errorOf(id) })
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
@@ -164,11 +165,10 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
         </TopAppBarActions>
         <form id={FORM_ID} ref={form} onSubmit={save}>
           <BackButton fallback={entry ? recipeHref(entry.id) : HOME_HREF} />
-          <TextField label="Title" id={fieldId.title} error={errorOf(fieldId.title)} data-autofocus value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
+          <TextField label="Title" {...fieldProps(fieldId.title)} data-autofocus value={draft.title} onInput={(e) => change({ title: e.currentTarget.value })} />
           <TextField
             label="Servings"
-            id={fieldId.servings}
-            error={errorOf(fieldId.servings)}
+            {...fieldProps(fieldId.servings)}
             inputMode="numeric"
             value={draft.servings}
             onInput={(e) => change({ servings: e.currentTarget.value })}
@@ -187,7 +187,7 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
               <IngredientRow
                 key={ingredient.key}
                 ingredient={ingredient}
-                errorOf={errorOf}
+                fieldProps={fieldProps}
                 items={items}
                 position={i + 1}
                 last={i === draft.ingredients.length - 1}
@@ -210,8 +210,8 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
               Add Ingredient
             </Button>
           </fieldset>
-          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} idOf={fieldId.prepStep} errorOf={errorOf} onChange={(prepSteps) => change({ prepSteps })} onAddedKey={setAddedKey} />
-          <StepList label="Step" legend="Steps" steps={draft.steps} idOf={fieldId.step} errorOf={errorOf} onChange={(steps) => change({ steps })} onAddedKey={setAddedKey} />
+          <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} idOf={fieldId.prepStep} fieldProps={fieldProps} onChange={(prepSteps) => change({ prepSteps })} onAddedKey={setAddedKey} />
+          <StepList label="Step" legend="Steps" steps={draft.steps} idOf={fieldId.step} fieldProps={fieldProps} onChange={(steps) => change({ steps })} onAddedKey={setAddedKey} />
           <div ref={messages} tabIndex={-1}>
             {blockers.length > 0 && (
               <div>
@@ -234,10 +234,17 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   )
 }
 
+/** What a field needs to be marked as a validation problem's subject: its id and the message beneath it. */
+interface FieldProps {
+  readonly id: string
+  readonly error: string | undefined
+}
+
 interface IngredientRowProps {
   readonly ingredient: IngredientDraft
   /** The message of the problem a field, by id, was refused for; absent when it has none. */
-  readonly errorOf: (field: string) => string | undefined
+  /** The id of a field, with the message of the problem it was refused for, if any. */
+  readonly fieldProps: (id: string) => FieldProps
   /** Every Item the Catalogue has, or null until they have arrived. */
   readonly items: readonly WatchedItem[] | null
   readonly position: number
@@ -249,7 +256,7 @@ interface IngredientRowProps {
   readonly onRemove: () => void
 }
 
-function IngredientRow({ ingredient, errorOf, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
+function IngredientRow({ ingredient, fieldProps, items, position, last, catalogueHref, onChange, onMove, onRemove }: IngredientRowProps) {
   const row = `Ingredient ${position}`
   const link = linkStatus(ingredient.link, items)
   const assumed = ingredient.link.kind === 'assumed'
@@ -261,15 +268,13 @@ function IngredientRow({ ingredient, errorOf, items, position, last, catalogueHr
   return (
     <div role="group" aria-label={row}>
       <TextField label="Name" aria-label={`${row} name`} data-row-key={ingredient.key}
-        id={fieldId.ingredient(ingredient, 'name')}
-        error={errorOf(fieldId.ingredient(ingredient, 'name'))}
+        {...fieldProps(fieldId.ingredient(ingredient, 'name'))}
         value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
       <div class="quantity-unit">
         <TextField
           label="Quantity"
           aria-label={`${row} quantity`}
-          id={fieldId.ingredient(ingredient, 'quantity')}
-          error={errorOf(fieldId.ingredient(ingredient, 'quantity'))}
+          {...fieldProps(fieldId.ingredient(ingredient, 'quantity'))}
           inputMode="decimal"
           value={ingredient.quantity}
           onInput={(e) => onChange({ quantity: e.currentTarget.value })}
@@ -277,8 +282,6 @@ function IngredientRow({ ingredient, errorOf, items, position, last, catalogueHr
         <Select
           label="Unit"
           aria-label={`${row} unit`}
-          id={fieldId.ingredient(ingredient, 'unit')}
-          error={errorOf(fieldId.ingredient(ingredient, 'unit'))}
           value={ingredient.unit}
           onChange={(e) => onChange({ unit: e.currentTarget.value as IngredientUnit | '' })}
         >
@@ -463,16 +466,17 @@ interface StepListProps {
   readonly label: string
   readonly legend: string
   readonly steps: readonly StepDraft[]
-  /** The id of a row's text field, and the message of the problem a field was refused for. */
+  /** The id of a row's text field. */
   readonly idOf: (step: StepDraft) => string
-  readonly errorOf: (field: string) => string | undefined
+  /** The id of a field, with the message of the problem it was refused for, if any. */
+  readonly fieldProps: (id: string) => FieldProps
   readonly onChange: (steps: StepDraft[]) => void
   /** Called with the key of a step the list has just added, whose first field takes focus. */
   readonly onAddedKey: (key: number) => void
 }
 
 /** An ordered list of Prep Steps or Steps that can be added to, edited, removed and reordered. */
-function StepList({ label, legend, steps, idOf, errorOf, onChange, onAddedKey }: StepListProps) {
+function StepList({ label, legend, steps, idOf, fieldProps, onChange, onAddedKey }: StepListProps) {
   return (
     <fieldset>
       <legend>{legend}</legend>
@@ -484,8 +488,7 @@ function StepList({ label, legend, steps, idOf, errorOf, onChange, onAddedKey }:
               label="Text"
               aria-label={`${row} text`}
               data-row-key={step.key}
-              id={idOf(step)}
-              error={errorOf(idOf(step))}
+              {...fieldProps(idOf(step))}
               value={step.text}
               onInput={(e) => {
                 const text = e.currentTarget.value

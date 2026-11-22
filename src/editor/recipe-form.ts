@@ -96,7 +96,7 @@ function isPositiveDecimal(text: string): boolean {
 export const fieldId = {
   title: 'recipe-field-title',
   servings: 'recipe-field-servings',
-  ingredient: (ingredient: IngredientDraft, part: 'name' | 'quantity' | 'unit') => `recipe-field-ingredient-${ingredient.key}-${part}`,
+  ingredient: (ingredient: IngredientDraft, part: 'name' | 'quantity') => `recipe-field-ingredient-${ingredient.key}-${part}`,
   prepStep: (step: StepDraft) => `recipe-field-prep-step-${step.key}`,
   step: (step: StepDraft) => `recipe-field-step-${step.key}`,
 }
@@ -135,10 +135,6 @@ export function fieldProblems(draft: RecipeDraft): Problem[] {
   return found
 }
 
-/** Why a draft cannot be saved, in the words the form shows; empty when it can. */
-export function problems(draft: RecipeDraft): string[] {
-  return fieldProblems(draft).map((problem) => problem.message)
-}
 
 /** The link to `id`; as an Assumed Ingredient has no Item, linking clears an Assumed mark. */
 export function linkedTo(id: core.ItemId): IngredientLink {
