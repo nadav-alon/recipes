@@ -81,8 +81,10 @@ textarea {
   margin: 0;
 }
 
-.catalogue-hand-off .ui-button {
+/* The hand-off is a link, so it drops the underline a button does not have; the picker's one is the same link. */
+.catalogue-hand-off-link {
   min-height: 3rem;
+  text-decoration: none;
 }
 
 /* The signed-out screen: the app's line and its one action, centred, with a tap target of at least 48px. */

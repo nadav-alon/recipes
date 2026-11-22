@@ -39,8 +39,8 @@ describe('step textareas in the editor', () => {
 
 describe('Catalogue hand-off in the editor', () => {
   it('is spaced from the field above and makes its button at least 48px tall', () => {
-    expect(rule('\\.catalogue-hand-off')).toMatch(/margin-top:/)
-    expect(rule('\\.catalogue-hand-off \\.ui-button')).toMatch(/min-height:\s*3rem/)
+    expect(rule('\\.catalogue-hand-off')).toMatch(/margin-top:\s*var\(--md-sys-spacing-/)
+    expect(rule('\\.catalogue-hand-off-link')).toMatch(/min-height:\s*3rem/)
   })
 })
 
