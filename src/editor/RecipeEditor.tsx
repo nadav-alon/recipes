@@ -338,8 +338,9 @@ interface ItemPickerProps {
 }
 
 /**
- * A dialog that searches the live Items by name, showing each one's State, and offers each match to link to; it lists
- * nothing until something is typed and closes once an Item is picked.
+ * A dialog that searches the live Items by name, showing each one's State, and offers each match to link to; it opens
+ * with the search filled in with the Ingredient's name (empty, so listing nothing, when it has none) and closes once an
+ * Item is picked.
  */
 function ItemPicker({ row, name, items, linked, onPick }: ItemPickerProps) {
   const [open, setOpen] = useState(false)
@@ -360,7 +361,10 @@ function ItemPicker({ row, name, items, linked, onPick }: ItemPickerProps) {
   }
   return (
     <>
-      <Button variant="tonal" aria-label={`Choose Item for ${row}`} onClick={() => setOpen(true)}>
+      <Button variant="tonal" aria-label={`Choose Item for ${row}`} onClick={() => {
+          setQuery(name)
+          setOpen(true)
+        }}>
         Choose Item
       </Button>
       <Dialog open={open} title={`Choose an Item for ${name === '' ? row : name}`} onClose={close} closable>

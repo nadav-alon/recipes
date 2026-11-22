@@ -450,7 +450,8 @@ describe('RecipeEditor linking an Ingredient to an Item', () => {
     openPicker('Ingredient 1')
     expect(screen.getByRole('dialog', { name: 'Choose an Item for Milk' })).toBeInTheDocument()
     expect(search()).toHaveFocus()
-    expect(screen.queryAllByRole('button', { name: /^(Milk|Oat milk) / })).toHaveLength(0)
+    expect(search()).toHaveValue('Milk')
+    expect(screen.getAllByRole('button', { name: /^(Milk|Oat milk) / })).toHaveLength(2)
     fireEvent.input(search(), { target: { value: 'MILK' } })
     expect(screen.getAllByRole('button', { name: /^(Milk|Oat milk) / }).map((b) => b.textContent)).toEqual([
       'Milkrunning low',
@@ -679,5 +680,16 @@ describe('RecipeEditor step textareas', () => {
     )
     for (const name of ['Prep Step 1 text', 'Step 1 text', 'Step 2 text']) expect(field(name).closest('.step-row')).not.toBeNull()
     expect(field('Notes').closest('.step-row')).toBeNull()
+  })
+})
+
+describe('RecipeEditor item picker without an Ingredient name', () => {
+  it('opens with an empty search listing nothing', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    openPicker('Ingredient 1')
+    expect(search()).toHaveValue('')
+    expect(screen.getByRole('dialog', { name: 'Choose an Item for Ingredient 1' })).toBeInTheDocument()
+    expect(screen.queryAllByRole('button', { name: /enough|running low|out/ })).toHaveLength(0)
   })
 })
