@@ -367,6 +367,15 @@ describe('App', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Your edit to Frittata was not saved')
   })
 
+  it('replaces the editor of a deleted Recipe in the history, so Back does not reopen it', () => {
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    const entries = history.length
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+    expect(location.hash).toBe(HOME_HREF)
+    expect(history.length).toBe(entries)
+  })
+
   it('goes Home at once when a Recipe is deleted, with its Undo there, and Undo restores it', async () => {
     location.hash = editRecipeHref(r1)
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)

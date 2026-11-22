@@ -323,7 +323,7 @@ function EditScreen({
         returnTo(recipeHref(id))
       }}
       onSaveFailed={onSaveFailed}
-      onDeleted={() => navigate(HOME_HREF)}
+      onDeleted={() => navigateInPlace(HOME_HREF)}
     />
   )
 }
