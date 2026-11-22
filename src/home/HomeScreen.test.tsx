@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/preact'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { core, recipes } from 'data-platform'
 import { fakeItemsPort } from '../items/fake-items-port.ts'
 import { fakeRecipeStore } from '../recipes/fake-recipe-store.ts'
@@ -25,6 +25,33 @@ const entry = (id: string, title: string, ingredients: { name: string; item?: st
 })
 
 const section = (name: string) => within(screen.getByRole('region', { name }))
+
+const viewport = (wide: boolean) =>
+  vi.stubGlobal('matchMedia', () => ({ matches: wide, addEventListener() {}, removeEventListener() {} }))
+
+describe('New Recipe action by viewport', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const home = () => render(<HomeScreen recipeStore={fakeRecipeStore()} itemsPort={fakeItemsPort([])} />)
+
+  it('is the icon-only "+" button in the page on a phone, with nothing in the bar', () => {
+    viewport(false)
+    home()
+    expect(within(screen.getByRole('banner')).queryByRole('button')).toBeNull()
+    const fab = screen.getByRole('button', { name: 'New Recipe' })
+    expect(fab).toHaveClass('ui-fab')
+    expect(fab).not.toHaveTextContent('New Recipe')
+  })
+
+  it('is a labelled "New Recipe" button in the top app bar on a wide viewport, and the FAB is gone', () => {
+    viewport(true)
+    home()
+    const button = within(screen.getByRole('banner')).getByRole('button', { name: 'New Recipe' })
+    expect(button).toHaveTextContent('New Recipe')
+    expect(document.querySelector('.ui-fab')).toBeNull()
+    fireEvent.click(button)
+    expect(location.hash).toBe('#/recipes/new')
+  })
+})
 
 describe('HomeScreen', () => {
   const itemsPort = () => fakeItemsPort([item('flour', 'enough'), item('eggs', 'out'), item('milk', 'out')])
