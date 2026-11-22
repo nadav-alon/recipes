@@ -59,6 +59,9 @@ textarea {
 /* The signed-out screen: the app's line and its one action, centred, with a tap target of at least 48px. */
 main.sign-in {
   align-items: center;
+  justify-content: center;
+  min-height: calc(100dvh - 4rem); /* the viewport less the TopAppBar */
+  padding-bottom: var(--md-sys-spacing-4); /* no New Recipe button on this screen */
   text-align: center;
 }
 
