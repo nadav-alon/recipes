@@ -93,14 +93,29 @@ export function useRoute(): Route {
   return parseRoute(hash)
 }
 
+/** What `navigate` stores in a history entry: the hash of the screen it was left from, for `returnTo`. */
+type RouteHistoryState = { readonly from?: string }
+
 /** Whether the app has routed since it opened, so the previous history entry is one of its own screens. */
 let routed = false
+/** Set while `navigateInPlace` raises its event: replacing an entry adds no earlier screen to go back to. */
+let inPlace = false
 addEventListener('hashchange', () => {
-  routed = true
+  if (!inPlace) routed = true
 })
 
 /** Whether Back would return to an earlier screen of this app, rather than leave it (a deep link, a shared URL, a fresh launch). */
 export const canGoBack = () => routed
+
+/** Tells the router the route changed: history calls such as pushState raise no hashchange of their own, and it follows that event. */
+function announceRouteChange(addedEntry: boolean): void {
+  inPlace = !addedEntry
+  try {
+    dispatchEvent(new HashChangeEvent('hashchange'))
+  } finally {
+    inPlace = false
+  }
+}
 
 /**
  * Leaves the current screen for `href`: returns to the history entry before it when `navigate` recorded
@@ -108,20 +123,19 @@ export const canGoBack = () => routed
  * replaces the current entry.
  */
 export function returnTo(href: string): void {
-  if ((history.state as { from?: string } | null)?.from === href) history.back()
-  else replace(href)
+  if ((history.state as RouteHistoryState | null)?.from === href) history.back()
+  else navigateInPlace(href)
 }
 
 /** Goes to `href`, adding a history entry that remembers the screen it was left from, for `returnTo`. */
 export function navigate(href: string): void {
-  history.pushState({ from: location.hash }, '', href)
-  // pushState raises no hashchange of its own, and the router follows that event.
-  dispatchEvent(new HashChangeEvent('hashchange'))
+  const state: RouteHistoryState = { from: location.hash }
+  history.pushState(state, '', href)
+  announceRouteChange(true)
 }
 
 /** Goes to `href` in place of the current history entry, so Back skips the screen being left. */
-export function replace(href: string): void {
+export function navigateInPlace(href: string): void {
   history.replaceState(history.state, '', href)
-  // replaceState raises no hashchange of its own, and the router follows that event.
-  dispatchEvent(new HashChangeEvent('hashchange'))
+  announceRouteChange(false)
 }
