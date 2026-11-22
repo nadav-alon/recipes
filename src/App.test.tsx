@@ -175,7 +175,7 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('link', { name: 'Back to the editor' }))
     fireEvent(window, new HashChangeEvent('hashchange'))
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Pancakes'))
-    expect(screen.getByLabelText('Title')).toHaveFocus()
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveFocus())
   })
 
   it('reports a refused create on the view it navigated to, with a way back to the editor holding the new Recipe', async () => {
