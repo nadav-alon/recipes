@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
@@ -63,10 +63,10 @@ export interface RecipeEditorProps {
   readonly onDeleted?: () => void
 }
 
-/** The form that creates a Recipe, or edits `entry`. */
 /** The editor's form, which Save in the top app bar submits from outside it. */
 const FORM_ID = 'recipe-editor-form'
 
+/** The form that creates a Recipe, or edits `entry`. */
 export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSaveFailed, onCreated, onDeleted }: RecipeEditorProps) {
   const seed = initial ?? entry?.recipe
   const [draft, setDraft] = useState<RecipeDraft>(() => (seed ? draftOf(seed) : emptyDraft()))
@@ -74,6 +74,12 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   const [blockers, setBlockers] = useState<string[]>([])
   const [items, setItems] = useState<readonly WatchedItem[] | null>(null)
   const [itemsFailed, setItemsFailed] = useState(false)
+  // Save sits in the top app bar, far from the messages at the foot of the form, so each refusal moves focus to them.
+  const [refusals, setRefusals] = useState(0)
+  const messages = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (refusals > 0) messages.current?.focus()
+  }, [refusals])
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
@@ -83,11 +89,15 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
     const found = problems(draft)
     if (found.length === 0) found.push(...schemaProblems(recipe))
     setBlockers(found)
-    if (found.length > 0) return
+    if (found.length > 0) {
+      setRefusals((n) => n + 1)
+      return
+    }
     setFailure(null)
     const refused = (error: Error) => {
       onSaveFailed?.(recipe, error)
       setFailure(error.message)
+      setRefusals((n) => n + 1)
     }
     if (entry) {
       store.update(entry.id, recipe).catch(refused)
@@ -96,7 +106,10 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
       store
         .create(recipe, refused)
         .then((id) => onCreated?.(id))
-        .catch((error: Error) => setFailure(error.message))
+        .catch((error: Error) => {
+          setFailure(error.message)
+          setRefusals((n) => n + 1)
+        })
     }
     onSaved?.()
   }
@@ -166,15 +179,17 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
           </fieldset>
           <StepList label="Prep Step" legend="Prep Steps" steps={draft.prepSteps} onChange={(prepSteps) => change({ prepSteps })} />
           <StepList label="Step" legend="Steps" steps={draft.steps} onChange={(steps) => change({ steps })} />
-          {blockers.length > 0 && (
-            <div>
-              <p>This Recipe cannot be saved yet:</p>
-              {blockers.map((reason, index) => (
-                <FieldError key={reason} id={`recipe-problem-${index}`} error={reason} />
-              ))}
-            </div>
-          )}
-          <FieldError id="recipe-failure" error={failure ?? undefined} />
+          <div ref={messages} tabIndex={-1}>
+            {blockers.length > 0 && (
+              <div>
+                <p>This Recipe cannot be saved yet:</p>
+                {blockers.map((reason, index) => (
+                  <FieldError key={reason} id={`recipe-problem-${index}`} error={reason} />
+                ))}
+              </div>
+            )}
+            <FieldError id="recipe-failure" error={failure ?? undefined} />
+          </div>
           {entry && (
             <Button variant="text" destructive onClick={softDelete}>
               Delete Recipe

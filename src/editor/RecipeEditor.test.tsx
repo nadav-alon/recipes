@@ -65,11 +65,36 @@ describe('RecipeEditor Save placement', () => {
     const onCreated = vi.fn()
     render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onCreated={onCreated} />)
     const save = screen.getByRole('button', { name: 'Save' })
-    expect(save.closest('header')).not.toBeNull()
+    expect(save.parentElement).toBe(within(screen.getByRole('banner')).getByRole('heading').nextElementSibling)
     expect(save.closest('form')).toBeNull()
     fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
     fireEvent.click(save)
     await waitFor(() => expect(onCreated).toHaveBeenCalled())
+  })
+})
+
+describe('RecipeEditor refused saves', () => {
+  it('moves focus to the messages when a save is blocked, then again on the next blocked save', () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    const alert = screen.getByRole('alert')
+    expect(alert.closest('[tabindex]')).toHaveFocus()
+
+    screen.getByLabelText('Title').focus()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(alert.closest('[tabindex]')).toHaveFocus()
+  })
+
+  it('moves focus to the messages when the store refuses the save', async () => {
+    const store = fakeRecipeStore()
+    vi.spyOn(store, 'create').mockRejectedValue(new Error('No write for you'))
+    render(<RecipeEditor store={store} itemsPort={itemsPort()} />)
+    fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'Pancakes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('No write for you')
+    await waitFor(() => expect(alert.closest('[tabindex]')).toHaveFocus())
   })
 })
 
