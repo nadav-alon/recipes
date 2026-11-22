@@ -80,3 +80,9 @@ main.sign-in .ui-button {
   flex: 1 1 0;
   min-width: 0;
 }
+
+/* A row's Move and Remove icon buttons keep their 48px targets and sit apart so a tap lands on one of them. */
+.row-controls {
+  display: flex;
+  gap: var(--md-sys-spacing-2);
+}

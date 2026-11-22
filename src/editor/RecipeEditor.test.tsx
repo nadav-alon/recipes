@@ -145,6 +145,41 @@ describe('RecipeEditor Ingredients', () => {
 })
 
 describe.each([
+  ['Ingredient', 'Add Ingredient'],
+  ['Prep Step', 'Add Prep Step'],
+  ['Step', 'Add Step'],
+] as const)('RecipeEditor %s row controls', (label, add) => {
+  const addRows = (n: number) => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} />)
+    for (let i = 0; i < n; i++) fireEvent.click(screen.getByRole('button', { name: add }))
+  }
+
+  it('are spaced icon buttons, each named for its row', () => {
+    addRows(2)
+    const group = screen.getByRole('group', { name: `${label} 1` })
+    const controls = group.querySelector('.row-controls') as HTMLElement
+    const buttons = within(controls).getAllByRole('button')
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([`Move ${label} 1 up`, `Move ${label} 1 down`, `Remove ${label} 1`])
+    for (const b of buttons) expect(b).toHaveClass('ui-icon-button')
+  })
+
+  it('show no Move on a lone row, but still Remove', () => {
+    addRows(1)
+    expect(screen.queryByRole('button', { name: `Move ${label} 1 up` })).toBeNull()
+    expect(screen.queryByRole('button', { name: `Move ${label} 1 down` })).toBeNull()
+    expect(screen.getByRole('button', { name: `Remove ${label} 1` })).toBeEnabled()
+  })
+
+  it('disable the first row’s Move up and the last row’s Move down in a longer list', () => {
+    addRows(2)
+    expect(screen.getByRole('button', { name: `Move ${label} 1 up` })).toBeDisabled()
+    expect(screen.getByRole('button', { name: `Move ${label} 1 down` })).toBeEnabled()
+    expect(screen.getByRole('button', { name: `Move ${label} 2 up` })).toBeEnabled()
+    expect(screen.getByRole('button', { name: `Move ${label} 2 down` })).toBeDisabled()
+  })
+})
+
+describe.each([
   ['Prep Step', 'prepSteps'],
   ['Step', 'steps'],
 ] as const)('RecipeEditor %ss', (label, key) => {
