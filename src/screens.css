@@ -72,6 +72,7 @@ main.sign-in .ui-button {
 /* An Ingredient's quantity and unit share a row; each field takes half and may shrink so the row never overflows. */
 .quantity-unit {
   display: flex;
+  align-items: flex-end; /* a wrapped label on one field does not push its control out of line with the other */
   gap: var(--md-sys-spacing-4);
 }
 

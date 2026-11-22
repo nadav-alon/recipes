@@ -20,6 +20,7 @@ describe('screen layout', () => {
 describe('Ingredient quantity and unit row', () => {
   it('lays the two fields side by side, each allowed to shrink so the row cannot overflow', () => {
     expect(rule('\\.quantity-unit')).toMatch(/display:\s*flex/)
+    expect(rule('\\.quantity-unit')).toMatch(/align-items:\s*flex-end/)
     expect(rule('\\.quantity-unit > \\*')).toMatch(/flex:\s*1 1 0/)
     expect(rule('\\.quantity-unit > \\*')).toMatch(/min-width:\s*0/)
   })
