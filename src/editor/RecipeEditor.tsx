@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import type { core } from 'data-platform'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
@@ -53,8 +53,8 @@ export interface RecipeEditorProps {
   /** Called with the new Recipe's id once the store has applied creating it, offline too; never called when editing. */
   readonly onCreated?: (id: RecipeId) => void
   /**
-   * Called once the Recipe is Soft deleted and the Undo offer has ended unused (timed out or replaced by another message), so a
-   * parent that closes the editor here does not take Undo with it. Not called when Undo is used.
+   * Called as soon as the Recipe is Soft deleted, so the parent can leave the editor at once; the snackbar's Undo
+   * outlives the editor and restores the Recipe wherever the user is.
    */
   readonly onDeleted?: () => void
 }
@@ -65,20 +65,9 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
   const [draft, setDraft] = useState<RecipeDraft>(() => (seed ? draftOf(seed) : emptyDraft()))
   const [failure, setFailure] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<string[]>([])
-  const [deletion, setDeletion] = useState<'none' | 'undoable' | 'final'>('none')
   const [items, setItems] = useState<readonly WatchedItem[] | null>(null)
   const [itemsFailed, setItemsFailed] = useState(false)
   useEffect(() => itemsPort.watchItems(setItems, () => setItemsFailed(true)), [itemsPort])
-  const onDeletedRef = useRef(onDeleted)
-  onDeletedRef.current = onDeleted
-  const deleted = deletion !== 'none'
-  const mounted = useRef(true)
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
   const change = (fields: Partial<RecipeDraft>) => setDraft((d) => ({ ...d, ...fields }))
 
   const save = (event: Event) => {
@@ -107,24 +96,19 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
 
   const softDelete = () => {
     if (!entry) return
-    store.softDelete(entry.id).catch((error: Error) => setFailure(error.message))
-    setDeletion('undoable')
+    // The editor is gone by the time these reject, so they are shown on the snackbar, which outlives it.
+    const reported = (what: string) => (error: Error) => showSnackbar({ text: `${what}: ${error.message}` })
+    store.softDelete(entry.id).catch(reported(`${entry.recipe.title} was not deleted`))
     showSnackbar({
       text: `Deleted ${entry.recipe.title}`,
       action: {
         label: 'Undo',
         onAction: () => {
-          store.restore(entry.id).catch((error: Error) => setFailure(error.message))
-          setDeletion('none')
+          store.restore(entry.id).catch(reported(`${entry.recipe.title} was not restored`))
         },
       },
-      // The message outlives the editor, so an editor the user has already left does not report the deletion.
-      onDismiss: () => {
-        if (!mounted.current) return
-        setDeletion('final')
-        onDeletedRef.current?.()
-      },
     })
+    onDeleted?.()
   }
 
   return (
@@ -179,11 +163,11 @@ export function RecipeEditor({ store, itemsPort, entry, initial, onSaved, onSave
             </div>
           )}
           <FieldError id="recipe-failure" error={failure ?? undefined} />
-          <Button type="submit" disabled={deleted}>
+          <Button type="submit">
             Save
           </Button>
           {entry && (
-            <Button variant="text" destructive disabled={deleted} onClick={softDelete}>
+            <Button variant="text" destructive onClick={softDelete}>
               Delete Recipe
             </Button>
           )}

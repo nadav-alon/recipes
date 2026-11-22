@@ -16,10 +16,12 @@ const store = () =>
     { id: r2, recipe: { title: 'Pancakes', ingredients: [], prepSteps: [], steps: ['Flip'] } },
   ])
 
-afterEach(() => {
+afterEach(async () => {
   resetSnackbar()
   location.hash = ''
   history.replaceState(null, '', location.pathname)
+  // jsdom delivers hashchange asynchronously; let it land before the next test reads the history.
+  await new Promise((r) => setTimeout(r, 30))
 })
 
 describe('App', () => {
@@ -367,23 +369,60 @@ describe('App', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Your edit to Frittata was not saved')
   })
 
-  it('returns to Home once the Undo offer for a deleted Recipe ends', async () => {
-    vi.useFakeTimers()
-    try {
-      location.hash = editRecipeHref(r1)
-      render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
-      await act(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
-      })
-      expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
-      expect(location.hash).toBe(editRecipeHref(r1))
-      await act(() => {
-        vi.advanceTimersByTime(9000)
-      })
-      expect(location.hash).toBe(HOME_HREF)
-    } finally {
-      vi.useRealTimers()
+  it('replaces the editor of a deleted Recipe in the history, so Back does not reopen it', async () => {
+    location.hash = HOME_HREF
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    await new Promise((r) => setTimeout(r, 30))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+    expect(location.hash).toBe(HOME_HREF)
+    history.back()
+    await new Promise((r) => setTimeout(r, 30))
+    expect(location.hash).not.toBe(editRecipeHref(r1))
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(screen.queryByRole('button', { name: 'Delete Recipe' })).not.toBeInTheDocument()
+  })
+
+  it('does not leave the deleted Recipe\'s view, "not found", behind Home when the editor was opened from it', async () => {
+    location.hash = HOME_HREF
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Omelette' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }))
+    await waitFor(() => expect(location.hash).toBe(editRecipeHref(r1)))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete Recipe' }))
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+    history.back()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(location.hash).not.toBe(recipeHref(r1))
+    expect(location.hash).not.toBe(editRecipeHref(r1))
+    expect(screen.queryByText(/not found/i)).not.toBeInTheDocument()
+  })
+
+  it('reports a failed delete and a failed Undo on the snackbar, which outlives the editor', async () => {
+    const failing = {
+      ...store(),
+      softDelete: () => Promise.reject(new Error('Permission denied')),
+      restore: () => Promise.reject(new Error('Offline')),
     }
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={failing} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+    expect(await screen.findByText('Omelette was not deleted: Permission denied')).toBeInTheDocument()
+  })
+
+  it('goes Home at once when a Recipe is deleted, with its Undo there, and Undo restores it', async () => {
+    location.hash = editRecipeHref(r1)
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Recipe' }))
+    expect(location.hash).toBe(HOME_HREF)
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(screen.queryByRole('button', { name: 'Delete Recipe' })).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Deleted Omelette')
+    expect(screen.queryByRole('link', { name: /Omelette/ })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(await screen.findByRole('link', { name: /Omelette/ })).toBeInTheDocument()
   })
 })
 
