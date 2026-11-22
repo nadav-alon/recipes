@@ -1,5 +1,5 @@
-# Gate for pull requests, and the same check on main: the app must typecheck and pass its tests
-# before a change merges, and a break that lands on main shows as a red run there.
+# Gate for pull requests, and the same check on main: the app must typecheck, pass its tests and
+# build before a change merges, and a break that lands on main shows as a red run there.
 name: CI
 
 on:
@@ -8,8 +8,8 @@ on:
     branches: [main]
 
 jobs:
-  test-typecheck:
-    name: Test and typecheck
+  test-typecheck-build:
+    name: Test, typecheck and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,3 +24,6 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run typecheck
+        if: ${{ !cancelled() }}
+      - run: npm run build
+        if: ${{ !cancelled() }}
