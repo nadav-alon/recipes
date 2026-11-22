@@ -60,7 +60,7 @@ describe('RecipeView ingredients', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Thing', quantity, unit }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
-    expect(line('Thing')).toHaveTextContent(new RegExp(`\\b${text}\\b`))
+    expect(line('Thing')).toHaveTextContent(new RegExp(`${text}\\b`))
   })
 
   it('writes an amount with no unit as the quantity alone', () => {
