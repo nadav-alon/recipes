@@ -106,3 +106,8 @@ export const canGoBack = () => routed
 export function navigate(href: string): void {
   location.hash = href
 }
+
+/** Goes to `href` in place of the current history entry, so Back skips the screen being left. */
+export function replace(href: string): void {
+  location.replace(href)
+}
