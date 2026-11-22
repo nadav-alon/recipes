@@ -46,6 +46,17 @@ function flag(status: IngredientStatus): string | null {
   }
 }
 
+/** Units whose name changes with the quantity; the rest are abbreviations and stay as they are. */
+const PLURAL_UNIT: Partial<Record<recipes.IngredientUnit, string>> = {
+  cup: 'cups',
+  piece: 'pieces',
+}
+
+/** The unit as it reads after `quantity`: plural unless the quantity is exactly 1. */
+function unitFor(unit: recipes.IngredientUnit | undefined, quantity: number): string | undefined {
+  return unit !== undefined && quantity !== 1 ? (PLURAL_UNIT[unit] ?? unit) : unit
+}
+
 /** The parts that are present, joined for a row's text. */
 function joinParts(parts: ReadonlyArray<string | number | null | undefined>, separator: string): string {
   return parts.filter((part) => part !== undefined && part !== null && part !== '').join(separator)
@@ -79,7 +90,7 @@ function IngredientLine({
   const status = classifyIngredient(ingredient, items)
   const flagged = flag(status)
   const item = ingredient.itemId === undefined ? undefined : items.get(ingredient.itemId)
-  const amount = joinParts([ingredient.quantity, ingredient.quantity === undefined ? undefined : ingredient.unit], ' ')
+  const amount = joinParts([ingredient.quantity, ingredient.quantity === undefined ? undefined : unitFor(ingredient.unit, ingredient.quantity)], ' ')
   return (
     <ListRow
       headline={ingredient.name}
