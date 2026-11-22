@@ -121,6 +121,14 @@ describe('RecipeEditor Ingredients', () => {
     }
   })
 
+  it("shows no row number in a Step textarea's visible label but keeps it in the accessible name", () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onSaved={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Prep Step' }))
+    const row = within(screen.getByRole('group', { name: 'Prep Step 1' }))
+    expect(row.getByText('Text', { selector: 'label' })).toBeInTheDocument()
+    expect(row.getByRole('textbox', { name: 'Prep Step 1 text' })).toBeInTheDocument()
+  })
+
   it('adds Ingredients with a quantity, a unit from the fixed set and a prep note', async () => {
     const store = fakeRecipeStore()
     const onSaved = vi.fn()

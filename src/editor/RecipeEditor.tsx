@@ -369,7 +369,8 @@ function StepList({ label, legend, steps, onChange }: StepListProps) {
         return (
           <div key={step.key} class="step-row" role="group" aria-label={row}>
             <TextArea
-              label={`${row} text`}
+              label="Text"
+              aria-label={`${row} text`}
               value={step.text}
               onInput={(e) => {
                 const text = e.currentTarget.value
