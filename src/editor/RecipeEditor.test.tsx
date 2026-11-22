@@ -467,6 +467,10 @@ describe('RecipeEditor unlinking and marking Assumed', () => {
     expect(screen.queryByText(/^Linked to/)).toBeNull()
     fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
     expect(screen.getByText(/^Linked to/)).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    expect(screen.queryByText(/^Linked to/)).toBeNull()
+    fireEvent.click(screen.getByLabelText('Ingredient 1 assumed'))
+    expect(screen.getByText(/^Linked to/)).toBeTruthy()
 
     expect((await save(store, onSaved))[0]).toEqual(beef)
   })
