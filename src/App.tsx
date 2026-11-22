@@ -10,7 +10,7 @@ import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
 import type { Recipe, RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
 import { linkUnlinkedIngredient } from './recipes/link-ingredient.ts'
-import { editRecipeHref, HOME_HREF, navigate, NEW_RECIPE_HREF, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
+import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
 
 export interface AppProps {
   recipeStore: RecipeStore
