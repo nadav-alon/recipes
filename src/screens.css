@@ -126,6 +126,28 @@ main.screen.sign-in .ui-button {
   min-width: 0;
 }
 
+/* An Ingredient sits in its own outlined card so one row's controls are not read as the next row's. */
+.ingredient-card {
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  padding: var(--md-sys-spacing-3);
+  margin-block-end: var(--md-sys-spacing-3);
+}
+
+/* The card's name and its Move and Remove controls share one line; a long name wraps instead of pushing them out. */
+.ingredient-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-sys-spacing-2);
+}
+
+.ingredient-card-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
 /* A row's Move and Remove icon buttons keep their 48px targets and sit apart so a tap lands on one of them. */
 .row-controls {
   display: flex;
