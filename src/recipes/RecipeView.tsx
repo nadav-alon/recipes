@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { core, recipes } from 'data-platform'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
+import { AlertBanner } from 'household-ui/ui/AlertBanner.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { IconButton } from 'household-ui/ui/IconButton.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
@@ -182,7 +183,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
             Edit
           </Button>
         </TopAppBarActions>
-        {failure !== null && <p role="alert">{failure}</p>}
+        {failure !== null && <AlertBanner message={failure} />}
         {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
         {recipe.sourceUrl !== undefined && (
           <p>

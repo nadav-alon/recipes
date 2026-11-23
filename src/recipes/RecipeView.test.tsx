@@ -342,6 +342,7 @@ describe('RecipeView actually out', () => {
     renderWith(port, flour)
     await click(actuallyOut())
     expect(await screen.findByRole('alert')).toHaveTextContent('denied')
+    expect(screen.getByRole('alert')).toHaveClass('ui-alert-banner')
     expect(screen.queryByRole('button', { name: /Undo/ })).toBeNull()
   })
 })
