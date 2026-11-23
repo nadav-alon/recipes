@@ -132,6 +132,28 @@ describe('HomeScreen', () => {
     expect(section('Other Recipes').getByRole('listitem')).toHaveTextContent('Missing 3: zucchini, eggs, milk')
   })
 
+  it('counts and names every missing Ingredient on an Almost makeable row', () => {
+    render(
+      <HomeScreen
+        recipeStore={fakeRecipeStore([
+          entry('4', 'Pancakes', [{ name: 'flour', item: 'flour' }, { name: 'eggs', item: 'eggs' }, { name: 'milk', item: 'milk' }]),
+        ])}
+        itemsPort={itemsPort()}
+      />,
+    )
+    expect(section('Almost makeable').getByRole('listitem')).toHaveTextContent('Missing 2: eggs, milk')
+  })
+
+  it('keeps the "(Item deleted)" suffix inside the counted Missing form', () => {
+    render(
+      <HomeScreen
+        recipeStore={fakeRecipeStore([entry('5', 'Toast', [{ name: 'butter', item: 'butter' }])])}
+        itemsPort={fakeItemsPort([item('butter', 'enough', true)])}
+      />,
+    )
+    expect(screen.getByRole('listitem')).toHaveTextContent('Missing 1: butter (Item deleted)')
+  })
+
   it('moves a Recipe between sections live when an Item changes State', async () => {
     const port = itemsPort()
     render(<HomeScreen recipeStore={store()} itemsPort={port} />)
@@ -166,8 +188,7 @@ describe('HomeScreen', () => {
     const rows = screen.getAllByRole('listitem')
     expect(rows).toHaveLength(3)
     for (const row of rows) {
-      const chevron = row.querySelector('.ui-list-row__trailing svg')
-      expect(chevron).not.toBeNull()
+      const chevron = within(row).getByTestId('recipe-row-chevron')
       expect(chevron).toHaveAttribute('aria-hidden', 'true')
     }
   })
