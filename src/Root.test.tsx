@@ -91,6 +91,7 @@ describe('Root and #config= links', () => {
     history.replaceState(null, '', '/#config=!!!')
     render(<Root />)
     expect(screen.getByRole('alert')).toHaveTextContent(/truncated or corrupted/)
+    expect(screen.getByRole('alert')).toHaveClass('ui-alert-banner')
     expect(location.hash).toBe('')
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByRole('alert')).toBeNull()
