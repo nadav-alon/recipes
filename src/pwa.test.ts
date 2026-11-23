@@ -30,3 +30,10 @@ describe('production build', () => {
     expect(sw).toContain('index.html')
   }, 60_000)
 })
+
+describe('favicon', () => {
+  it('is the 192 manifest icon, which draws the cooking pot', () => {
+    const href = readFileSync('index.html', 'utf8').match(/<link rel="icon"[^>]*href="\/([^"]+)"/)?.[1]
+    expect(href).toBe(manifest.icons!.find((i) => i.sizes === '192x192' && !i.purpose)!.src)
+  })
+})
