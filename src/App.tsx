@@ -107,7 +107,7 @@ export function App({ recipeStore, itemsPort }: AppProps) {
           held={shown}
           onDismiss={release}
           onBackToEditor={(entry) => {
-            // The link names the URL the New Recipe editor may already be on, so reopen it on the held Recipe by hand.
+            // The action navigates to the URL the New Recipe editor may already be on, so reopen it on the held Recipe by hand.
             if (entry.target.kind !== 'new') return
             restoreNext.current = entry
             if (route.screen === 'new-recipe') {

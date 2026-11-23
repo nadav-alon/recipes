@@ -45,7 +45,7 @@ export function PlatformGuard({ db }: { db: Firestore }) {
   return (
     <AlertBanner
       message="You need to update your platform deploy."
-      action={{ label: 'Open the household setup guide', onAction: () => window.open(HOUSEHOLD_SETUP_DOC_URL, '_blank', 'noopener') }}
+      action={{ label: 'Open the household setup guide', onAction: () => window.location.assign(HOUSEHOLD_SETUP_DOC_URL) }}
     />
   )
 }
