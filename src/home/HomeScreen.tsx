@@ -60,7 +60,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
           empty="No Recipe is only one or two Ingredients short."
           showMissing
         />
-        <Section title="Other Recipes" list={sections.other} empty="No other Recipes." />
+        <Section title="Other Recipes" list={sections.other} empty="No other Recipes." showMissing />
       </main>
     </TopAppBar>
   )
@@ -87,7 +87,7 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
             <ListRow
               key={entry.id}
               headline={entry.recipe.title}
-              supporting={showMissing ? `Missing: ${missingNames(classification)}` : undefined}
+              supporting={showMissing ? `Missing ${classification.missing}: ${missingNames(classification)}` : undefined}
               href={href}
               onFollow={() => navigate(href)}
             />

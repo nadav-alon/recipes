@@ -123,8 +123,13 @@ describe('HomeScreen', () => {
       'Other Recipes',
     ])
     expect(section('Makeable').getByText('Bread')).toBeInTheDocument()
-    expect(section('Almost makeable').getByRole('listitem')).toHaveTextContent('Missing: eggs')
+    expect(section('Almost makeable').getByRole('listitem')).toHaveTextContent('Missing 1: eggs')
     expect(section('Other Recipes').getByText('Zucchini')).toBeInTheDocument()
+  })
+
+  it('says how many and which Ingredients an Other Recipe is Missing', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    expect(section('Other Recipes').getByRole('listitem')).toHaveTextContent('Missing 3: zucchini, eggs, milk')
   })
 
   it('moves a Recipe between sections live when an Item changes State', async () => {
@@ -159,7 +164,7 @@ describe('HomeScreen', () => {
   it('links each Recipe to its view', () => {
     render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
     expect(screen.getByRole('link', { name: 'Bread' })).toHaveAttribute('href', '#/recipes/3')
-    expect(screen.getByRole('link', { name: 'OmeletteMissing: eggs' })).toHaveAttribute('href', '#/recipes/2')
+    expect(screen.getByRole('link', { name: 'OmeletteMissing 1: eggs' })).toHaveAttribute('href', '#/recipes/2')
   })
 
   it('replaces the whole screen with a load error when the Recipe watch fails after it rendered', async () => {
