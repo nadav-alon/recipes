@@ -53,6 +53,23 @@ describe('Ingredient flag colours', () => {
   })
 })
 
+describe('Ingredient card', () => {
+  it('is outlined in a theme colour-role token, with a gap between consecutive cards', () => {
+    const card = rule('\\.ingredient-card')
+    expect(card).toMatch(/border:\s*1px solid var\(--md-sys-color-outline-variant\)/)
+    expect(card).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i)
+    expect(card).not.toMatch(/margin/) // the fieldset's own gap separates the cards
+    expect(rule('fieldset')).toMatch(/gap:\s*var\(--md-sys-spacing-\d+\)/)
+  })
+
+  it('puts the name and the row controls on one line in the header', () => {
+    const header = rule('\\.ingredient-card-header')
+    expect(header).toMatch(/display:\s*flex/)
+    expect(header).toMatch(/justify-content:\s*space-between/)
+    expect(rule('\\.ingredient-card-title')).toMatch(/min-width:\s*0/)
+  })
+})
+
 describe('Ingredient quantity and unit row', () => {
   it('lays the two fields side by side, each allowed to shrink so the row cannot overflow', () => {
     expect(rule('\\.quantity-unit')).toMatch(/display:\s*flex/)

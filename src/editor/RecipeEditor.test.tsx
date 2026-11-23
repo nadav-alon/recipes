@@ -38,6 +38,8 @@ const SCHEMA_REFUSED = {
   id: recipes.recipeId('odd'),
   recipe: { title: 'Odd', ingredients: [{ name: 'Salt', assumed: false }], prepSteps: [], steps: [] },
 } as unknown as RecipeEntry
+/** The header of an Ingredient's card: its name and its Move and Remove controls. */
+const headerOf = (card: HTMLElement) => card.querySelector<HTMLElement>('.ingredient-card-header')
 const openPicker = (row: string) => fireEvent.click(screen.getByRole('button', { name: `Choose Item for ${row}` }))
 const pickerRow = (name: string) => screen.getByRole('button', { name })
 const search = () => within(screen.getByRole('dialog')).getByLabelText('Search Items')
@@ -199,6 +201,31 @@ describe('RecipeEditor Ingredients', () => {
     ]) {
       expect(row.getByText(visible, { selector: 'label' })).toHaveAttribute('for', row.getByLabelText(accessible).id)
     }
+  })
+
+  it("heads an Ingredient's card with its name as typed, or its position while it has none, beside Move and Remove", () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onSaved={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    const card = screen.getByRole('group', { name: 'Ingredient 1' })
+    const header = headerOf(card)
+    expect(header).not.toBeNull()
+    expect(header).toHaveTextContent('Ingredient 1')
+    fireEvent.input(field('Ingredient 1 name'), { target: { value: 'Sriracha' } })
+    expect(header).toHaveTextContent('Sriracha')
+    expect(header).not.toHaveTextContent('Ingredient 1')
+    const inHeader = within(header as HTMLElement)
+    expect(inHeader.getByRole('button', { name: 'Move Ingredient 1 down' })).toBeInTheDocument()
+    expect(inHeader.getByRole('button', { name: 'Move Ingredient 1 up' })).toBeInTheDocument()
+    expect(inHeader.getByRole('button', { name: 'Remove Ingredient 1' })).toBeInTheDocument()
+    expect(header?.contains(field('Ingredient 1 name'))).toBe(false)
+    expect(card.contains(field('Ingredient 1 name'))).toBe(true)
+    expect(card.lastElementChild?.classList.contains('row-controls')).toBe(false)
+    expect(card.querySelectorAll('.row-controls')).toHaveLength(1)
+    expect(header?.querySelectorAll('.row-controls')).toHaveLength(1)
+    for (const name of ['Ingredient 1 quantity', 'Ingredient 1 unit', 'Ingredient 1 prep note', 'Ingredient 1 assumed'])
+      expect(card.contains(field(name))).toBe(true)
+    expect(card.contains(screen.getByRole('button', { name: 'Choose Item for Ingredient 1' }))).toBe(true)
   })
 
   it.each([
