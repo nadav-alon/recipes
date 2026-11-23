@@ -11,6 +11,20 @@ describe('theme', () => {
     expect(css).toContain('color-scheme: light dark')
   })
 
+  it('defines the warning colour role family in light and dark', () => {
+    const css = readFileSync('src/theme.css', 'utf8')
+    for (const [role, cssName] of [
+      ['warning', 'warning'],
+      ['onWarning', 'on-warning'],
+      ['warningContainer', 'warning-container'],
+      ['onWarningContainer', 'on-warning-container'],
+    ] as const) {
+      for (const scheme of ['light', 'dark'] as const) {
+        expect(css).toContain(`--md-sys-color-${cssName}: ${colourRoleHex(seedColour(SEED), role, scheme)};`)
+      }
+    }
+  })
+
   it('takes the PWA manifest theme colour from the same seed', () => {
     expect(manifest.theme_color).toBe(SEED)
   })
