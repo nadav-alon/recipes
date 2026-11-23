@@ -4,6 +4,7 @@ import { useItemsById } from '../items/use-items-by-id.ts'
 import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
 import { navigate, NEW_RECIPE_HREF, recipeHref } from '../routes.ts'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
+import { AlertBanner } from 'household-ui/ui/AlertBanner.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { Fab } from 'household-ui/ui/Fab.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
@@ -34,7 +35,9 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   if (failed)
     return (
       <TopAppBar title="Recipes">
-        <p role="alert">The Recipes could not be loaded.</p>
+        <main class="screen">
+          <AlertBanner message="The Recipes could not be loaded." />
+        </main>
       </TopAppBar>
     )
   if (entries === null || items === null) return null
