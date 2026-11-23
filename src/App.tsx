@@ -192,7 +192,9 @@ function LoadFailed() {
   return (
     <TopAppBar title="Recipe">
       <BackButton fallback={HOME_HREF} />
-      <p role="alert">The Recipe could not be loaded.</p>
+      <main class="screen">
+        <AlertBanner message="The Recipe could not be loaded." />
+      </main>
     </TopAppBar>
   )
 }

@@ -85,6 +85,9 @@ describe('App', () => {
     const failing = { ...store(), watch: (_onChange: unknown, onError?: (e: Error) => void) => (onError?.(new Error('permission-denied')), () => {}) }
     render(<App recipeStore={failing as never} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+    expect(screen.getByRole('alert')).toHaveClass('ui-alert-banner')
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'))
+    expect(screen.getByRole('main')).toHaveClass('screen')
     expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
   })
 
