@@ -13,10 +13,15 @@ describe('theme', () => {
 
   it('defines the warning colour role family in light and dark', () => {
     const css = readFileSync('src/theme.css', 'utf8')
-    const [light, dark] = css.split('@media (prefers-color-scheme: dark)')
-    for (const role of ['warning', 'on-warning', 'warning-container', 'on-warning-container']) {
-      expect(light).toContain(`--md-sys-color-${role}:`)
-      expect(dark).toContain(`--md-sys-color-${role}:`)
+    for (const [role, cssName] of [
+      ['warning', 'warning'],
+      ['onWarning', 'on-warning'],
+      ['warningContainer', 'warning-container'],
+      ['onWarningContainer', 'on-warning-container'],
+    ] as const) {
+      for (const scheme of ['light', 'dark'] as const) {
+        expect(css).toContain(`--md-sys-color-${cssName}: ${colourRoleHex(seedColour(SEED), role, scheme)};`)
+      }
     }
   })
 
