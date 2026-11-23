@@ -30,7 +30,7 @@ describe('pre-Household cards', () => {
 describe('Ingredient flag colours', () => {
   it('colours Missing from the theme error tokens and Running low from its warning tokens, in light and dark through the tokens themselves', () => {
     expect(rule('\\.ingredient-flag--missing')).toMatch(/background:\s*var\(--md-sys-color-error-container\)[^}]*color:\s*var\(--md-sys-color-on-error-container\)/)
-    expect(rule('\\.ingredient-flag--low')).toMatch(/background:\s*var\(--md-sys-color-warning-container\)[^}]*color:\s*var\(--md-sys-color-on-warning-container\)/)
+    expect(rule('\\.ingredient-flag--running-low')).toMatch(/background:\s*var\(--md-sys-color-warning-container\)[^}]*color:\s*var\(--md-sys-color-on-warning-container\)/)
   })
 
   it('writes no colour literal for a flag', () => {

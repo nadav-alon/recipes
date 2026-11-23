@@ -113,7 +113,7 @@ describe('RecipeView ingredients', () => {
       />,
     )
     expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag--missing')
-    expect(within(line('Milk')).getByText('Running low')).toHaveClass('ingredient-flag--low')
+    expect(within(line('Milk')).getByText('Running low')).toHaveClass('ingredient-flag--running-low')
     expect(within(line('Water')).getByText('Assumed')).toHaveClass('ingredient-flag--assumed')
   })
 

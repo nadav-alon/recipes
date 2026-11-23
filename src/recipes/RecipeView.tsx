@@ -37,15 +37,24 @@ const MISSING_REASON: Record<MissingReason, string> = {
   'item soft-deleted': 'Deleted in the Catalogue',
 }
 
-/** An Ingredient's flag in the words of someone cooking; null when there is nothing to flag. */
-function flag(status: IngredientStatus): string | null {
+/** How a flag is coloured; each tone has a rule in screens.css. */
+type FlagTone = 'missing' | 'running-low' | 'assumed'
+
+/** An Ingredient's flag: its words (for someone cooking) and its tone. */
+interface Flag {
+  text: string
+  tone: FlagTone
+}
+
+/** An Ingredient's flag; null when there is nothing to flag. */
+function flag(status: IngredientStatus): Flag | null {
   switch (status.kind) {
     case 'missing':
-      return MISSING_REASON[status.reason]
+      return { text: MISSING_REASON[status.reason], tone: 'missing' }
     case 'assumed':
-      return 'Assumed'
+      return { text: 'Assumed', tone: 'assumed' }
     case 'at home':
-      return status.runningLow ? 'Running low' : null
+      return status.runningLow ? { text: 'Running low', tone: 'running-low' } : null
   }
 }
 
@@ -122,7 +131,7 @@ function IngredientLine({
       trailing={
         flagged !== null || action !== undefined ? (
           <div class="ingredient-trailing">
-            {flagged !== null && <span class={`ingredient-flag ingredient-flag--${status.kind === 'missing' ? 'missing' : status.kind === 'at home' ? 'low' : 'assumed'}`}>{flagged}</span>}
+            {flagged !== null && <span class={`ingredient-flag ingredient-flag--${flagged.tone}`}>{flagged.text}</span>}
             {action}
           </div>
         ) : undefined
