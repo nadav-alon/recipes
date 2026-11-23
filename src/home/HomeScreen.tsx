@@ -88,8 +88,8 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
             <ListRow
               key={entry.id}
               headline={entry.recipe.title}
-              supporting={showMissing ? `Missing ${classification.missing}: ${missingNames(classification)}` : undefined}
-              trailing={<ChevronRight aria-hidden="true" />}
+              supporting={showMissing ? missingLabel(classification) : undefined}
+              trailing={<ChevronRight aria-hidden="true" data-testid="recipe-row-chevron" />}
               href={href}
               onFollow={() => navigate(href)}
             />
@@ -98,6 +98,10 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
       </ul>
     </section>
   )
+}
+
+function missingLabel(classification: ClassifiedEntry['classification']): string {
+  return `Missing ${classification.missing}: ${missingNames(classification)}`
 }
 
 function missingNames({ missingIngredients }: ClassifiedEntry['classification']): string {
