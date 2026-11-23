@@ -9,6 +9,7 @@ import type { WatchedItem } from '../items/items-port.ts'
 import { addToCatalogueHref } from '../routes.ts'
 import { RecipeView } from './RecipeView.tsx'
 import type { ItemsById } from './makeability.ts'
+import { expectAlertBanner } from '../test/alert-banner.ts'
 
 const id = (value: string) => value as core.ItemId
 const rid = recipes.recipeId('r1')
@@ -342,7 +343,7 @@ describe('RecipeView actually out', () => {
     renderWith(port, flour)
     await click(actuallyOut())
     expect(await screen.findByRole('alert')).toHaveTextContent('denied')
-    expect(screen.getByRole('alert')).toHaveClass('ui-alert-banner')
+    expectAlertBanner(screen.getByRole('alert'))
     expect(screen.queryByRole('button', { name: /Undo/ })).toBeNull()
   })
 })

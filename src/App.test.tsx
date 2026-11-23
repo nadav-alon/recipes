@@ -7,6 +7,7 @@ import { fakeItemsPort } from './items/fake-items-port.ts'
 import { fakeRecipeStore } from './recipes/fake-recipe-store.ts'
 import type { RecipeEntry } from './recipes/recipe-store.ts'
 import { catalogueReturnHref, editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, recipeHref } from './routes.ts'
+import { expectAlertBanner } from './test/alert-banner.ts'
 
 const r1 = recipes.recipeId('r1')
 const r2 = recipes.recipeId('r2')
@@ -85,7 +86,7 @@ describe('App', () => {
     const failing = { ...store(), watch: (_onChange: unknown, onError?: (e: Error) => void) => (onError?.(new Error('permission-denied')), () => {}) }
     render(<App recipeStore={failing as never} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
-    expect(screen.getByRole('alert')).toHaveClass('ui-alert-banner')
+    expectAlertBanner(screen.getByRole('alert'))
     expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'))
     expect(screen.getByRole('main')).toHaveClass('screen')
     expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
