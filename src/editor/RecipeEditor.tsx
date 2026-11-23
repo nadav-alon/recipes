@@ -268,7 +268,11 @@ function IngredientRow({ ingredient, fieldProps, items, position, last, catalogu
     onChange({ link: ticked ? ASSUMED : linkBeforeAssumed })
   }
   return (
-    <div role="group" aria-label={row}>
+    <div class="ingredient-card" role="group" aria-label={row}>
+      <div class="ingredient-card-header">
+        <span class="ingredient-card-title">{ingredient.name.trim() === '' ? row : ingredient.name}</span>
+        <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
+      </div>
       <TextField label="Name" aria-label={`${row} name`} data-row-key={ingredient.key}
         {...fieldProps(fieldId.ingredient(ingredient, 'name'))}
         value={ingredient.name} onInput={(e) => onChange({ name: e.currentTarget.value })} />
@@ -343,7 +347,6 @@ function IngredientRow({ ingredient, fieldProps, items, position, last, catalogu
       {!assumed && (
         <ItemPicker label={row} name={ingredient.name.trim()} catalogueHref={ingredient.link.kind === 'unlinked' ? catalogueHref : undefined} linked={ingredient.link.kind === 'linked' ? ingredient.link.itemId : null} items={items ?? []} onPick={(item) => onChange({ link: linkedTo(item.id) })} />
       )}
-      <RowControls label={row} first={position === 1} last={last} onMove={onMove} onRemove={onRemove} />
     </div>
   )
 }

@@ -201,6 +201,27 @@ describe('RecipeEditor Ingredients', () => {
     }
   })
 
+  it("heads an Ingredient's card with its name as typed, or its position while it has none, beside Move and Remove", () => {
+    render(<RecipeEditor store={fakeRecipeStore()} itemsPort={itemsPort()} onSaved={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Ingredient' }))
+    const card = screen.getByRole('group', { name: 'Ingredient 1' })
+    const header = card.querySelector<HTMLElement>('.ingredient-card-header')
+    expect(header).not.toBeNull()
+    expect(header).toHaveTextContent('Ingredient 1')
+    fireEvent.input(field('Ingredient 1 name'), { target: { value: 'Sriracha' } })
+    expect(header).toHaveTextContent('Sriracha')
+    expect(header).not.toHaveTextContent('Ingredient 1')
+    const inHeader = within(header as HTMLElement)
+    expect(inHeader.getByRole('button', { name: 'Move Ingredient 1 down' })).toBeInTheDocument()
+    expect(inHeader.getByRole('button', { name: 'Move Ingredient 1 up' })).toBeInTheDocument()
+    expect(inHeader.getByRole('button', { name: 'Remove Ingredient 1' })).toBeInTheDocument()
+    expect(header?.contains(field('Ingredient 1 name'))).toBe(false)
+    expect(card.contains(field('Ingredient 1 name'))).toBe(true)
+    expect(card.lastElementChild).not.toBe(header)
+    expect(card.querySelectorAll('.row-controls')).toHaveLength(1)
+  })
+
   it.each([
     ['Prep Step', 'Add Prep Step'],
     ['Step', 'Add Step'],
