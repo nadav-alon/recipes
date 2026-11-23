@@ -47,7 +47,7 @@ describe('RecipeView ingredients', () => {
     )
     expect(line('Flour')).toHaveTextContent('200 g')
     expect(line('Flour')).toHaveTextContent('sifted')
-    expect(within(line('Flour')).queryByText(/missing|running low|assumed/i)).toBeNull()
+    expect(line('Flour').querySelector('.ingredient-flag')).toBeNull()
   })
 
   it.each([
@@ -64,7 +64,7 @@ describe('RecipeView ingredients', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Thing', quantity, unit }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
-    expect(line('Thing')).toHaveTextContent(new RegExp(`${text}\\b`))
+    expect(within(line('Thing')).getByText(text)).toBeInTheDocument()
   })
 
   it('writes an amount with no unit as the quantity alone', () => {
@@ -75,23 +75,46 @@ describe('RecipeView ingredients', () => {
     expect(line('Thing')).not.toHaveTextContent(/\b3 \w/)
   })
 
-  it('flags an Unlinked Ingredient as Missing', () => {
+  it('flags an Unlinked Ingredient as not in the Catalogue', () => {
     render(<RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Salt' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
-    expect(line('Salt')).toHaveTextContent('Missing: Unlinked')
+    expect(within(line('Salt')).getByText('Not in the Catalogue')).toHaveClass('ingredient-flag--missing')
   })
 
   it('flags an Ingredient whose Item is out as Missing', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
-    expect(line('Eggs')).toHaveTextContent('Missing: out')
+    expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag--missing')
   })
 
   it('flags an Ingredient whose Item the Catalogue deleted as Missing', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Old', itemId: id('gone') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
-    expect(line('Old')).toHaveTextContent('Missing: deleted in the Catalogue')
+    expect(within(line('Old')).getByText('Deleted in the Catalogue')).toHaveClass('ingredient-flag--missing')
+  })
+
+  it('sets the flag apart from the amount and prep note', () => {
+    render(
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs'), quantity: 2, unit: 'piece', prepNote: 'beaten' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+    )
+    expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag')
+    expect(within(line('Eggs')).getByText('2 pieces, beaten')).toBeInTheDocument()
+  })
+
+  it('marks a Missing flag as an error, Running low as a warning and Assumed as neither', () => {
+    render(
+      <RecipeView
+        recipeId={rid}
+        recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }, { name: 'Milk', itemId: id('milk') }, { name: 'Water', assumed: true }] })}
+        items={items}
+        itemsPort={fakeItemsPort([])}
+        editHref="#/edit"
+      />,
+    )
+    expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag--missing')
+    expect(within(line('Milk')).getByText('Running low')).toHaveClass('ingredient-flag--running-low')
+    expect(within(line('Water')).getByText('Assumed')).toHaveClass('ingredient-flag--assumed')
   })
 
   it('flags an Ingredient whose Item is running low', () => {
@@ -243,7 +266,7 @@ describe('RecipeView actually out', () => {
   it('flags the Ingredient Missing and drops the button once the Item is out', async () => {
     renderWith(fakeItemsPort([watched('enough')]), flour)
     await click(actuallyOut())
-    expect(line('Flour')).toHaveTextContent('Missing: out')
+    expect(within(line('Flour')).getByText('Out')).toHaveClass('ingredient-flag--missing')
     expect(noActuallyOut(within(line('Flour')))).toBeNull()
   })
 

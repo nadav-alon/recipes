@@ -136,3 +136,30 @@ main.screen.sign-in .ui-button {
 .ui-centred-card {
   overflow-wrap: anywhere;
 }
+
+/* An Ingredient's flag and its action sit together at the row's end, apart from the amount and prep note. */
+.ingredient-trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+}
+
+.ingredient-flag {
+  padding: 0 var(--md-sys-spacing-2);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  font-size: var(--md-sys-typescale-label-size);
+}
+
+.ingredient-flag--missing {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.ingredient-flag--running-low {
+  background: var(--md-sys-color-warning-container);
+  color: var(--md-sys-color-on-warning-container);
+}
+
+.ingredient-flag--assumed {
+  color: var(--md-sys-color-on-surface-variant);
+}
