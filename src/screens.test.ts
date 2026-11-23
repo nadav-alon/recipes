@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const css = readFileSync('src/screens.css', 'utf8')
+const themeCss = readFileSync('src/theme.css', 'utf8')
 const rule = (selector: string) => new RegExp(`${selector}\\s*\\{[^}]*\\}`).exec(css)?.[0] ?? ''
 
 describe('screen layout', () => {
@@ -28,13 +29,27 @@ describe('pre-Household cards', () => {
 })
 
 describe('Ingredient flag colours', () => {
-  it('colours Missing from the theme error tokens and Running low from its warning tokens, in light and dark through the tokens themselves', () => {
+  const flagRules = css.match(/\.ingredient-flag[^{]*\{[^}]*\}/g) ?? []
+
+  it('colours Missing from the theme error tokens and Running low from its warning tokens', () => {
     expect(rule('\\.ingredient-flag--missing')).toMatch(/background:\s*var\(--md-sys-color-error-container\)[^}]*color:\s*var\(--md-sys-color-on-error-container\)/)
     expect(rule('\\.ingredient-flag--running-low')).toMatch(/background:\s*var\(--md-sys-color-warning-container\)[^}]*color:\s*var\(--md-sys-color-on-warning-container\)/)
   })
 
+  it('has every colour token a flag uses in both the light and the dark block of the theme', () => {
+    const dark = themeCss.indexOf('prefers-color-scheme: dark')
+    expect(dark).toBeGreaterThan(0)
+    const tokens = new Set(flagRules.flatMap((flagRule) => [...flagRule.matchAll(/var\((--md-sys-color-[\w-]+)\)/g)].map((match) => match[1])))
+    expect(tokens.size).toBeGreaterThan(0)
+    for (const token of tokens) {
+      expect(themeCss.slice(0, dark), `${token} in light`).toContain(`${token}:`)
+      expect(themeCss.slice(dark), `${token} in dark`).toContain(`${token}:`)
+    }
+  })
+
   it('writes no colour literal for a flag', () => {
-    expect(css.slice(css.indexOf('.ingredient-flag'))).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i)
+    expect(flagRules.length).toBeGreaterThan(0)
+    expect(flagRules.join('\n')).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i)
   })
 })
 

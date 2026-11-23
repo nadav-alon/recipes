@@ -47,7 +47,7 @@ describe('RecipeView ingredients', () => {
     )
     expect(line('Flour')).toHaveTextContent('200 g')
     expect(line('Flour')).toHaveTextContent('sifted')
-    expect(within(line('Flour')).queryByText(/missing|running low|assumed/i)).toBeNull()
+    expect(line('Flour').querySelector('.ingredient-flag')).toBeNull()
   })
 
   it.each([
@@ -77,21 +77,21 @@ describe('RecipeView ingredients', () => {
 
   it('flags an Unlinked Ingredient as not in the Catalogue', () => {
     render(<RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Salt' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
-    expect(line('Salt')).toHaveTextContent('Not in the Catalogue')
+    expect(within(line('Salt')).getByText('Not in the Catalogue')).toHaveClass('ingredient-flag--missing')
   })
 
   it('flags an Ingredient whose Item is out as Missing', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
-    expect(line('Eggs')).toHaveTextContent('Out')
+    expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag--missing')
   })
 
   it('flags an Ingredient whose Item the Catalogue deleted as Missing', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Old', itemId: id('gone') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
     )
-    expect(line('Old')).toHaveTextContent('Deleted in the Catalogue')
+    expect(within(line('Old')).getByText('Deleted in the Catalogue')).toHaveClass('ingredient-flag--missing')
   })
 
   it('sets the flag apart from the amount and prep note', () => {
@@ -266,7 +266,7 @@ describe('RecipeView actually out', () => {
   it('flags the Ingredient Missing and drops the button once the Item is out', async () => {
     renderWith(fakeItemsPort([watched('enough')]), flour)
     await click(actuallyOut())
-    expect(line('Flour')).toHaveTextContent('Out')
+    expect(within(line('Flour')).getByText('Out')).toHaveClass('ingredient-flag--missing')
     expect(noActuallyOut(within(line('Flour')))).toBeNull()
   })
 
