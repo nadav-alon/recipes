@@ -123,8 +123,35 @@ describe('HomeScreen', () => {
       'Other Recipes',
     ])
     expect(section('Makeable').getByText('Bread')).toBeInTheDocument()
-    expect(section('Almost makeable').getByRole('listitem')).toHaveTextContent('Missing: eggs')
+    expect(section('Almost makeable').getByRole('listitem')).toHaveTextContent('Missing 1: eggs')
     expect(section('Other Recipes').getByText('Zucchini')).toBeInTheDocument()
+  })
+
+  it('says how many and which Ingredients an Other Recipe is Missing', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    expect(section('Other Recipes').getByRole('listitem')).toHaveTextContent('Missing 3: zucchini, eggs, milk')
+  })
+
+  it('counts and names every missing Ingredient on an Almost makeable row', () => {
+    render(
+      <HomeScreen
+        recipeStore={fakeRecipeStore([
+          entry('4', 'Pancakes', [{ name: 'flour', item: 'flour' }, { name: 'eggs', item: 'eggs' }, { name: 'milk', item: 'milk' }]),
+        ])}
+        itemsPort={itemsPort()}
+      />,
+    )
+    expect(section('Almost makeable').getByRole('listitem')).toHaveTextContent('Missing 2: eggs, milk')
+  })
+
+  it('keeps the "(Item deleted)" suffix inside the counted Missing form', () => {
+    render(
+      <HomeScreen
+        recipeStore={fakeRecipeStore([entry('5', 'Toast', [{ name: 'butter', item: 'butter' }])])}
+        itemsPort={fakeItemsPort([item('butter', 'enough', true)])}
+      />,
+    )
+    expect(screen.getByRole('listitem')).toHaveTextContent('Missing 1: butter (Item deleted)')
   })
 
   it('moves a Recipe between sections live when an Item changes State', async () => {
@@ -156,10 +183,20 @@ describe('HomeScreen', () => {
     expect(location.hash).toBe('#/recipes/3')
   })
 
+  it('ends every Recipe row in a decorative chevron, in each section', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    const rows = screen.getAllByRole('listitem')
+    expect(rows).toHaveLength(3)
+    for (const row of rows) {
+      const chevron = within(row).getByTestId('recipe-row-chevron')
+      expect(chevron).toHaveAttribute('aria-hidden', 'true')
+    }
+  })
+
   it('links each Recipe to its view', () => {
     render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
     expect(screen.getByRole('link', { name: 'Bread' })).toHaveAttribute('href', '#/recipes/3')
-    expect(screen.getByRole('link', { name: 'OmeletteMissing: eggs' })).toHaveAttribute('href', '#/recipes/2')
+    expect(screen.getByRole('link', { name: 'OmeletteMissing 1: eggs' })).toHaveAttribute('href', '#/recipes/2')
   })
 
   it('replaces the whole screen with a load error when the Recipe watch fails after it rendered', async () => {

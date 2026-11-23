@@ -7,6 +7,7 @@ import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { Fab } from 'household-ui/ui/Fab.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
+import ChevronRight from '~icons/material-symbols/chevron-right'
 import Add from '~icons/material-symbols/add'
 import { AccountAction } from '../gate/account.tsx'
 import { useWideViewport } from './use-wide-viewport.ts'
@@ -60,7 +61,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
           empty="No Recipe is only one or two Ingredients short."
           showMissing
         />
-        <Section title="Other Recipes" list={sections.other} empty="No other Recipes." />
+        <Section title="Other Recipes" list={sections.other} empty="No other Recipes." showMissing />
       </main>
     </TopAppBar>
   )
@@ -87,7 +88,8 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
             <ListRow
               key={entry.id}
               headline={entry.recipe.title}
-              supporting={showMissing ? `Missing: ${missingNames(classification)}` : undefined}
+              supporting={showMissing ? missingLabel(classification) : undefined}
+              trailing={<ChevronRight aria-hidden="true" data-testid="recipe-row-chevron" />}
               href={href}
               onFollow={() => navigate(href)}
             />
@@ -96,6 +98,10 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
       </ul>
     </section>
   )
+}
+
+function missingLabel(classification: ClassifiedEntry['classification']): string {
+  return `Missing ${classification.missing}: ${missingNames(classification)}`
 }
 
 function missingNames({ missingIngredients }: ClassifiedEntry['classification']): string {
