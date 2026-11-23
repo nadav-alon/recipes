@@ -27,6 +27,7 @@
     "@firebase/rules-unit-testing": "^5.0.2",
     "@iconify-json/material-symbols": "^1.2.101",
     "@preact/preset-vite": "^2.10.6",
+    "@resvg/resvg-js": "^2.6.2",
     "@svgr/core": "^8.1.0",
     "@svgr/plugin-jsx": "^8.1.0",
     "@testing-library/jest-dom": "^7.0.1",
