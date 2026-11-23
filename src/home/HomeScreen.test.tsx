@@ -218,7 +218,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     await act(() => port.failWatches(new Error('permission-denied')))
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
-    expect(screen.queryByRole('main')).toBeNull()
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'))
     expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'New Recipe' })).toBeNull()
   })
