@@ -243,7 +243,6 @@ interface FieldProps {
 
 interface IngredientRowProps {
   readonly ingredient: IngredientDraft
-  /** The message of the problem a field, by id, was refused for; absent when it has none. */
   /** The id of a field, with the message of the problem it was refused for, if any. */
   readonly fieldProps: (id: string) => FieldProps
   /** Every Item the Catalogue has, or null until they have arrived. */
