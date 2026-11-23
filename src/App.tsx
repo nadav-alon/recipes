@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { core } from 'data-platform'
 import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
+import { AlertBanner } from 'household-ui/ui/AlertBanner.tsx'
 import { SnackbarHost } from 'household-ui/ui/Snackbar.tsx'
 import type { ItemsPort } from './items/items-port.ts'
 import { useItemsById } from './items/use-items-by-id.ts'
@@ -10,7 +11,7 @@ import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
 import type { Recipe, RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
 import { linkUnlinkedIngredient } from './recipes/link-ingredient.ts'
-import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
+import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, navigate, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
 
 export interface AppProps {
   recipeStore: RecipeStore
@@ -157,32 +158,25 @@ function HeldSavesNotice({
   onBackToEditor: (entry: HeldSave) => void
 }) {
   return (
-    <div role="alert">
-      <ul>
-        {held.map((entry) => {
-          const { label, href } = describeTarget(entry.target)
-          return (
-            <li key={entry.key}>
-              <p>
-                {label} {entry.recipe.title} was not saved: {entry.message}
-              </p>
-              <a
-                href={href}
-                onClick={(e) => {
-                  // A click that opens the editor elsewhere leaves this tab's editor alone.
-                  if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) onBackToEditor(entry)
-                }}
-              >
-                Back to the editor
-              </a>
-              <button type="button" onClick={() => onDismiss(entry)}>
-                Dismiss
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
+    <>
+      {held.map((entry) => {
+        const { label, href } = describeTarget(entry.target)
+        return (
+          <AlertBanner
+            key={entry.key}
+            message={`${label} ${entry.recipe.title} was not saved: ${entry.message}`}
+            action={{
+              label: 'Back to the editor',
+              onAction: () => {
+                onBackToEditor(entry)
+                navigate(href)
+              },
+            }}
+            onDismiss={() => onDismiss(entry)}
+          />
+        )
+      })}
+    </>
   )
 }
 
