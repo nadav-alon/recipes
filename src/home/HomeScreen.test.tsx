@@ -7,6 +7,7 @@ import type { ItemsPort } from '../items/items-port.ts'
 import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
 import { MemberContext } from '../gate/account.tsx'
 import { HomeScreen } from './HomeScreen.tsx'
+import { expectAlertBanner } from '../test/alert-banner.ts'
 
 const item = (id: string, state: core.State, deleted = false) => ({
   id: core.itemId(id),
@@ -205,7 +206,9 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     await act(() => recipeStore.failWatches(new Error('permission-denied')))
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
-    expect(screen.queryByRole('main')).toBeNull()
+    expectAlertBanner(screen.getByRole('alert'))
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'))
+    expect(screen.getByRole('main')).toHaveClass('screen')
     expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'New Recipe' })).toBeNull()
   })
@@ -216,7 +219,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     await act(() => port.failWatches(new Error('permission-denied')))
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
-    expect(screen.queryByRole('main')).toBeNull()
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'))
     expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'New Recipe' })).toBeNull()
   })

@@ -7,6 +7,7 @@ import { fakeItemsPort } from './items/fake-items-port.ts'
 import { fakeRecipeStore } from './recipes/fake-recipe-store.ts'
 import type { RecipeEntry } from './recipes/recipe-store.ts'
 import { catalogueReturnHref, editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, recipeHref } from './routes.ts'
+import { expectAlertBanner } from './test/alert-banner.ts'
 
 const r1 = recipes.recipeId('r1')
 const r2 = recipes.recipeId('r2')
@@ -85,6 +86,9 @@ describe('App', () => {
     const failing = { ...store(), watch: (_onChange: unknown, onError?: (e: Error) => void) => (onError?.(new Error('permission-denied')), () => {}) }
     render(<App recipeStore={failing as never} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+    expectAlertBanner(screen.getByRole('alert'))
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'))
+    expect(screen.getByRole('main')).toHaveClass('screen')
     expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
   })
 
@@ -172,7 +176,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
     fireEvent(window, new HashChangeEvent('hashchange'))
-    fireEvent.click(await screen.findByRole('link', { name: 'Back to the editor' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Back to the editor' }))
     fireEvent(window, new HashChangeEvent('hashchange'))
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Pancakes'))
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveFocus())
@@ -188,7 +192,7 @@ describe('App', () => {
     await waitFor(() => expect(location.hash).toMatch(/^#\/recipes\/fake-/))
     fireEvent(window, new HashChangeEvent('hashchange'))
     expect(await screen.findByText('Your new Recipe Pancakes was not saved: Permission denied')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('link', { name: 'Back to the editor' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to the editor' }))
     fireEvent(window, new HashChangeEvent('hashchange'))
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Pancakes'))
     expect(screen.getByRole('heading', { name: 'New Recipe' })).toBeInTheDocument()
@@ -223,7 +227,7 @@ describe('App', () => {
       expect(screen.getByText('Your new Recipe Pancakes was not saved: Permission denied')).toBeInTheDocument()
       expect(screen.getByLabelText('Title')).toHaveValue('Waffles')
       await act(() => {
-        fireEvent.click(screen.getByRole('link', { name: 'Back to the editor' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Back to the editor' }))
       })
       expect(screen.getByLabelText('Title')).toHaveValue('Pancakes')
       expect(screen.queryByText(/was not saved/)).not.toBeInTheDocument()
@@ -248,7 +252,9 @@ describe('App', () => {
     fireEvent(window, new HashChangeEvent('hashchange'))
     await screen.findByText('Your edit to Crepes was not saved: Permission denied')
     expect(screen.getByText('Your edit to Frittata was not saved: Permission denied')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'Back to the editor' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Back to the editor' })).toHaveLength(2)
+    expect(screen.getAllByRole('alert')).toHaveLength(2)
+    expect(screen.queryByRole('link')).toBeNull()
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0]!)
     expect(screen.queryByText(/Frittata was not saved/)).not.toBeInTheDocument()
@@ -274,20 +280,12 @@ describe('App', () => {
 
   it('restores one of several refused creates, leaving the others listed', async () => {
     await refuseTwoCreates()
-    fireEvent.click(screen.getAllByRole('link', { name: 'Back to the editor' })[1]!)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Back to the editor' })[1]!)
     location.hash = NEW_RECIPE_HREF
     fireEvent(window, new HashChangeEvent('hashchange'))
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Waffles'))
     expect(screen.getByText('Your new Recipe Pancakes was not saved: Permission denied')).toBeInTheDocument()
     expect(screen.queryByText(/Waffles was not saved/)).not.toBeInTheDocument()
-  })
-
-  it('does not reopen a held create on the next visit after a modified click on its link', async () => {
-    await refuseTwoCreates()
-    fireEvent.click(screen.getAllByRole('link', { name: 'Back to the editor' })[1]!, { ctrlKey: true })
-    location.hash = NEW_RECIPE_HREF
-    fireEvent(window, new HashChangeEvent('hashchange'))
-    expect(screen.getByLabelText('Title')).toHaveValue('')
   })
 
   it('keeps both refused edits of one Recipe listed when two saves are in flight, and reopens the editor on the latest', async () => {
@@ -370,7 +368,7 @@ describe('App', () => {
     fireEvent(window, new HashChangeEvent('hashchange'))
     expect(await screen.findByRole('alert')).toHaveTextContent('Your edit to Frittata was not saved: Permission denied')
     expect(await screen.findByRole('heading', { name: 'Omelette' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('link', { name: 'Back to the editor' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to the editor' }))
     fireEvent(window, new HashChangeEvent('hashchange'))
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Frittata'))
   })

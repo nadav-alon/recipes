@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/preact'
+import { fireEvent, render, screen, waitFor } from '@testing-library/preact'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Firestore } from 'firebase/firestore'
 
@@ -13,7 +13,8 @@ vi.mock('firebase/firestore', () => ({
 }))
 
 import { core } from 'data-platform'
-import { PlatformGuard } from './PlatformGuard.tsx'
+import { HOUSEHOLD_SETUP_DOC_URL, PlatformGuard } from './PlatformGuard.tsx'
+import { expectAlertBanner } from '../test/alert-banner.ts'
 
 const db = {} as Firestore
 
@@ -33,6 +34,18 @@ describe('PlatformGuard', () => {
     mocks.data = { version: '0.1.0' }
     render(<PlatformGuard db={db} />)
     expect(await screen.findByRole('alert')).toHaveTextContent(/update your platform deploy/i)
+  })
+
+  it('offers the household setup guide as a button on the banner', async () => {
+    mocks.data = { version: '0.1.0' }
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    render(<PlatformGuard db={db} />)
+    expectAlertBanner(await screen.findByRole('alert'))
+    fireEvent.click(screen.getByRole('button', { name: 'Open the household setup guide' }))
+    expect(assign).toHaveBeenCalledWith(HOUSEHOLD_SETUP_DOC_URL)
+    expect(screen.queryByRole('link')).toBeNull()
+    vi.unstubAllGlobals()
   })
 
   it('shows the banner when nothing has deployed meta/platform', async () => {

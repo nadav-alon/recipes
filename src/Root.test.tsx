@@ -13,6 +13,7 @@ vi.mock('data-platform/client', async (importOriginal) => ({
 
 import { localKit } from 'data-platform/local'
 import { Root } from './Root.tsx'
+import { expectAlertBanner } from './test/alert-banner.ts'
 
 beforeEach(() => {
   localStorage.clear()
@@ -91,6 +92,7 @@ describe('Root and #config= links', () => {
     history.replaceState(null, '', '/#config=!!!')
     render(<Root />)
     expect(screen.getByRole('alert')).toHaveTextContent(/truncated or corrupted/)
+    expectAlertBanner(screen.getByRole('alert'))
     expect(location.hash).toBe('')
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByRole('alert')).toBeNull()

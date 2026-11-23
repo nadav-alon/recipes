@@ -9,6 +9,7 @@ import { SetupScreen } from './gate/SetupScreen.tsx'
 import { App } from './App.tsx'
 import { firestoreItemsPort } from './items/firestore-items-port.ts'
 import { firestoreRecipeStore } from './recipes/recipe-store.ts'
+import { AlertBanner } from 'household-ui/ui/AlertBanner.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { CentredCard } from 'household-ui/ui/CentredCard.tsx'
 
@@ -65,10 +66,10 @@ export function Root() {
   return (
     <>
       {error !== null && (
-        <div role="alert">
-          <p>{error} The link was ignored.</p>
-          <button onClick={() => setState({ config, error: null, proposed: null, kit })}>Dismiss</button>
-        </div>
+        <AlertBanner
+          message={`${error} The link was ignored.`}
+          onDismiss={() => setState({ config, error: null, proposed: null, kit })}
+        />
       )}
       <Connected config={config} kit={kit} />
     </>
