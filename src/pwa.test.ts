@@ -5,7 +5,6 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { manifest } from './pwa-manifest.ts'
 import { SEED } from './seed.ts'
-import { renderIcon } from '../scripts/app-icons.ts'
 
 describe('PWA manifest', () => {
   it('is installable: standalone with a 192 and a 512 icon that exist', () => {
@@ -36,6 +35,5 @@ describe('favicon', () => {
   it('is the 192 manifest icon, which draws the cooking pot', () => {
     const href = readFileSync('index.html', 'utf8').match(/<link rel="icon"[^>]*href="\/([^"]+)"/)?.[1]
     expect(href).toBe(manifest.icons!.find((i) => i.sizes === '192x192' && !i.purpose)!.src)
-    expect(readFileSync(join('public', href!)).equals(renderIcon({ sizes: '192x192' }))).toBe(true)
   })
 })

@@ -1,4 +1,4 @@
-// Regenerates the PWA icons in public/ from the cooking-pot SVGs in scripts/icons/, whose colours are the seed in src/seed.ts.
+// Regenerates the PWA icons in public/ from the cooking-pot SVG in scripts/icons/, which renderIcon fills with the seed in src/seed.ts and its on-primary colour.
 // The icon list is the manifest's: one file per entry, drawn by renderIcon.
 import { writeFileSync } from 'node:fs'
 import { manifest } from '../src/pwa-manifest.ts'

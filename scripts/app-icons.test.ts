@@ -2,8 +2,12 @@ import { readFileSync } from 'node:fs'
 import { inflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import { manifest } from '../src/pwa-manifest.ts'
+import { colourRoleHex, seedColour } from 'household-ui/ui/colourRoles.ts'
 import { SEED } from '../src/seed.ts'
 import { renderIcon } from './app-icons.ts'
+
+const seedPixel = `${SEED.slice(1)}ff`
+const glyphPixel = `${colourRoleHex(seedColour(SEED), 'onPrimary', 'light').slice(1)}ff`
 
 /** The rows of an 8-bit RGBA PNG, each `width * 4` bytes. */
 function decode(png: Buffer): { width: number; rows: Buffer[] } {
@@ -59,14 +63,14 @@ describe('PWA icons', () => {
     }
   })
 
-  it('draw the glyph in white on the seed', () => {
+  it('draw the glyph in the on-primary colour over the seed', () => {
     const [r, g, b] = Buffer.from(SEED.slice(1), 'hex')
     expect(g).toBeGreaterThan(r!)
     expect(g).toBeGreaterThan(b!)
     for (const icon of manifest.icons!) {
       const seen = colours(readFileSync(`public/${icon.src}`))
-      expect(seen, icon.src).toContain(`${SEED.slice(1)}ff`)
-      expect(seen, icon.src).toContain('ffffffff')
+      expect(seen, icon.src).toContain(seedPixel)
+      expect(seen, icon.src).toContain(glyphPixel)
     }
   })
 
@@ -79,8 +83,8 @@ describe('PWA icons', () => {
         for (let x = 0; x < width; x++) {
           const inside = Math.hypot(x + 0.5 - centre, y + 0.5 - centre) <= 0.4 * width
           const pixel = row.subarray(x * 4, x * 4 + 4).toString('hex')
-          if (inside && pixel !== `${SEED.slice(1)}ff`) glyph++
-          if (!inside) expect(pixel, `${icon.src} at ${x},${y}`).toBe(`${SEED.slice(1)}ff`)
+          if (inside && pixel !== seedPixel) glyph++
+          if (!inside) expect(pixel, `${icon.src} at ${x},${y}`).toBe(seedPixel)
         }
       })
       expect(glyph, icon.src).toBeGreaterThan(0)
