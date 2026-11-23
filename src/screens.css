@@ -131,7 +131,6 @@ main.screen.sign-in .ui-button {
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-medium);
   padding: var(--md-sys-spacing-3);
-  margin-block-end: var(--md-sys-spacing-3);
 }
 
 /* The card's name and its Move and Remove controls share one line; a long name wraps instead of pushing them out. */
