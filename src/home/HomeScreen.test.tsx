@@ -161,6 +161,17 @@ describe('HomeScreen', () => {
     expect(location.hash).toBe('#/recipes/3')
   })
 
+  it('ends every Recipe row in a decorative chevron, in each section', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    const rows = screen.getAllByRole('listitem')
+    expect(rows).toHaveLength(3)
+    for (const row of rows) {
+      const chevron = row.querySelector('.ui-list-row__trailing svg')
+      expect(chevron).not.toBeNull()
+      expect(chevron).toHaveAttribute('aria-hidden', 'true')
+    }
+  })
+
   it('links each Recipe to its view', () => {
     render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
     expect(screen.getByRole('link', { name: 'Bread' })).toHaveAttribute('href', '#/recipes/3')

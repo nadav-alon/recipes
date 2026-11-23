@@ -7,6 +7,7 @@ import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { Fab } from 'household-ui/ui/Fab.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
+import ChevronRight from '~icons/material-symbols/chevron-right'
 import Add from '~icons/material-symbols/add'
 import { AccountAction } from '../gate/account.tsx'
 import { useWideViewport } from './use-wide-viewport.ts'
@@ -88,6 +89,7 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
               key={entry.id}
               headline={entry.recipe.title}
               supporting={showMissing ? `Missing ${classification.missing}: ${missingNames(classification)}` : undefined}
+              trailing={<ChevronRight aria-hidden="true" />}
               href={href}
               onFollow={() => navigate(href)}
             />
