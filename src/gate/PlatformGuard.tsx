@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { doc, getDoc, type Firestore } from 'firebase/firestore'
+import { AlertBanner } from 'household-ui/ui/AlertBanner.tsx'
 import { core } from 'data-platform'
 
 /** The platform's own setup guide, deployed and versioned with it. */
@@ -39,18 +40,12 @@ export function PlatformGuard({ db }: { db: Firestore }) {
 
   if (check === null || check === 'ok') return null
   if (check === 'failed') {
-    return (
-      <div role="alert">
-        <p>Couldn't check your platform version. Check your connection and reload.</p>
-      </div>
-    )
+    return <AlertBanner message="Couldn't check your platform version. Check your connection and reload." />
   }
   return (
-    <div role="alert">
-      <p>
-        You need to update your platform deploy. Follow the{' '}
-        <a href={HOUSEHOLD_SETUP_DOC_URL}>household setup guide</a>.
-      </p>
-    </div>
+    <AlertBanner
+      message="You need to update your platform deploy."
+      action={{ label: 'Open the household setup guide', onAction: () => window.open(HOUSEHOLD_SETUP_DOC_URL, '_blank', 'noopener') }}
+    />
   )
 }
