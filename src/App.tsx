@@ -262,8 +262,13 @@ function CatalogueReturnScreen({
   if (notice !== null) {
     return (
       <main class="screen">
-        <p role="alert">{notice}</p>
-        <a href={entry === undefined ? HOME_HREF : recipeHref(id)}>{entry === undefined ? 'Back to Recipes' : 'Back to the Recipe'}</a>
+        <AlertBanner
+          message={notice}
+          action={{
+            label: entry === undefined ? 'Back to Recipes' : 'Back to the Recipe',
+            href: entry === undefined ? HOME_HREF : recipeHref(id),
+          }}
+        />
       </main>
     )
   }
