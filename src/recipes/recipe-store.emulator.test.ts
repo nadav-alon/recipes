@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { disableNetwork, doc, getDoc, type Firestore } from 'firebase/firestore'
+import { disableNetwork, doc, getDoc, waitForPendingWrites, type Firestore } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { core } from 'data-platform'
 import { setIngredientBought } from 'data-platform/client'
@@ -168,17 +168,30 @@ describe('firestoreRecipeStore', () => {
   })
 
   describe('setWanted', () => {
+    /** The Recipe once the watch shows it satisfying `ready`; a transaction reaches the watch after it resolves. */
+    const recipeWhen = (ready: (recipe: Recipe) => boolean): Promise<Recipe> =>
+      new Promise((resolve) => {
+        const stop = store.watch((entries) => {
+          const recipe = entries[0]?.recipe
+          if (recipe !== undefined && ready(recipe)) {
+            stop()
+            resolve(recipe)
+          }
+        })
+      })
+
     it('marks a Recipe Wanted and, marking it not Wanted, clears every Ingredient\'s bought', async () => {
       const id = await store.create({ ...pancakes, ingredients: [{ name: 'Salt' }] })
+      await waitForPendingWrites(alice)
 
       await store.setWanted(id, true)
-      expect((await current())[0]?.recipe.wanted).toBe(true)
+      expect((await recipeWhen((r) => r.wanted === true)).wanted).toBe(true)
 
       await setIngredientBought(alice, id, 0, true)
+      await recipeWhen((r) => r.ingredients[0]?.bought === true)
       await store.setWanted(id, false)
-      const [entry] = await current()
-      expect(entry?.recipe.wanted).toBeUndefined()
-      expect(entry?.recipe.ingredients[0]?.bought).toBeUndefined()
+      const recipe = await recipeWhen((r) => r.wanted === undefined)
+      expect(recipe.ingredients[0]?.bought).toBeUndefined()
     })
   })
 })

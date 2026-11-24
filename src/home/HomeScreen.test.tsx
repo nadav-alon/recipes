@@ -116,6 +116,21 @@ describe('HomeScreen', () => {
     expect(signOut).toHaveBeenCalledOnce()
   })
 
+  it('marks the row of a Wanted Recipe as wanted, and no other', () => {
+    const wanted = entry('3', 'Bread', [{ name: 'flour', item: 'flour' }])
+    const others = [entry('1', 'Zucchini', [{ name: 'zucchini' }]), entry('2', 'Omelette', [{ name: 'flour', item: 'flour' }])]
+    render(
+      <HomeScreen
+        recipeStore={fakeRecipeStore([...others, { ...wanted, recipe: { ...wanted.recipe, wanted: true } }])}
+        itemsPort={itemsPort()}
+      />,
+    )
+    const row = (title: string) => screen.getByRole('link', { name: new RegExp(title) })
+    expect(within(row('Bread')).getByText('Want to make')).toBeInTheDocument()
+    expect(within(row('Omelette')).queryByText('Want to make')).toBeNull()
+    expect(within(row('Zucchini')).queryByText('Want to make')).toBeNull()
+  })
+
   it('shows Makeable, then Almost makeable with what is Missing, then every other Recipe', () => {
     render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([

@@ -184,3 +184,18 @@ main.screen.sign-in .ui-button {
 .ingredient-flag--assumed {
   color: var(--md-sys-color-on-surface-variant);
 }
+
+/* The Recipe view's "Want to make" switch and the tag on a Wanted Recipe's row on Home. */
+.want-to-make {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+}
+
+.recipe-wanted {
+  padding: 0 var(--md-sys-spacing-2);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-size: var(--md-sys-typescale-label-size);
+}

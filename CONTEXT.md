@@ -65,3 +65,10 @@ _Avoid_: can make, available
 
 **Almost makeable**:
 A Recipe with one or two Missing Ingredients, ranked by how few.
+
+### Wanted
+
+**Wanted Recipe**:
+A Recipe marked "want to make". The mark is stored on the Recipe, so the whole Household shares it,
+and it is cleared only by hand: nothing un-marks a Recipe on its own.
+_Avoid_: favourite, planned, queued

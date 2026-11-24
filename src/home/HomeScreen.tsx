@@ -92,7 +92,12 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
               key={entry.id}
               headline={entry.recipe.title}
               supporting={showMissing ? missingLabel(classification) : undefined}
-              trailing={<ChevronRight aria-hidden="true" data-testid="recipe-row-chevron" />}
+              trailing={
+                <>
+                  {entry.recipe.wanted === true && <span class="recipe-wanted">Want to make</span>}
+                  <ChevronRight aria-hidden="true" data-testid="recipe-row-chevron" />
+                </>
+              }
               href={href}
               onFollow={() => navigate(href)}
             />
