@@ -107,7 +107,7 @@ export function App({ recipeStore, itemsPort }: AppProps) {
           held={shown}
           onDismiss={release}
           onBackToEditor={(entry) => {
-            // The action navigates to the URL the New Recipe editor may already be on, so reopen it on the held Recipe by hand.
+            // The link goes to the URL the New Recipe editor may already be on, so reopen it on the held Recipe by hand.
             if (entry.target.kind !== 'new') return
             restoreNext.current = entry
             if (route.screen === 'new-recipe') {
@@ -147,6 +147,11 @@ function describeTarget(target: SaveTarget): { label: string; href: string } {
     : { label: 'Your edit to', href: editRecipeHref(target.id) }
 }
 
+/** Whether a click is a plain left click, one that follows a link in this tab rather than opening it elsewhere. */
+function isPlainClick(e: MouseEvent): boolean {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
+}
+
 /** Tells the user which saves were rejected after their editor had gone, each with the way back to the editor holding it. */
 function HeldSavesNotice({
   held,
@@ -162,18 +167,25 @@ function HeldSavesNotice({
       {held.map((entry) => {
         const { label, href } = describeTarget(entry.target)
         return (
-          <AlertBanner
+          // The link has no handler of its own, so its click is heard here, where `display: contents` keeps the banner's layout.
+          <div
             key={entry.key}
-            message={`${label} ${entry.recipe.title} was not saved: ${entry.message}`}
-            action={{
-              label: 'Back to the editor',
-              onAction: () => {
-                onBackToEditor(entry)
-                navigate(href)
-              },
+            style={{ display: 'contents' }}
+            onClick={(e) => {
+              if (!(e.target instanceof Element) || e.target.closest('a') === null) return
+              // A click that opens the editor elsewhere leaves this tab's editor, and the browser's own handling, alone.
+              if (!isPlainClick(e)) return
+              e.preventDefault()
+              onBackToEditor(entry)
+              navigate(href)
             }}
-            onDismiss={() => onDismiss(entry)}
-          />
+          >
+            <AlertBanner
+              message={`${label} ${entry.recipe.title} was not saved: ${entry.message}`}
+              action={{ label: 'Back to the editor', href }}
+              onDismiss={() => onDismiss(entry)}
+            />
+          </div>
         )
       })}
     </>
