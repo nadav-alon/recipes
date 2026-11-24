@@ -22,6 +22,8 @@ export interface RecipeViewProps {
   itemsPort: ItemsPort
   /** Where the link to the Recipe's editor points. */
   editHref: string
+  /** Writes the Recipe Wanted or not Wanted; resolves once the server has it, so it may stay pending offline. */
+  onSetWanted: (wanted: boolean) => Promise<void>
 }
 
 /** What "actually out" changed, so Undo can put the Item back. */
@@ -141,7 +143,7 @@ function IngredientLine({
   )
 }
 
-export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: RecipeViewProps) {
+export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSetWanted }: RecipeViewProps) {
   const [inFlight, setInFlight] = useState<ReadonlySet<core.ItemId>>(new Set())
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -201,6 +203,18 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
           </Button>
         </TopAppBarActions>
         {failure !== null && <AlertBanner message={failure} />}
+        <label class="want-to-make">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={recipe.wanted === true}
+            onChange={() => {
+              setFailure(null)
+              onSetWanted(recipe.wanted !== true).catch((error: unknown) => setFailure(error instanceof Error ? error.message : String(error)))
+            }}
+          />
+          Want to make
+        </label>
         {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
         {recipe.sourceUrl !== undefined && (
           <p>
