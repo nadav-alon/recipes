@@ -36,6 +36,18 @@ describe('classifyIngredient', () => {
     expect(classifyIngredient(ingredient(), items)).toEqual({ kind: 'missing', reason: 'unlinked' })
   })
 
+  it('is Bought, not Missing, for an Unlinked Ingredient marked bought on a Wanted Recipe', () => {
+    expect(classifyIngredient(ingredient({ bought: true }), items, true)).toEqual({ kind: 'bought' })
+  })
+
+  it('is Missing for a bought Unlinked Ingredient once the Recipe is not Wanted', () => {
+    expect(classifyIngredient(ingredient({ bought: true }), items, false)).toEqual({ kind: 'missing', reason: 'unlinked' })
+  })
+
+  it('is Missing for an Unlinked Ingredient not marked bought on a Wanted Recipe', () => {
+    expect(classifyIngredient(ingredient(), items, true)).toEqual({ kind: 'missing', reason: 'unlinked' })
+  })
+
   it('is Missing when the Item is out', () => {
     expect(classifyIngredient(ingredient({ itemId: id('eggs') }), items)).toEqual({
       kind: 'missing',
@@ -118,5 +130,20 @@ describe('classifyRecipe missingIngredients', () => {
       { ingredient: unlinked, reason: 'unlinked' },
       { ingredient: gone, reason: 'item soft-deleted' },
     ])
+  })
+})
+
+describe('classifyRecipe with a Bought Ingredient', () => {
+  const recipe = (wanted: boolean): recipes.Recipe =>
+    ({ title: 'Pancakes', wanted, ingredients: [ingredient({ bought: true })], steps: [] }) as unknown as recipes.Recipe
+
+  it('is Makeable while Wanted', () => {
+    const result = classifyRecipe(recipe(true), items)
+    expect(result.makeability).toBe('makeable')
+    expect(result.missing).toBe(0)
+  })
+
+  it('has the Ingredient Missing when not Wanted', () => {
+    expect(classifyRecipe(recipe(false), items).missing).toBe(1)
   })
 })

@@ -181,6 +181,7 @@ main.screen.sign-in .ui-button {
   color: var(--md-sys-color-on-warning-container);
 }
 
+.ingredient-flag--bought,
 .ingredient-flag--assumed {
   color: var(--md-sys-color-on-surface-variant);
 }

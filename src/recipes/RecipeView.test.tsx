@@ -129,6 +129,14 @@ describe('RecipeView ingredients', () => {
     expect(line('Milk')).not.toHaveTextContent('Missing')
   })
 
+  it('shows a bought Unlinked Ingredient of a Wanted Recipe as Bought, not Missing', () => {
+    render(
+      <RecipeView recipeId={rid} recipe={recipe({ wanted: true, ingredients: [{ name: 'Salt', bought: true }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
+    )
+    expect(within(line('Salt')).getByText('Bought')).toHaveClass('ingredient-flag--bought')
+    expect(line('Salt')).not.toHaveTextContent('Not in the Catalogue')
+  })
+
   it('flags an Assumed Ingredient', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Water', assumed: true }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,

@@ -45,7 +45,7 @@ const MISSING_REASON: Record<MissingReason, string> = {
 }
 
 /** How a flag is coloured; each tone has a rule in screens.css. */
-type FlagTone = 'missing' | 'running-low' | 'assumed'
+type FlagTone = 'missing' | 'running-low' | 'assumed' | 'bought'
 
 /** An Ingredient's flag: its words (for someone cooking) and its tone. */
 interface Flag {
@@ -60,6 +60,8 @@ function flag(status: IngredientStatus): Flag | null {
       return { text: MISSING_REASON[status.reason], tone: 'missing' }
     case 'assumed':
       return { text: 'Assumed', tone: 'assumed' }
+    case 'bought':
+      return { text: 'Bought', tone: 'bought' }
     case 'at home':
       return status.runningLow ? { text: 'Running low', tone: 'running-low' } : null
   }
@@ -103,6 +105,7 @@ function IngredientLine({
   ingredient,
   catalogueHref,
   items,
+  wanted,
   busy,
   onActuallyOut,
 }: {
@@ -110,10 +113,12 @@ function IngredientLine({
   /** The Catalogue hand-off for an Unlinked Ingredient; absent when it has no name to hand over. */
   catalogueHref?: string
   items: ItemsById
+  /** Whether the Recipe is Wanted, which is when a bought Ingredient counts as at home. */
+  wanted: boolean
   busy: boolean
   onActuallyOut: (marking: MarkedOut) => void
 }) {
-  const status = classifyIngredient(ingredient, items)
+  const status = classifyIngredient(ingredient, items, wanted)
   const flagged = flag(status)
   const item = ingredient.itemId === undefined ? undefined : items.get(ingredient.itemId)
   const amount = joinParts([ingredient.quantity, unitText(ingredient.unit, ingredient.quantity)], ' ')
@@ -243,6 +248,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
                   ingredient={ingredient}
                   catalogueHref={ingredient.name.trim() === '' ? undefined : addToCatalogueHref(recipeId, index, ingredient.name.trim())}
                   items={items}
+                  wanted={recipe.wanted === true}
                   busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
                   onActuallyOut={markOut}
                 />
