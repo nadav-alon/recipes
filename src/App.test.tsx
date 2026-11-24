@@ -89,6 +89,7 @@ describe('App', () => {
     location.hash = recipeHref(recipes.recipeId('nope'))
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('alert')).toHaveTextContent('This Recipe does not exist.')
+    expectAlertBanner(screen.getByRole('alert'))
     expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
   })
 

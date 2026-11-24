@@ -204,7 +204,7 @@ function RecipeNotFound() {
     <TopAppBar title="Recipe not found">
       <BackButton fallback={HOME_HREF} />
       <main class="screen">
-        <p role="alert">This Recipe does not exist.</p>
+        <AlertBanner message="This Recipe does not exist." />
       </main>
     </TopAppBar>
   )
