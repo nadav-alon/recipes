@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/preact'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/preact'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resetSnackbar } from 'household-ui/ui/Snackbar.tsx'
 import { core, recipes } from 'data-platform'
@@ -89,6 +89,7 @@ describe('App', () => {
     location.hash = recipeHref(recipes.recipeId('nope'))
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     expect(screen.getByRole('alert')).toHaveTextContent('This Recipe does not exist.')
+    expectAlertBanner(screen.getByRole('alert'))
     expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
   })
 
@@ -527,7 +528,10 @@ describe('App returning from the Catalogue', () => {
     location.hash = catalogueReturnHref(r1, index, name)
     render(<App recipeStore={s} itemsPort={fakeItemsPort([])} />)
 
-    expect((await screen.findByRole('alert')).textContent).toContain('new-item')
+    const alert = await screen.findByRole('alert')
+    expectAlertBanner(alert)
+    expect(alert.textContent).toContain('new-item')
+    expect(within(alert).getByRole('link', { name: 'Back to the Recipe' })).toHaveAttribute('href', recipeHref(r1))
     expect(update).not.toHaveBeenCalled()
     expect(location.search).toBe('')
   })
@@ -537,7 +541,10 @@ describe('App returning from the Catalogue', () => {
     location.hash = catalogueReturnHref(recipes.recipeId('gone'), 0, 'Chive')
     render(<App recipeStore={unlinked()} itemsPort={fakeItemsPort([])} />)
 
-    expect((await screen.findByRole('alert')).textContent).toContain('new-item')
+    const alert = await screen.findByRole('alert')
+    expectAlertBanner(alert)
+    expect(alert.textContent).toContain('new-item')
+    expect(within(alert).getByRole('link', { name: 'Back to Recipes' })).toHaveAttribute('href', HOME_HREF)
     expect(location.search).toBe('')
   })
 
