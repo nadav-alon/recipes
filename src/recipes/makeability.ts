@@ -24,7 +24,7 @@ export type IngredientStatus =
 export function classifyIngredient(
   ingredient: recipes.Ingredient,
   items: ItemsById,
-  wanted = false,
+  wanted: boolean,
 ): IngredientStatus {
   if (ingredient.assumed) return { kind: 'assumed' }
   if (ingredient.itemId === undefined) {
@@ -37,6 +37,11 @@ export function classifyIngredient(
   if (item.state === 'out') return { kind: 'missing', reason: 'item out' }
   if (item.state === 'running low') return { kind: 'at home', runningLow: true }
   return { kind: 'at home', runningLow: false }
+}
+
+/** An absent `wanted` means the Recipe is not Wanted. */
+export function isWanted(recipe: Pick<recipes.Recipe, 'wanted'>): boolean {
+  return recipe.wanted === true
 }
 
 export type Makeability = 'makeable' | 'almost makeable' | 'neither'
@@ -55,7 +60,7 @@ export interface RecipeMakeability {
 const ALMOST_MAKEABLE_MAX_MISSING = 2
 
 export function classifyRecipe(recipe: recipes.Recipe, items: ItemsById): RecipeMakeability {
-  const statuses = recipe.ingredients.map((ingredient) => classifyIngredient(ingredient, items, recipe.wanted === true))
+  const statuses = recipe.ingredients.map((ingredient) => classifyIngredient(ingredient, items, isWanted(recipe)))
   const missingIngredients = recipe.ingredients.flatMap((ingredient, i) => {
     const status = statuses[i]
     return status?.kind === 'missing' ? [{ ingredient, reason: status.reason }] : []

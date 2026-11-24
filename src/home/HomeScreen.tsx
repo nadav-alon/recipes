@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import type { ItemsPort } from '../items/items-port.ts'
 import { useItemsById } from '../items/use-items-by-id.ts'
 import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
+import { isWanted } from '../recipes/makeability.ts'
 import { navigate, NEW_RECIPE_HREF, recipeHref } from '../routes.ts'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
 import { AlertBanner } from 'household-ui/ui/AlertBanner.tsx'
@@ -94,7 +95,7 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
               supporting={showMissing ? missingLabel(classification) : undefined}
               trailing={
                 <>
-                  {entry.recipe.wanted === true && <span class="wanted-tag">Want to make</span>}
+                  {isWanted(entry.recipe) && <span class="wanted-tag">Want to make</span>}
                   <ChevronRight aria-hidden="true" data-testid="recipe-row-chevron" />
                 </>
               }

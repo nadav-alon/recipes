@@ -11,7 +11,7 @@ import type { ItemsPort } from '../items/items-port.ts'
 import { BackButton } from '../shell/BackButton.tsx'
 import { HOME_HREF, addToCatalogueHref, navigate } from '../routes.ts'
 import type { RecipeId } from './recipe-store.ts'
-import { classifyIngredient, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
+import { classifyIngredient, isWanted, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
 
 export interface RecipeViewProps {
   /** The Recipe's id, which the Catalogue's return URL names. */
@@ -130,7 +130,7 @@ function IngredientLine({
         disabled={busy}
         onClick={() => onActuallyOut({ ingredientName: ingredient.name, itemId: ingredient.itemId!, previous: item.state })}
       />
-    ) : status.kind === 'missing' && status.reason === 'unlinked' && catalogueHref !== undefined ? (
+    ) : ingredient.itemId === undefined && status.kind !== 'assumed' && catalogueHref !== undefined ? (
       <a href={catalogueHref} aria-label={`Add ${ingredient.name.trim()} to Catalogue`}>
         Add to Catalogue
       </a>
@@ -182,7 +182,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
     if (wantedPending) return
     setFailure(null)
     setWantedPending(true)
-    onSetWanted(recipe.wanted !== true)
+    onSetWanted(!isWanted(recipe))
       .catch((error: unknown) => setFailure(messageOf(error)))
       .finally(() => setWantedPending(false))
   }
@@ -226,7 +226,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
           <input
             type="checkbox"
             role="switch"
-            checked={recipe.wanted === true}
+            checked={isWanted(recipe)}
             disabled={wantedPending}
             onChange={toggleWanted}
           />
@@ -248,7 +248,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
                   ingredient={ingredient}
                   catalogueHref={ingredient.name.trim() === '' ? undefined : addToCatalogueHref(recipeId, index, ingredient.name.trim())}
                   items={items}
-                  wanted={recipe.wanted === true}
+                  wanted={isWanted(recipe)}
                   busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
                   onActuallyOut={markOut}
                 />

@@ -18,22 +18,22 @@ const items: ItemsById = new Map([
 
 describe('classifyIngredient', () => {
   it('is at home for an Item that is enough', () => {
-    expect(classifyIngredient(ingredient({ itemId: id('flour') }), items)).toEqual({ kind: 'at home', runningLow: false })
+    expect(classifyIngredient(ingredient({ itemId: id('flour') }), items, false)).toEqual({ kind: 'at home', runningLow: false })
   })
 
   it('is at home and running low for an Item that is running low', () => {
-    expect(classifyIngredient(ingredient({ itemId: id('milk') }), items)).toEqual({
+    expect(classifyIngredient(ingredient({ itemId: id('milk') }), items, false)).toEqual({
       kind: 'at home',
       runningLow: true,
     })
   })
 
   it('is Assumed for a marked Ingredient', () => {
-    expect(classifyIngredient(ingredient({ assumed: true }), items)).toEqual({ kind: 'assumed' })
+    expect(classifyIngredient(ingredient({ assumed: true }), items, false)).toEqual({ kind: 'assumed' })
   })
 
   it('is Missing as Unlinked with no Item and not Assumed', () => {
-    expect(classifyIngredient(ingredient(), items)).toEqual({ kind: 'missing', reason: 'unlinked' })
+    expect(classifyIngredient(ingredient(), items, false)).toEqual({ kind: 'missing', reason: 'unlinked' })
   })
 
   it('is Bought, not Missing, for an Unlinked Ingredient marked bought on a Wanted Recipe', () => {
@@ -49,7 +49,7 @@ describe('classifyIngredient', () => {
   })
 
   it('is Missing when the Item is out', () => {
-    expect(classifyIngredient(ingredient({ itemId: id('eggs') }), items)).toEqual({
+    expect(classifyIngredient(ingredient({ itemId: id('eggs') }), items, false)).toEqual({
       kind: 'missing',
       reason: 'item out',
     })
@@ -57,7 +57,7 @@ describe('classifyIngredient', () => {
 
   it('is Missing as soft-deleted when the Item is soft-deleted, whatever its State', () => {
     for (const itemId of ['gone', 'out-and-gone']) {
-      expect(classifyIngredient(ingredient({ itemId: id(itemId) }), items)).toEqual({
+      expect(classifyIngredient(ingredient({ itemId: id(itemId) }), items, false)).toEqual({
         kind: 'missing',
         reason: 'item soft-deleted',
       })
@@ -65,7 +65,7 @@ describe('classifyIngredient', () => {
   })
 
   it('is Missing as soft-deleted when the linked id is absent from the Items', () => {
-    expect(classifyIngredient(ingredient({ itemId: id('nowhere') }), items)).toEqual({
+    expect(classifyIngredient(ingredient({ itemId: id('nowhere') }), items, false)).toEqual({
       kind: 'missing',
       reason: 'item soft-deleted',
     })
@@ -134,8 +134,13 @@ describe('classifyRecipe missingIngredients', () => {
 })
 
 describe('classifyRecipe with a Bought Ingredient', () => {
-  const recipe = (wanted: boolean): recipes.Recipe =>
-    ({ title: 'Pancakes', wanted, ingredients: [ingredient({ bought: true })], steps: [] }) as unknown as recipes.Recipe
+  const recipe = (wanted: boolean): recipes.Recipe => ({
+    title: 'Pancakes',
+    ...(wanted ? { wanted: true as const } : {}),
+    ingredients: [ingredient({ bought: true })],
+    prepSteps: [],
+    steps: [],
+  })
 
   it('is Makeable while Wanted', () => {
     const result = classifyRecipe(recipe(true), items)

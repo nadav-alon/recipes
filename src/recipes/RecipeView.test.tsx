@@ -137,6 +137,13 @@ describe('RecipeView ingredients', () => {
     expect(line('Salt')).not.toHaveTextContent('Not in the Catalogue')
   })
 
+  it('still offers Add to Catalogue on a Bought Ingredient', () => {
+    render(
+      <RecipeView recipeId={rid} recipe={recipe({ wanted: true, ingredients: [{ name: 'Salt', bought: true }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
+    )
+    expect(screen.getByRole('link', { name: 'Add Salt to Catalogue' })).toBeInTheDocument()
+  })
+
   it('flags an Assumed Ingredient', () => {
     render(
       <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Water', assumed: true }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
