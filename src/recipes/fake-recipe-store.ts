@@ -63,8 +63,9 @@ export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): FakeRecip
       return id
     },
     async update(id, recipe) {
-      const fields = validatedFields(recipe)
-      existing(id).recipe = fields
+      const { wanted: _ignored, ...fields } = validatedFields(recipe)
+      const entry = existing(id)
+      entry.recipe = entry.recipe.wanted === true ? { ...fields, wanted: true } : fields
       notify()
     },
     async softDelete(id) {

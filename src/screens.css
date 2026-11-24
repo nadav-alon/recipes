@@ -186,13 +186,13 @@ main.screen.sign-in .ui-button {
 }
 
 /* The Recipe view's "Want to make" switch and the tag on a Wanted Recipe's row on Home. */
-.want-to-make {
+.wanted-switch {
   display: flex;
   align-items: center;
   gap: var(--md-sys-spacing-2);
 }
 
-.recipe-wanted {
+.wanted-tag {
   padding: 0 var(--md-sys-spacing-2);
   border-radius: var(--md-sys-shape-corner-extra-small);
   background: var(--md-sys-color-secondary-container);

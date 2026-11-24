@@ -50,7 +50,8 @@ export interface RecipeStore {
 
   /**
    * Replaces the Recipe stored under `id`; fields the schema knows that `recipe` lacks are removed. Whether the
-   * Recipe is soft-deleted is left as it was. Rejects with `InvalidRecipeError` before any write.
+   * Recipe is soft-deleted, and whether it is Wanted, are left as they were: `setWanted` is the only writer of `wanted`,
+   * so a save from a stale copy cannot un-mark or re-mark it. Ingredients are replaced whole, `bought` included. Rejects with `InvalidRecipeError` before any write.
    */
   update(id: RecipeId, recipe: Recipe): Promise<void>
 
@@ -95,8 +96,8 @@ function withoutUndefined<T>(value: T): T {
   return value
 }
 
-/** Every field the schema knows, bar `deletedAt`; `update` removes those a Recipe lacks. */
-const SCHEMA_FIELDS = Object.keys(recipes.recipeSchema.shape).filter((f) => f !== 'deletedAt')
+/** Every field the schema knows, bar `deletedAt` and `wanted`, which `update` never writes; it removes those a Recipe lacks. */
+const SCHEMA_FIELDS = Object.keys(recipes.recipeSchema.shape).filter((f) => f !== 'deletedAt' && f !== 'wanted')
 
 export function firestoreRecipeStore(db: Firestore): RecipeStore {
   const recipesCollection = collection(db, recipes.RECIPES_COLLECTION)
@@ -126,7 +127,7 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
     },
 
     async update(id, recipe) {
-      const fields = validatedFields(recipe)
+      const { wanted: _wanted, ...fields } = validatedFields(recipe)
       const removed = Object.fromEntries(SCHEMA_FIELDS.filter((f) => !(f in fields)).map((f) => [f, deleteField()]))
       await updateDoc(doc(recipesCollection, id), { ...fields, ...removed })
     },

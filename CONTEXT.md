@@ -70,5 +70,7 @@ A Recipe with one or two Missing Ingredients, ranked by how few.
 
 **Wanted Recipe**:
 A Recipe marked "want to make". The mark is stored on the Recipe, so the whole Household shares it,
-and it is cleared only by hand: nothing un-marks a Recipe on its own.
+and it is cleared only by hand: nothing un-marks a Recipe on its own, and saving an edit to the Recipe
+never changes it. Clearing the mark also clears every Ingredient's _bought_ flag, the per-Ingredient tick that
+records it as bought while the Recipe is Wanted.
 _Avoid_: favourite, planned, queued

@@ -22,8 +22,12 @@ export interface RecipeViewProps {
   itemsPort: ItemsPort
   /** Where the link to the Recipe's editor points. */
   editHref: string
-  /** Writes the Recipe Wanted or not Wanted; resolves once the server has it, so it may stay pending offline. */
+  /** Writes the Recipe Wanted or not Wanted; resolves once the server has it; rejects offline. */
   onSetWanted: (wanted: boolean) => Promise<void>
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 /** What "actually out" changed, so Undo can put the Item back. */
@@ -158,7 +162,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
     itemsPort
       .setItemState(itemId, state)
       .then(then, (error: unknown) => {
-        setFailure(error instanceof Error ? error.message : String(error))
+        setFailure(messageOf(error))
       })
       .finally(() => {
         const next = new Set(inFlightRef.current)
@@ -166,6 +170,16 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
         inFlightRef.current = next
         setInFlight(next)
       })
+  }
+
+  const [wantedPending, setWantedPending] = useState(false)
+  const toggleWanted = () => {
+    if (wantedPending) return
+    setFailure(null)
+    setWantedPending(true)
+    onSetWanted(recipe.wanted !== true)
+      .catch((error: unknown) => setFailure(messageOf(error)))
+      .finally(() => setWantedPending(false))
   }
 
   const latestItems = useRef(items)
@@ -203,15 +217,13 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
           </Button>
         </TopAppBarActions>
         {failure !== null && <AlertBanner message={failure} />}
-        <label class="want-to-make">
+        <label class="wanted-switch">
           <input
             type="checkbox"
             role="switch"
             checked={recipe.wanted === true}
-            onChange={() => {
-              setFailure(null)
-              onSetWanted(recipe.wanted !== true).catch((error: unknown) => setFailure(error instanceof Error ? error.message : String(error)))
-            }}
+            disabled={wantedPending}
+            onChange={toggleWanted}
           />
           Want to make
         </label>

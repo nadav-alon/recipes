@@ -180,6 +180,21 @@ describe('firestoreRecipeStore', () => {
         })
       })
 
+    it('is not undone by an update from a copy made before it', async () => {
+      const id = await store.create(pancakes)
+      await waitForPendingWrites(alice)
+      await store.setWanted(id, true)
+      await recipeWhen((r) => r.wanted === true)
+
+      await store.update(id, { ...pancakes, title: 'Stale save' })
+      expect((await recipeWhen((r) => r.title === 'Stale save')).wanted).toBe(true)
+
+      await store.setWanted(id, false)
+      await recipeWhen((r) => r.wanted === undefined)
+      await store.update(id, { ...pancakes, wanted: true, title: 'Stale again' })
+      expect((await recipeWhen((r) => r.title === 'Stale again')).wanted).toBeUndefined()
+    })
+
     it('marks a Recipe Wanted and, marking it not Wanted, clears every Ingredient\'s bought', async () => {
       const id = await store.create({ ...pancakes, ingredients: [{ name: 'Salt' }] })
       await waitForPendingWrites(alice)
