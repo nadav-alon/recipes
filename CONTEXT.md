@@ -44,7 +44,7 @@ _Avoid_: component
 An Ingredient pointing at an Item, so the Item's State speaks for it.
 
 **Unlinked Ingredient**:
-An Ingredient with no Item. Counts as Missing unless it is Assumed. Never auto-creates an Item; it
+An Ingredient with no Item. Counts as Missing unless it is Assumed, or Bought on a Wanted Recipe. Never auto-creates an Item; it
 offers creating one in the Catalogue, which links back to it.
 
 **Assumed Ingredient**:
@@ -61,8 +61,8 @@ counts as at home, and the Recipe shows that Ingredient flagged.
 _Avoid_: needed, out (for the Ingredient)
 
 **Bought**:
-An Unlinked Ingredient of a Wanted Recipe that has been ticked as bought, on the Catalogue's Shopping
-list. It counts as at home, and the Recipe shows it as bought rather than flagged. It lasts only while
+An Unlinked Ingredient of a Wanted Recipe that has been marked bought on the Catalogue's Shopping
+list. It counts as at home, and the Recipe marks it Bought rather than Missing. It lasts only while
 the Recipe is Wanted: clearing the Wanted mark clears it, and the Ingredient is Missing again.
 _Avoid_: purchased, ticked
 
