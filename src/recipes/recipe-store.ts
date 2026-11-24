@@ -1,5 +1,6 @@
 import { collection, deleteField, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Firestore } from 'firebase/firestore'
 import { recipes } from 'data-platform'
+import { setRecipeWanted } from 'data-platform/client'
 
 export type Recipe = recipes.Recipe
 export type RecipeId = recipes.RecipeId
@@ -58,6 +59,13 @@ export interface RecipeStore {
 
   /** Clears `deletedAt`, so the Recipe is listed again under the same id. */
   restore(id: RecipeId): Promise<void>
+
+  /**
+   * Sets the Recipe Wanted, or not Wanted; the mark is stored on the Recipe, so the whole Household
+   * sees it. Marking it not Wanted also clears `bought` from every Ingredient. Rejects for a Recipe
+   * that does not exist or is soft-deleted.
+   */
+  setWanted(id: RecipeId, wanted: boolean): Promise<void>
 }
 
 /** Checks `recipe` against data-platform's schema and returns it without `undefined` fields, which Firestore refuses. */
@@ -129,6 +137,10 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
 
     async restore(id) {
       await updateDoc(doc(recipesCollection, id), { deletedAt: deleteField() })
+    },
+
+    async setWanted(id, wanted) {
+      await setRecipeWanted(db, id, wanted)
     },
   }
 }

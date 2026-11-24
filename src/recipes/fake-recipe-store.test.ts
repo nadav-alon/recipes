@@ -30,6 +30,21 @@ describe('fakeRecipeStore', () => {
     expect(onChange.mock.lastCall?.[0]).toHaveLength(2)
   })
 
+  it('marks a Recipe Wanted, and clears every Ingredient\'s bought when it is marked not Wanted', async () => {
+    const id = recipes.recipeId('pancakes')
+    const store = fakeRecipeStore([{ id, recipe: { ...pancakes, ingredients: [{ name: 'Salt', bought: true }] } }])
+    const onChange = vi.fn()
+    store.watch(onChange)
+
+    await store.setWanted(id, true)
+    expect(onChange.mock.lastCall?.[0][0].recipe.wanted).toBe(true)
+
+    await store.setWanted(id, false)
+    const recipe = onChange.mock.lastCall?.[0][0].recipe
+    expect(recipe).not.toHaveProperty('wanted')
+    expect(recipe.ingredients).toEqual([{ name: 'Salt' }])
+  })
+
   it('refuses an invalid Recipe, as the real store does', async () => {
     const store = fakeRecipeStore()
 

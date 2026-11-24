@@ -77,5 +77,14 @@ export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): FakeRecip
       existing(id).deleted = false
       notify()
     },
+    async setWanted(id, wanted) {
+      const entry = existing(id)
+      if (entry.deleted) throw new Error(`Recipe ${id} is soft-deleted`)
+      const { wanted: _was, ...rest } = entry.recipe
+      entry.recipe = wanted
+        ? { ...rest, wanted: true }
+        : { ...rest, ingredients: rest.ingredients.map(({ bought: _bought, ...ingredient }) => ingredient) }
+      notify()
+    },
   }
 }

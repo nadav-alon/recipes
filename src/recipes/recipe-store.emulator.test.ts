@@ -2,6 +2,7 @@
 import { disableNetwork, doc, getDoc, type Firestore } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { core } from 'data-platform'
+import { setIngredientBought } from 'data-platform/client'
 import { startEmulator, type Emulator } from '../test/emulator.ts'
 import { firestoreRecipeStore, InvalidRecipeError, type Recipe, type RecipeEntry, type RecipeStore } from './recipe-store.ts'
 
@@ -163,6 +164,21 @@ describe('firestoreRecipeStore', () => {
       await store.update(id, { ...pancakes, title: 'Renamed' })
 
       expect(await current()).toEqual([])
+    })
+  })
+
+  describe('setWanted', () => {
+    it('marks a Recipe Wanted and, marking it not Wanted, clears every Ingredient\'s bought', async () => {
+      const id = await store.create({ ...pancakes, ingredients: [{ name: 'Salt' }] })
+
+      await store.setWanted(id, true)
+      expect((await current())[0]?.recipe.wanted).toBe(true)
+
+      await setIngredientBought(alice, id, 0, true)
+      await store.setWanted(id, false)
+      const [entry] = await current()
+      expect(entry?.recipe.wanted).toBeUndefined()
+      expect(entry?.recipe.ingredients[0]?.bought).toBeUndefined()
     })
   })
 })
