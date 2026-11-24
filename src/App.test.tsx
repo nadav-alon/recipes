@@ -39,6 +39,17 @@ describe('App', () => {
     expect(location.hash).toBe(editRecipeHref(r1))
   })
 
+  it('switches "Want to make" on and off for a Recipe through the store, live', async () => {
+    location.hash = recipeHref(r1)
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
+    const toggle = screen.getByRole('switch', { name: 'Want to make' })
+    expect(toggle).not.toBeChecked()
+    fireEvent.click(toggle)
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Want to make' })).toBeChecked())
+    fireEvent.click(screen.getByRole('switch', { name: 'Want to make' }))
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Want to make' })).not.toBeChecked())
+  })
+
   it('opens a Recipe from its link on Home, then its editor from the Edit button', async () => {
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
     fireEvent.click(await screen.findByRole('link', { name: 'Omelette' }))

@@ -63,8 +63,9 @@ export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): FakeRecip
       return id
     },
     async update(id, recipe) {
-      const fields = validatedFields(recipe)
-      existing(id).recipe = fields
+      const { wanted: _ignored, ...fields } = validatedFields(recipe)
+      const entry = existing(id)
+      entry.recipe = entry.recipe.wanted === true ? { ...fields, wanted: true } : fields
       notify()
     },
     async softDelete(id) {
@@ -75,6 +76,15 @@ export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): FakeRecip
     },
     async restore(id) {
       existing(id).deleted = false
+      notify()
+    },
+    async setWanted(id, wanted) {
+      const entry = existing(id)
+      if (entry.deleted) throw new Error(`Recipe ${id} is soft-deleted`)
+      const { wanted: _was, ...rest } = entry.recipe
+      entry.recipe = wanted
+        ? { ...rest, wanted: true }
+        : { ...rest, ingredients: rest.ingredients.map(({ bought: _bought, ...ingredient }) => ingredient) }
       notify()
     },
   }

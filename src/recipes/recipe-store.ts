@@ -1,5 +1,6 @@
 import { collection, deleteField, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Firestore } from 'firebase/firestore'
 import { recipes } from 'data-platform'
+import { setRecipeWanted } from 'data-platform/client'
 
 export type Recipe = recipes.Recipe
 export type RecipeId = recipes.RecipeId
@@ -49,7 +50,8 @@ export interface RecipeStore {
 
   /**
    * Replaces the Recipe stored under `id`; fields the schema knows that `recipe` lacks are removed. Whether the
-   * Recipe is soft-deleted is left as it was. Rejects with `InvalidRecipeError` before any write.
+   * Recipe is soft-deleted, and whether it is Wanted, are left as they were: `setWanted` is the only writer of `wanted`,
+   * so a save from a stale copy cannot un-mark or re-mark it. Ingredients are replaced whole, `bought` included. Rejects with `InvalidRecipeError` before any write.
    */
   update(id: RecipeId, recipe: Recipe): Promise<void>
 
@@ -58,6 +60,13 @@ export interface RecipeStore {
 
   /** Clears `deletedAt`, so the Recipe is listed again under the same id. */
   restore(id: RecipeId): Promise<void>
+
+  /**
+   * Sets the Recipe Wanted, or not Wanted; the mark is stored on the Recipe, so the whole Household
+   * sees it. Marking it not Wanted also clears `bought` from every Ingredient. Rejects for a Recipe
+   * that does not exist or is soft-deleted.
+   */
+  setWanted(id: RecipeId, wanted: boolean): Promise<void>
 }
 
 /** Checks `recipe` against data-platform's schema and returns it without `undefined` fields, which Firestore refuses. */
@@ -87,8 +96,8 @@ function withoutUndefined<T>(value: T): T {
   return value
 }
 
-/** Every field the schema knows, bar `deletedAt`; `update` removes those a Recipe lacks. */
-const SCHEMA_FIELDS = Object.keys(recipes.recipeSchema.shape).filter((f) => f !== 'deletedAt')
+/** Every field the schema knows, bar `deletedAt` and `wanted`, which `update` never writes; it removes those a Recipe lacks. */
+const SCHEMA_FIELDS = Object.keys(recipes.recipeSchema.shape).filter((f) => f !== 'deletedAt' && f !== 'wanted')
 
 export function firestoreRecipeStore(db: Firestore): RecipeStore {
   const recipesCollection = collection(db, recipes.RECIPES_COLLECTION)
@@ -118,7 +127,7 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
     },
 
     async update(id, recipe) {
-      const fields = validatedFields(recipe)
+      const { wanted: _wanted, ...fields } = validatedFields(recipe)
       const removed = Object.fromEntries(SCHEMA_FIELDS.filter((f) => !(f in fields)).map((f) => [f, deleteField()]))
       await updateDoc(doc(recipesCollection, id), { ...fields, ...removed })
     },
@@ -129,6 +138,10 @@ export function firestoreRecipeStore(db: Firestore): RecipeStore {
 
     async restore(id) {
       await updateDoc(doc(recipesCollection, id), { deletedAt: deleteField() })
+    },
+
+    async setWanted(id, wanted) {
+      await setRecipeWanted(db, id, wanted)
     },
   }
 }

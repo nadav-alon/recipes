@@ -22,6 +22,12 @@ export interface RecipeViewProps {
   itemsPort: ItemsPort
   /** Where the link to the Recipe's editor points. */
   editHref: string
+  /** Writes the Recipe Wanted or not Wanted; resolves once the server has it; rejects offline. */
+  onSetWanted: (wanted: boolean) => Promise<void>
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 /** What "actually out" changed, so Undo can put the Item back. */
@@ -141,7 +147,7 @@ function IngredientLine({
   )
 }
 
-export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: RecipeViewProps) {
+export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSetWanted }: RecipeViewProps) {
   const [inFlight, setInFlight] = useState<ReadonlySet<core.ItemId>>(new Set())
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -156,7 +162,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
     itemsPort
       .setItemState(itemId, state)
       .then(then, (error: unknown) => {
-        setFailure(error instanceof Error ? error.message : String(error))
+        setFailure(messageOf(error))
       })
       .finally(() => {
         const next = new Set(inFlightRef.current)
@@ -164,6 +170,16 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
         inFlightRef.current = next
         setInFlight(next)
       })
+  }
+
+  const [wantedPending, setWantedPending] = useState(false)
+  const toggleWanted = () => {
+    if (wantedPending) return
+    setFailure(null)
+    setWantedPending(true)
+    onSetWanted(recipe.wanted !== true)
+      .catch((error: unknown) => setFailure(messageOf(error)))
+      .finally(() => setWantedPending(false))
   }
 
   const latestItems = useRef(items)
@@ -201,6 +217,16 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref }: Rec
           </Button>
         </TopAppBarActions>
         {failure !== null && <AlertBanner message={failure} />}
+        <label class="wanted-switch">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={recipe.wanted === true}
+            disabled={wantedPending}
+            onChange={toggleWanted}
+          />
+          Want to make
+        </label>
         {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
         {recipe.sourceUrl !== undefined && (
           <p>

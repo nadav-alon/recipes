@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/preact'
+import { act, render, screen, waitFor, within } from '@testing-library/preact'
 import { fireEvent } from '@testing-library/preact'
 import { useEffect, useState } from 'preact/hooks'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -13,6 +13,9 @@ import { expectAlertBanner } from '../test/alert-banner.ts'
 
 const id = (value: string) => value as core.ItemId
 const rid = recipes.recipeId('r1')
+const noop = async () => {}
+/** The props every render needs but most tests do not exercise. */
+const defaults = { editHref: '#/edit', onSetWanted: noop }
 
 const items: ItemsById = new Map([
   [id('flour'), { state: 'enough' }],
@@ -43,7 +46,7 @@ describe('RecipeView ingredients', () => {
         })}
         items={items}
         itemsPort={fakeItemsPort([])}
-        editHref="#/edit"
+        {...defaults}
       />,
     )
     expect(line('Flour')).toHaveTextContent('200 g')
@@ -63,41 +66,41 @@ describe('RecipeView ingredients', () => {
     [0, 'cup', '0 cups'],
   ] as const)('writes %s %s as "%s"', (quantity, unit, text) => {
     render(
-      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Thing', quantity, unit }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Thing', quantity, unit }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
     )
     expect(within(line('Thing')).getByText(text)).toBeInTheDocument()
   })
 
   it('writes an amount with no unit as the quantity alone', () => {
     render(
-      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Thing', quantity: 3 }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Thing', quantity: 3 }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
     )
     expect(line('Thing')).toHaveTextContent('3')
     expect(line('Thing')).not.toHaveTextContent(/\b3 \w/)
   })
 
   it('flags an Unlinked Ingredient as not in the Catalogue', () => {
-    render(<RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Salt' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Salt' }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />)
     expect(within(line('Salt')).getByText('Not in the Catalogue')).toHaveClass('ingredient-flag--missing')
   })
 
   it('flags an Ingredient whose Item is out as Missing', () => {
     render(
-      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
     )
     expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag--missing')
   })
 
   it('flags an Ingredient whose Item the Catalogue deleted as Missing', () => {
     render(
-      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Old', itemId: id('gone') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Old', itemId: id('gone') }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
     )
     expect(within(line('Old')).getByText('Deleted in the Catalogue')).toHaveClass('ingredient-flag--missing')
   })
 
   it('sets the flag apart from the amount and prep note', () => {
     render(
-      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs'), quantity: 2, unit: 'piece', prepNote: 'beaten' }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs'), quantity: 2, unit: 'piece', prepNote: 'beaten' }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
     )
     expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag')
     expect(within(line('Eggs')).getByText('2 pieces, beaten')).toBeInTheDocument()
@@ -110,7 +113,7 @@ describe('RecipeView ingredients', () => {
         recipe={recipe({ ingredients: [{ name: 'Eggs', itemId: id('eggs') }, { name: 'Milk', itemId: id('milk') }, { name: 'Water', assumed: true }] })}
         items={items}
         itemsPort={fakeItemsPort([])}
-        editHref="#/edit"
+        {...defaults}
       />,
     )
     expect(within(line('Eggs')).getByText('Out')).toHaveClass('ingredient-flag--missing')
@@ -120,7 +123,7 @@ describe('RecipeView ingredients', () => {
 
   it('flags an Ingredient whose Item is running low', () => {
     render(
-      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Milk', itemId: id('milk') }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Milk', itemId: id('milk') }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
     )
     expect(line('Milk')).toHaveTextContent('Running low')
     expect(line('Milk')).not.toHaveTextContent('Missing')
@@ -128,7 +131,7 @@ describe('RecipeView ingredients', () => {
 
   it('flags an Assumed Ingredient', () => {
     render(
-      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Water', assumed: true }] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />,
+      <RecipeView recipeId={rid} recipe={recipe({ ingredients: [{ name: 'Water', assumed: true }] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />,
     )
     expect(line('Water')).toHaveTextContent('Assumed')
   })
@@ -142,7 +145,7 @@ describe('RecipeView sections', () => {
         recipe={recipe({ prepSteps: ['Sift the flour'], steps: ['Whisk', 'Fry'] })}
         items={items}
         itemsPort={fakeItemsPort([])}
-        editHref="#/edit"
+        {...defaults}
       />,
     )
     const prep = screen.getByRole('heading', { name: 'Prep Steps' })
@@ -159,7 +162,7 @@ describe('RecipeView sections', () => {
         recipe={recipe({ ingredients: [{ name: 'Flour', itemId: id('flour') }], prepSteps: ['Sift'], steps: ['Fry'] })}
         items={items}
         itemsPort={fakeItemsPort([])}
-        editHref="#/edit"
+        {...defaults}
       />,
     )
     const heading = screen.getByRole('heading', { name: 'Ingredients' })
@@ -169,17 +172,17 @@ describe('RecipeView sections', () => {
   })
 
   it('leaves out the Ingredients section when there are none', () => {
-    render(<RecipeView recipeId={rid} recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />)
     expect(screen.queryByRole('heading', { name: 'Ingredients' })).toBeNull()
   })
 
   it('leaves out the Steps section when there are none', () => {
-    render(<RecipeView recipeId={rid} recipe={recipe({ prepSteps: ['Sift'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe({ prepSteps: ['Sift'] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />)
     expect(screen.queryByRole('heading', { name: 'Steps' })).toBeNull()
   })
 
   it('leaves out the Prep Steps section when there are none', () => {
-    render(<RecipeView recipeId={rid} recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe({ steps: ['Fry'] })} items={items} itemsPort={fakeItemsPort([])} {...defaults} />)
     expect(screen.queryByRole('heading', { name: 'Prep Steps' })).toBeNull()
   })
 
@@ -190,7 +193,7 @@ describe('RecipeView sections', () => {
         recipe={recipe({ servings: 4, sourceUrl: 'https://example.com/p', notes: 'Rest the batter' })}
         items={items}
         itemsPort={fakeItemsPort([])}
-        editHref="#/edit"
+        {...defaults}
       />,
     )
     expect(screen.getByText(/Servings: 4/)).toBeInTheDocument()
@@ -199,14 +202,14 @@ describe('RecipeView sections', () => {
   })
 
   it('leaves out Servings, the source link and notes when absent', () => {
-    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} {...defaults} />)
     expect(screen.queryByText(/Servings/)).toBeNull()
     expect(screen.queryByRole('link', { name: 'Source' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Notes' })).toBeNull()
   })
 
   it('opens the editor from an Edit button in the top app bar', () => {
-    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/recipes/r1/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/recipes/r1/edit" onSetWanted={noop} />)
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Edit' }))
     expect(location.hash).toBe('#/recipes/r1/edit')
   })
@@ -236,7 +239,7 @@ describe('RecipeView actually out', () => {
         ),
       [port],
     )
-    return <RecipeView recipeId={rid} recipe={recipe({ ingredients })} items={current} itemsPort={port} editHref="#/edit" />
+    return <RecipeView recipeId={rid} recipe={recipe({ ingredients })} items={current} itemsPort={port} {...defaults} />
   }
 
   const renderWith = (port: FakeItemsPort, ...ingredients: recipes.Ingredient[]) =>
@@ -379,7 +382,7 @@ async function click(element: HTMLElement) {
 
 describe('RecipeView top app bar', () => {
   it('titles the bar with the Recipe and offers a back arrow', () => {
-    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} editHref="#/edit" />)
+    render(<RecipeView recipeId={rid} recipe={recipe()} items={items} itemsPort={fakeItemsPort([])} {...defaults} />)
     const bar = within(screen.getByRole('banner'))
     expect(bar.getByRole('heading', { name: 'Pancakes' })).toBeInTheDocument()
     expect(bar.getByRole('button', { name: 'Back' })).toBeInTheDocument()
@@ -394,12 +397,59 @@ describe('RecipeView Add to Catalogue', () => {
         recipe={recipe({ ingredients: [{ name: 'Flour', itemId: id('flour') }, { name: 'Salt' }, { name: 'Pepper', assumed: true }, { name: 'Eggs', itemId: id('eggs') }] })}
         items={items}
         itemsPort={fakeItemsPort([])}
-        editHref="#/edit"
+        {...defaults}
       />,
     )
     expect(screen.getAllByText('Add to Catalogue')).toHaveLength(1)
     const href = within(line('Salt')).getByText('Add to Catalogue').getAttribute('href')!
     expect(href).toBe(addToCatalogueHref(rid, 1, 'Salt'))
     expect(href).toMatch(/^\/home-catalogue\/#\/items\?add=Salt&return=/)
+  })
+})
+
+describe('RecipeView Want to make', () => {
+  const view = (fields: Partial<recipes.Recipe>, onSetWanted: (wanted: boolean) => Promise<void>) =>
+    render(<RecipeView recipeId={rid} recipe={recipe(fields)} items={items} itemsPort={fakeItemsPort([])} {...defaults} onSetWanted={onSetWanted} />)
+
+  it('shows the switch off for a Recipe that is not Wanted, and on for one that is', () => {
+    const { unmount } = view({}, noop)
+    expect(screen.getByRole('switch', { name: 'Want to make' })).not.toBeChecked()
+    unmount()
+    view({ wanted: true }, noop)
+    expect(screen.getByRole('switch', { name: 'Want to make' })).toBeChecked()
+  })
+
+  it('asks for the Recipe to be Wanted when switched on, and not Wanted when switched off', () => {
+    const calls: boolean[] = []
+    const onSetWanted = async (wanted: boolean) => void calls.push(wanted)
+    const { unmount } = view({}, onSetWanted)
+    fireEvent.click(screen.getByRole('switch', { name: 'Want to make' }))
+    unmount()
+    view({ wanted: true }, onSetWanted)
+    fireEvent.click(screen.getByRole('switch', { name: 'Want to make' }))
+    expect(calls).toEqual([true, false])
+  })
+
+  it('disables the switch while a write is pending, so a quick second click sends nothing', async () => {
+    const calls: boolean[] = []
+    let settle = () => {}
+    view({}, (wanted) => {
+      calls.push(wanted)
+      return new Promise<void>((resolve) => (settle = resolve))
+    })
+    const toggle = screen.getByRole('switch', { name: 'Want to make' })
+    fireEvent.click(toggle)
+    expect(toggle).toBeDisabled()
+    fireEvent.click(toggle)
+    expect(calls).toEqual([true])
+    settle()
+    await waitFor(() => expect(toggle).not.toBeDisabled())
+  })
+
+  it('says so when the write is refused', async () => {
+    view({}, () => Promise.reject(new Error('permission-denied')))
+    fireEvent.click(screen.getByRole('switch', { name: 'Want to make' }))
+    expectAlertBanner(await screen.findByRole('alert'))
+    expect(screen.getByRole('alert')).toHaveTextContent('permission-denied')
   })
 })
