@@ -11,7 +11,7 @@ import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
 import type { Recipe, RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
 import { linkUnlinkedIngredient } from './recipes/link-ingredient.ts'
-import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
+import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, navigate, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
 
 export interface AppProps {
   recipeStore: RecipeStore
@@ -147,6 +147,11 @@ function describeTarget(target: SaveTarget): { label: string; href: string } {
     : { label: 'Your edit to', href: editRecipeHref(target.id) }
 }
 
+/** Whether a click is a plain left click, one that follows a link in this tab rather than opening it elsewhere. */
+function isPlainClick(e: MouseEvent): boolean {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
+}
+
 /** Tells the user which saves were rejected after their editor had gone, each with the way back to the editor holding it. */
 function HeldSavesNotice({
   held,
@@ -168,8 +173,11 @@ function HeldSavesNotice({
             style={{ display: 'contents' }}
             onClick={(e) => {
               if (!(e.target instanceof Element) || e.target.closest('a') === null) return
-              // A click that opens the editor elsewhere leaves this tab's editor alone.
-              if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) onBackToEditor(entry)
+              // A click that opens the editor elsewhere leaves this tab's editor, and the browser's own handling, alone.
+              if (!isPlainClick(e)) return
+              e.preventDefault()
+              onBackToEditor(entry)
+              navigate(href)
             }}
           >
             <AlertBanner

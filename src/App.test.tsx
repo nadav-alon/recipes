@@ -138,6 +138,28 @@ describe('App', () => {
     await waitFor(() => expect(location.hash).toBe(HOME_HREF))
   })
 
+  it('goes back from a save made in an editor restored through Back to the editor to Home, with no duplicate Recipe entry', async () => {
+    const inner = store()
+    let refuse = true
+    const flaky = { ...inner, update: (...args: Parameters<typeof inner.update>) => (refuse ? Promise.reject(new Error('Permission denied')) : inner.update(...args)) }
+    location.hash = HOME_HREF
+    render(<App recipeStore={flaky} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('link', { name: 'Omelette' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }))
+    await waitFor(() => expect(location.hash).toBe(editRecipeHref(r1)))
+    fireEvent.input(await screen.findByLabelText('Title'), { target: { value: 'Frittata' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    fireEvent.click(await screen.findByRole('link', { name: 'Back to the editor' }))
+    await waitFor(() => expect(location.hash).toBe(editRecipeHref(r1)))
+    refuse = false
+    fireEvent.click(await screen.findByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+    history.back()
+    await waitFor(() => expect(location.hash).toBe(HOME_HREF))
+  })
+
   it('goes back from an editor left without saving to the Recipe, and from there to Home', async () => {
     location.hash = HOME_HREF
     render(<App recipeStore={store()} itemsPort={fakeItemsPort([])} />)
