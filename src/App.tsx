@@ -232,6 +232,10 @@ function CatalogueReturnScreen({
   const [notice, setNotice] = useState<string | null>(null)
   const handled = useRef(false)
   const entry = entries?.find((e) => e.id === id)
+  const back =
+    entry === undefined
+      ? { label: 'Back to Recipes', href: HOME_HREF }
+      : { label: 'Back to the Recipe', href: recipeHref(id) }
 
   useEffect(() => {
     if (entries === null || handled.current) return
@@ -240,7 +244,7 @@ function CatalogueReturnScreen({
     const clearItemId = () => history.replaceState(null, '', `${location.pathname}${location.hash}`)
     if (itemId === null) {
       clearItemId()
-      return navigateInPlace(entry === undefined ? HOME_HREF : recipeHref(id))
+      return navigateInPlace(back.href)
     }
     const unlinked = (why: string) => {
       clearItemId()
@@ -256,19 +260,13 @@ function CatalogueReturnScreen({
       },
       (error: Error) => setNotice(`The Catalogue added the Item ${itemId}, but it could not be linked: ${error.message}`),
     )
-  }, [entries, entry, id, ingredientIndex, name, recipeStore])
+  }, [entries, entry, back.href, id, ingredientIndex, name, recipeStore])
 
   if (failed) return <LoadFailed />
   if (notice !== null) {
     return (
       <main class="screen">
-        <AlertBanner
-          message={notice}
-          action={{
-            label: entry === undefined ? 'Back to Recipes' : 'Back to the Recipe',
-            href: entry === undefined ? HOME_HREF : recipeHref(id),
-          }}
-        />
+        <AlertBanner message={notice} action={back} />
       </main>
     )
   }
