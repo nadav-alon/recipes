@@ -11,7 +11,7 @@ import { HomeScreen } from './home/HomeScreen.tsx'
 import { RecipeView } from './recipes/RecipeView.tsx'
 import type { Recipe, RecipeEntry, RecipeId, RecipeStore } from './recipes/recipe-store.ts'
 import { linkUnlinkedIngredient } from './recipes/link-ingredient.ts'
-import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, navigate, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
+import { editRecipeHref, HOME_HREF, NEW_RECIPE_HREF, navigateInPlace, recipeHref, replaceRoutes, returnTo, useRoute } from './routes.ts'
 
 export interface AppProps {
   recipeStore: RecipeStore
@@ -107,7 +107,7 @@ export function App({ recipeStore, itemsPort }: AppProps) {
           held={shown}
           onDismiss={release}
           onBackToEditor={(entry) => {
-            // The action navigates to the URL the New Recipe editor may already be on, so reopen it on the held Recipe by hand.
+            // The link goes to the URL the New Recipe editor may already be on, so reopen it on the held Recipe by hand.
             if (entry.target.kind !== 'new') return
             restoreNext.current = entry
             if (route.screen === 'new-recipe') {
@@ -162,18 +162,22 @@ function HeldSavesNotice({
       {held.map((entry) => {
         const { label, href } = describeTarget(entry.target)
         return (
-          <AlertBanner
+          // The link has no handler of its own, so its click is heard here, where `display: contents` keeps the banner's layout.
+          <div
             key={entry.key}
-            message={`${label} ${entry.recipe.title} was not saved: ${entry.message}`}
-            action={{
-              label: 'Back to the editor',
-              onAction: () => {
-                onBackToEditor(entry)
-                navigate(href)
-              },
+            style={{ display: 'contents' }}
+            onClick={(e) => {
+              if (!(e.target instanceof Element) || e.target.closest('a') === null) return
+              // A click that opens the editor elsewhere leaves this tab's editor alone.
+              if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) onBackToEditor(entry)
             }}
-            onDismiss={() => onDismiss(entry)}
-          />
+          >
+            <AlertBanner
+              message={`${label} ${entry.recipe.title} was not saved: ${entry.message}`}
+              action={{ label: 'Back to the editor', href }}
+              onDismiss={() => onDismiss(entry)}
+            />
+          </div>
         )
       })}
     </>
