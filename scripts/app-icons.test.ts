@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { inflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { manifest } from '../src/pwa-manifest.ts'
+import { iconSpecs } from '../src/pwa-icons.ts'
 import { colourRoleHex, seedColour } from 'household-ui/ui/colourRoles.ts'
 import { SEED } from '../src/seed.ts'
 import { renderIcon } from './app-icons.ts'
@@ -51,15 +51,15 @@ function colours(png: Buffer): Set<string> {
 
 describe('PWA icons', () => {
   it('are the cooking pot rendered from its SVGs at every size the manifest lists, maskable included', () => {
-    expect(manifest.icons!.length).toBe(4)
-    for (const icon of manifest.icons!) {
-      expect(readFileSync(`public/${icon.src}`).equals(renderIcon(icon)), icon.src).toBe(true)
+    expect(iconSpecs.length).toBe(4)
+    for (const icon of iconSpecs) {
+      expect(readFileSync(`public/${icon.file}`).equals(renderIcon(icon)), icon.file).toBe(true)
     }
   })
 
   it('are never a single flat colour: the glyph stands out from the seed', () => {
-    for (const icon of manifest.icons!) {
-      expect(colours(readFileSync(`public/${icon.src}`)).size, icon.src).toBeGreaterThan(1)
+    for (const icon of iconSpecs) {
+      expect(colours(readFileSync(`public/${icon.file}`)).size, icon.file).toBeGreaterThan(1)
     }
   })
 
@@ -67,16 +67,16 @@ describe('PWA icons', () => {
     const [r, g, b] = Buffer.from(SEED.slice(1), 'hex')
     expect(g).toBeGreaterThan(r!)
     expect(g).toBeGreaterThan(b!)
-    for (const icon of manifest.icons!) {
-      const seen = colours(readFileSync(`public/${icon.src}`))
-      expect(seen, icon.src).toContain(seedPixel)
-      expect(seen, icon.src).toContain(glyphPixel)
+    for (const icon of iconSpecs) {
+      const seen = colours(readFileSync(`public/${icon.file}`))
+      expect(seen, icon.file).toContain(seedPixel)
+      expect(seen, icon.file).toContain(glyphPixel)
     }
   })
 
   it('keep the maskable glyph inside the 80% safe zone: everything outside that circle is the seed', () => {
-    for (const icon of manifest.icons!.filter((i) => i.purpose === 'maskable')) {
-      const { width, rows } = decode(readFileSync(`public/${icon.src}`))
+    for (const icon of iconSpecs.filter((i) => i.purpose === 'maskable')) {
+      const { width, rows } = decode(readFileSync(`public/${icon.file}`))
       const centre = width / 2
       let glyph = 0
       rows.forEach((row, y) => {
@@ -84,10 +84,10 @@ describe('PWA icons', () => {
           const inside = Math.hypot(x + 0.5 - centre, y + 0.5 - centre) <= 0.4 * width
           const pixel = row.subarray(x * 4, x * 4 + 4).toString('hex')
           if (inside && pixel !== seedPixel) glyph++
-          if (!inside) expect(pixel, `${icon.src} at ${x},${y}`).toBe(seedPixel)
+          if (!inside) expect(pixel, `${icon.file} at ${x},${y}`).toBe(seedPixel)
         }
       })
-      expect(glyph, icon.src).toBeGreaterThan(0)
+      expect(glyph, icon.file).toBeGreaterThan(0)
     }
   })
 })
