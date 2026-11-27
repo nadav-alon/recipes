@@ -12,9 +12,20 @@ const themeColour = (): Plugin => ({
   transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'theme-color', content: SEED }, injectTo: 'head' }],
 })
 
+/** Gives the favicon the manifest's content-versioned URL for the same icon, so it too tracks the icon's bytes. */
+const faviconVersion = (): Plugin => ({
+  name: 'favicon-version',
+  transformIndexHtml: (html) =>
+    html.replace(/(<link rel="icon"[^>]*href="[^"]*\/)(pwa-[^"?]+\.png)"/, (_, head: string, file: string) => {
+      const icon = manifest.icons!.find((i) => i.src.split('?')[0] === file)
+      if (!icon) throw new Error(`favicon ${file} is not a manifest icon`)
+      return `${head}${icon.src}"`
+    }),
+})
+
 export default defineConfig({
   base: '/recipes/',
-  plugins: [preact(), Icons({ compiler: 'jsx', jsx: 'preact', scale: 1 }), themeColour(), VitePWA({ registerType: 'autoUpdate', manifest })],
+  plugins: [preact(), Icons({ compiler: 'jsx', jsx: 'preact', scale: 1 }), themeColour(), faviconVersion(), VitePWA({ registerType: 'autoUpdate', manifest })],
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
