@@ -11,7 +11,7 @@ import type { ItemsPort } from '../items/items-port.ts'
 import { BackButton } from '../shell/BackButton.tsx'
 import { HOME_HREF, addToCatalogueHref, navigate } from '../routes.ts'
 import type { RecipeId } from './recipe-store.ts'
-import { classifyIngredient, isWanted, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
+import { classifyIngredient, isBought, isWanted, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
 
 export interface RecipeViewProps {
   /** The Recipe's id, which the Catalogue's return URL names. */
@@ -105,7 +105,7 @@ function IngredientLine({
   ingredient,
   catalogueHref,
   items,
-  wanted,
+  bought,
   busy,
   onActuallyOut,
 }: {
@@ -113,12 +113,12 @@ function IngredientLine({
   /** The Catalogue hand-off for an Unlinked Ingredient; absent when it has no name to hand over. */
   catalogueHref?: string
   items: ItemsById
-  /** Whether the Recipe is Wanted, which is when a bought Ingredient counts as at home. */
-  wanted: boolean
+  /** Whether the Ingredient is Bought on its Recipe, which is when an Unlinked one counts as at home. */
+  bought: boolean
   busy: boolean
   onActuallyOut: (marking: MarkedOut) => void
 }) {
-  const status = classifyIngredient(ingredient, items, wanted)
+  const status = classifyIngredient(ingredient, items, bought)
   const flagged = flag(status)
   const item = ingredient.itemId === undefined ? undefined : items.get(ingredient.itemId)
   const amount = joinParts([ingredient.quantity, unitText(ingredient.unit, ingredient.quantity)], ' ')
@@ -248,7 +248,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
                   ingredient={ingredient}
                   catalogueHref={ingredient.name.trim() === '' ? undefined : addToCatalogueHref(recipeId, index, ingredient.name.trim())}
                   items={items}
-                  wanted={isWanted(recipe)}
+                  bought={isBought(recipe, ingredient.name)}
                   busy={ingredient.itemId !== undefined && inFlight.has(ingredient.itemId)}
                   onActuallyOut={markOut}
                 />

@@ -195,18 +195,18 @@ describe('firestoreRecipeStore', () => {
       expect((await recipeWhen((r) => r.title === 'Stale again')).wanted).toBeUndefined()
     })
 
-    it('marks a Recipe Wanted and, marking it not Wanted, clears every Ingredient\'s bought', async () => {
+    it('marks a Recipe Wanted and, marking it not Wanted, clears boughtIngredients', async () => {
       const id = await store.create({ ...pancakes, ingredients: [{ name: 'Salt' }] })
       await waitForPendingWrites(alice)
 
       await store.setWanted(id, true)
       expect((await recipeWhen((r) => r.wanted === true)).wanted).toBe(true)
 
-      await setIngredientBought(alice, id, 0, true)
-      await recipeWhen((r) => r.ingredients[0]?.bought === true)
+      await setIngredientBought(alice, id, 'Salt', true)
+      await recipeWhen((r) => r.boughtIngredients?.Salt === true)
       await store.setWanted(id, false)
       const recipe = await recipeWhen((r) => r.wanted === undefined)
-      expect(recipe.ingredients[0]?.bought).toBeUndefined()
+      expect(recipe.boughtIngredients).toBeUndefined()
     })
   })
 })

@@ -51,7 +51,7 @@ export interface RecipeStore {
   /**
    * Replaces the Recipe stored under `id`; fields the schema knows that `recipe` lacks are removed. Whether the
    * Recipe is soft-deleted, and whether it is Wanted, are left as they were: `setWanted` is the only writer of `wanted`,
-   * so a save from a stale copy cannot un-mark or re-mark it. Ingredients are replaced whole, `bought` included. Rejects with `InvalidRecipeError` before any write.
+   * so a save from a stale copy cannot un-mark or re-mark it. Ingredients are replaced whole. Rejects with `InvalidRecipeError` before any write.
    */
   update(id: RecipeId, recipe: Recipe): Promise<void>
 
@@ -63,7 +63,7 @@ export interface RecipeStore {
 
   /**
    * Sets the Recipe Wanted, or not Wanted; the mark is stored on the Recipe, so the whole Household
-   * sees it. Marking it not Wanted also clears `bought` from every Ingredient. Rejects for a Recipe
+   * sees it. Marking it not Wanted also clears `boughtIngredients`. Rejects for a Recipe
    * that does not exist or is soft-deleted.
    */
   setWanted(id: RecipeId, wanted: boolean): Promise<void>
