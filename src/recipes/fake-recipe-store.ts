@@ -82,9 +82,12 @@ export function fakeRecipeStore(initial: readonly RecipeEntry[] = []): FakeRecip
       const entry = existing(id)
       if (entry.deleted) throw new Error(`Recipe ${id} is soft-deleted`)
       const { wanted: _was, ...rest } = entry.recipe
-      entry.recipe = wanted
-        ? { ...rest, wanted: true }
-        : { ...rest, ingredients: rest.ingredients.map(({ bought: _bought, ...ingredient }) => ingredient) }
+      if (wanted) {
+        entry.recipe = { ...rest, wanted: true }
+      } else {
+        const { boughtIngredients: _bought, ...cleared } = rest
+        entry.recipe = cleared
+      }
       notify()
     },
   }

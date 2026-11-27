@@ -18,17 +18,17 @@ export type IngredientStatus =
 
 /**
  * Classifies one Ingredient against the Catalogue's Items. A link to an id absent from `items`
- * is treated as soft-deleted: the Catalogue no longer has that Item. An Unlinked Ingredient marked
- * `bought` is Bought, not Missing, only while its Recipe is `wanted`.
+ * is treated as soft-deleted: the Catalogue no longer has that Item. An Unlinked Ingredient that is
+ * `bought` (see `isBought`) is Bought, not Missing.
  */
 export function classifyIngredient(
   ingredient: recipes.Ingredient,
   items: ItemsById,
-  wanted: boolean,
+  bought: boolean,
 ): IngredientStatus {
   if (ingredient.assumed) return { kind: 'assumed' }
   if (ingredient.itemId === undefined) {
-    return wanted && ingredient.bought === true ? { kind: 'bought' } : { kind: 'missing', reason: 'unlinked' }
+    return bought ? { kind: 'bought' } : { kind: 'missing', reason: 'unlinked' }
   }
   const item = items.get(ingredient.itemId)
   if (item === undefined || item.deletedAt !== undefined) {
@@ -42,6 +42,14 @@ export function classifyIngredient(
 /** An absent `wanted` means the Recipe is not Wanted. */
 export function isWanted(recipe: Pick<recipes.Recipe, 'wanted'>): boolean {
   return recipe.wanted === true
+}
+
+/**
+ * Whether the Recipe's Ingredient named `name` is Bought: marked in the Recipe's `boughtIngredients`,
+ * which counts only while the Recipe is Wanted.
+ */
+export function isBought(recipe: Pick<recipes.Recipe, 'wanted' | 'boughtIngredients'>, name: string): boolean {
+  return isWanted(recipe) && recipe.boughtIngredients?.[name] === true
 }
 
 export type Makeability = 'makeable' | 'almost makeable' | 'neither'
@@ -60,7 +68,7 @@ export interface RecipeMakeability {
 const ALMOST_MAKEABLE_MAX_MISSING = 2
 
 export function classifyRecipe(recipe: recipes.Recipe, items: ItemsById): RecipeMakeability {
-  const statuses = recipe.ingredients.map((ingredient) => classifyIngredient(ingredient, items, isWanted(recipe)))
+  const statuses = recipe.ingredients.map((ingredient) => classifyIngredient(ingredient, items, isBought(recipe, ingredient.name)))
   const missingIngredients = recipe.ingredients.flatMap((ingredient, i) => {
     const status = statuses[i]
     return status?.kind === 'missing' ? [{ ingredient, reason: status.reason }] : []

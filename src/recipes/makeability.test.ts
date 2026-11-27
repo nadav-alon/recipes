@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { core, recipes } from 'data-platform'
-import { classifyIngredient, classifyRecipe, type ItemsById } from './makeability.ts'
+import { classifyIngredient, classifyRecipe, isBought, type ItemsById } from './makeability.ts'
 
 const id = (value: string) => value as core.ItemId
 
@@ -36,16 +36,8 @@ describe('classifyIngredient', () => {
     expect(classifyIngredient(ingredient(), items, false)).toEqual({ kind: 'missing', reason: 'unlinked' })
   })
 
-  it('is Bought, not Missing, for an Unlinked Ingredient marked bought on a Wanted Recipe', () => {
-    expect(classifyIngredient(ingredient({ bought: true }), items, true)).toEqual({ kind: 'bought' })
-  })
-
-  it('is Missing for a bought Unlinked Ingredient once the Recipe is not Wanted', () => {
-    expect(classifyIngredient(ingredient({ bought: true }), items, false)).toEqual({ kind: 'missing', reason: 'unlinked' })
-  })
-
-  it('is Missing for an Unlinked Ingredient not marked bought on a Wanted Recipe', () => {
-    expect(classifyIngredient(ingredient(), items, true)).toEqual({ kind: 'missing', reason: 'unlinked' })
+  it('is Bought, not Missing, for a bought Unlinked Ingredient', () => {
+    expect(classifyIngredient(ingredient(), items, true)).toEqual({ kind: 'bought' })
   })
 
   it('is Missing when the Item is out', () => {
@@ -133,11 +125,22 @@ describe('classifyRecipe missingIngredients', () => {
   })
 })
 
+describe('isBought', () => {
+  it('is true for an Ingredient named in boughtIngredients on a Wanted Recipe', () => {
+    expect(isBought({ wanted: true, boughtIngredients: { Salt: true } }, 'Salt')).toBe(true)
+  })
+
+  it('is false for an Ingredient not named, or once the Recipe is not Wanted', () => {
+    expect(isBought({ wanted: true, boughtIngredients: { Salt: true } }, 'Pepper')).toBe(false)
+    expect(isBought({ boughtIngredients: { Salt: true } }, 'Salt')).toBe(false)
+  })
+})
+
 describe('classifyRecipe with a Bought Ingredient', () => {
   const recipe = (wanted: boolean): recipes.Recipe => ({
     title: 'Pancakes',
-    ...(wanted ? { wanted: true as const } : {}),
-    ingredients: [ingredient({ bought: true })],
+    ...(wanted ? { wanted: true as const, boughtIngredients: { thing: true as const } } : { boughtIngredients: { thing: true as const } }),
+    ingredients: [ingredient()],
     prepSteps: [],
     steps: [],
   })
