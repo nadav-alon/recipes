@@ -3,6 +3,7 @@ import { defineConfig, type Plugin } from 'vite'
 import preact from '@preact/preset-vite'
 import Icons from 'unplugin-icons/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { iconSpecs } from './src/pwa-icons.ts'
 import { manifest } from './src/pwa-manifest.ts'
 import { SEED } from './src/seed.ts'
 
@@ -17,7 +18,7 @@ const faviconVersion = (): Plugin => ({
   name: 'favicon-version',
   transformIndexHtml: (html) =>
     html.replace(/(<link rel="icon"[^>]*href="[^"]*\/)(pwa-[^"?]+\.png)"/, (_, head: string, file: string) => {
-      const icon = manifest.icons!.find((i) => i.src.split('?')[0] === file)
+      const icon = manifest.icons!.find((i) => i.src.startsWith(`${file}?`))
       if (!icon) throw new Error(`favicon ${file} is not a manifest icon`)
       return `${head}${icon.src}"`
     }),
@@ -25,7 +26,13 @@ const faviconVersion = (): Plugin => ({
 
 export default defineConfig({
   base: '/recipes/',
-  plugins: [preact(), Icons({ compiler: 'jsx', jsx: 'preact', scale: 1 }), themeColour(), faviconVersion(), VitePWA({ registerType: 'autoUpdate', manifest })],
+  plugins: [preact(), Icons({ compiler: 'jsx', jsx: 'preact', scale: 1 }), themeColour(), faviconVersion(), VitePWA({
+      registerType: 'autoUpdate',
+      manifest,
+      // The manifest's versioned icon URLs are not file globs, so precache the bare files and let the `?v=` URLs hit them.
+      includeAssets: iconSpecs.map((i) => i.file),
+      workbox: { ignoreURLParametersMatching: [/^v$/] },
+    })],
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

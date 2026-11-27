@@ -2,6 +2,7 @@ import type { ManifestOptions } from 'vite-plugin-pwa'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { iconSpecs, type IconSpec } from './pwa-icons.ts'
 import { SEED } from './seed.ts'
 
 /**
@@ -13,18 +14,16 @@ const lightBackground = readFileSync(join(import.meta.dirname, 'theme.css'), 'ut
 )?.[1]
 if (!lightBackground) throw new Error('theme.css has no --md-sys-color-background')
 
-const sizes = [192, 512]
-
 /**
  * The URL of an icon file in `dir`, versioned by its content (`?v=` and the first 8 hex of its
  * sha256), so an installed app sees a new URL, and refreshes the icon, exactly when the bytes change.
  */
-export const versionedIconSrc = (file: string, dir = 'public') =>
+export const versionedIconSrc = (file: string, dir = join(import.meta.dirname, '..', 'public')) =>
   `${file}?v=${createHash('sha256').update(readFileSync(join(dir, file))).digest('hex').slice(0, 8)}`
 
-const icon = (size: number, purpose?: 'maskable') => ({
-  src: versionedIconSrc(`pwa-${purpose ? `${purpose}-` : ''}${size}x${size}.png`),
-  sizes: `${size}x${size}`,
+const icon = ({ file, sizes, purpose }: IconSpec) => ({
+  src: versionedIconSrc(file),
+  sizes,
   type: 'image/png',
   ...(purpose && { purpose }),
 })
@@ -37,5 +36,5 @@ export const manifest: Partial<ManifestOptions> = {
   background_color: lightBackground,
   display: 'standalone',
   start_url: '.',
-  icons: [...sizes.map((size) => icon(size)), ...sizes.map((size) => icon(size, 'maskable'))],
+  icons: iconSpecs.map(icon),
 }

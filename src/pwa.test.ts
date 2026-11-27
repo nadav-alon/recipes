@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { iconSpecs } from './pwa-icons.ts'
 import { manifest, versionedIconSrc } from './pwa-manifest.ts'
 import { SEED } from './seed.ts'
 
@@ -13,31 +14,31 @@ describe('PWA manifest', () => {
     const sizes = manifest.icons!.map((i) => i.sizes)
     expect(sizes).toContain('192x192')
     expect(sizes).toContain('512x512')
-    for (const icon of manifest.icons!) {
-      expect(existsSync(join('public', icon.src.split('?')[0]))).toBe(true)
-    }
+    for (const { file } of iconSpecs) expect(existsSync(join('public', file))).toBe(true)
   })
 })
 
 describe('icon versioning', () => {
-  const iconIn = (bytes: string) => {
+  const versionedSrcFor = (bytes: string) => {
     const dir = mkdtempSync(join(tmpdir(), 'recipes-icon-'))
     writeFileSync(join(dir, 'pwa-192x192.png'), bytes)
     return versionedIconSrc('pwa-192x192.png', dir)
   }
 
   it('changes the URL when the icon bytes change and keeps it when they do not', () => {
-    expect(iconIn('pot')).toBe(iconIn('pot'))
-    expect(iconIn('pot')).not.toBe(iconIn('square'))
+    expect(versionedSrcFor('pot')).toBe(versionedSrcFor('pot'))
+    expect(versionedSrcFor('pot')).not.toBe(versionedSrcFor('square'))
   })
 
   it('versions by the first 8 hex of the content sha256', () => {
     const hash = createHash('sha256').update('pot').digest('hex').slice(0, 8)
-    expect(iconIn('pot')).toBe(`pwa-192x192.png?v=${hash}`)
+    expect(versionedSrcFor('pot')).toBe(`pwa-192x192.png?v=${hash}`)
   })
 
-  it('versions every manifest icon', () => {
-    for (const icon of manifest.icons!) expect(icon.src).toMatch(/^pwa-.*\.png\?v=[0-9a-f]{8}$/)
+  it('pins every manifest icon URL to the bytes of the file it names', () => {
+    expect(manifest.icons!.map((i) => i.src)).toEqual(
+      iconSpecs.map(({ file }) => `${file}?v=${createHash('sha256').update(readFileSync(join('public', file))).digest('hex').slice(0, 8)}`),
+    )
   })
 })
 
@@ -53,5 +54,7 @@ describe('production build', () => {
     expect(readdirSync(outDir)).toContain('manifest.webmanifest')
     const sw = readFileSync(join(outDir, 'sw.js'), 'utf8')
     expect(sw).toContain('index.html')
+    for (const { file } of iconSpecs) expect(sw, file).toContain(`"${file}"`)
+    expect(sw).toContain('ignoreURLParametersMatching')
   }, 60_000)
 })
