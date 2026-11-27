@@ -4,4 +4,4 @@ import { writeFileSync } from 'node:fs'
 import { manifest } from '../src/pwa-manifest.ts'
 import { renderIcon } from './app-icons.ts'
 
-for (const icon of manifest.icons ?? []) writeFileSync(`public/${icon.src}`, renderIcon(icon))
+for (const icon of manifest.icons ?? []) writeFileSync(`public/${icon.src.split('?')[0]}`, renderIcon(icon))

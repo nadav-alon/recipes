@@ -53,13 +53,13 @@ describe('PWA icons', () => {
   it('are the cooking pot rendered from its SVGs at every size the manifest lists, maskable included', () => {
     expect(manifest.icons!.length).toBe(4)
     for (const icon of manifest.icons!) {
-      expect(readFileSync(`public/${icon.src}`).equals(renderIcon(icon)), icon.src).toBe(true)
+      expect(readFileSync(`public/${icon.src.split('?')[0]}`).equals(renderIcon(icon)), icon.src).toBe(true)
     }
   })
 
   it('are never a single flat colour: the glyph stands out from the seed', () => {
     for (const icon of manifest.icons!) {
-      expect(colours(readFileSync(`public/${icon.src}`)).size, icon.src).toBeGreaterThan(1)
+      expect(colours(readFileSync(`public/${icon.src.split('?')[0]}`)).size, icon.src).toBeGreaterThan(1)
     }
   })
 
@@ -68,7 +68,7 @@ describe('PWA icons', () => {
     expect(g).toBeGreaterThan(r!)
     expect(g).toBeGreaterThan(b!)
     for (const icon of manifest.icons!) {
-      const seen = colours(readFileSync(`public/${icon.src}`))
+      const seen = colours(readFileSync(`public/${icon.src.split('?')[0]}`))
       expect(seen, icon.src).toContain(seedPixel)
       expect(seen, icon.src).toContain(glyphPixel)
     }
@@ -76,7 +76,7 @@ describe('PWA icons', () => {
 
   it('keep the maskable glyph inside the 80% safe zone: everything outside that circle is the seed', () => {
     for (const icon of manifest.icons!.filter((i) => i.purpose === 'maskable')) {
-      const { width, rows } = decode(readFileSync(`public/${icon.src}`))
+      const { width, rows } = decode(readFileSync(`public/${icon.src.split('?')[0]}`))
       const centre = width / 2
       let glyph = 0
       rows.forEach((row, y) => {
