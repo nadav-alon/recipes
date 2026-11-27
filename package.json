@@ -18,7 +18,7 @@
     "test:unit": "vitest run --exclude '**/*.emulator.test.ts' --exclude '**/node_modules/**'"
   },
   "dependencies": {
-    "data-platform": "github:nadav-alon/data-platform#v0.28.0",
+    "data-platform": "github:nadav-alon/data-platform#v0.29.0",
     "firebase": "^12.19.0",
     "household-ui": "github:nadav-alon/household-ui#v0.5.1",
     "preact": "^10.29.8"
