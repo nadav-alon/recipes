@@ -149,3 +149,11 @@ describe('Pill', () => {
     expect(rule('\\.wanted-tag')).toMatch(/background:\s*var\(--md-sys-color-secondary-container\)[^}]*color:\s*var\(--md-sys-color-on-secondary-container\)/)
   })
 })
+
+describe('Home row trailing slot', () => {
+  it('puts the standard spacing between the Wanted tag and the chevron', () => {
+    expect(rule('\\.row-trailing')).toMatch(/display:\s*flex/)
+    expect(rule('\\.row-trailing')).toMatch(/gap:\s*var\(--md-sys-spacing-2\)/)
+    expect(readFileSync('src/home/HomeScreen.tsx', 'utf8')).toMatch(/class="row-trailing"/)
+  })
+})

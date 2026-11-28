@@ -206,3 +206,10 @@ main.screen.sign-in .ui-button {
   place-items: center;
   min-block-size: 100dvh;
 }
+
+/* A Wanted Recipe's Home row ends with its tag, then the chevron, a standard gap apart. */
+.row-trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+}
