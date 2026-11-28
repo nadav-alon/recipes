@@ -169,7 +169,7 @@ main.screen.sign-in .ui-button {
   text-decoration: none;
 }
 
-/* A row's trailing cluster (an Ingredient's flag and action, a Wanted Recipe's tag and chevron, the Want to make switch) sits together at the row's end, a standard gap apart. */
+/* A row's trailing cluster (an Ingredient's flag and action, a Wanted Recipe's tag and chevron) sits together at the row's end, a standard gap apart. */
 .trailing-cluster {
   display: flex;
   align-items: center;

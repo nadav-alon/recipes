@@ -1,0 +1,88 @@
+.switch {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+  min-block-size: 3rem;
+  cursor: pointer;
+}
+
+.switch:has(.switch__input:disabled) {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.switch__input {
+  appearance: none;
+  position: absolute;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch__track {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 52px;
+  block-size: 32px;
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: 16px;
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.switch__handle {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 6px;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: 50%;
+  background: var(--md-sys-color-outline);
+  transform: translateY(-50%);
+  transition: inline-size 100ms, block-size 100ms, inset-inline-start 100ms;
+}
+
+/* The 40dp state layer, centred on the handle. */
+.switch__handle::before {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  background: currentColor;
+  color: var(--md-sys-color-on-surface);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+
+.switch:hover .switch__handle::before {
+  opacity: 0.08;
+}
+
+.switch__input:focus-visible + .switch__track {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.switch__input:focus-visible + .switch__track .switch__handle::before {
+  opacity: 0.12;
+}
+
+.switch__input:checked + .switch__track {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-primary);
+}
+
+.switch__input:checked + .switch__track .switch__handle {
+  inline-size: 24px;
+  block-size: 24px;
+  inset-inline-start: 22px;
+  background: var(--md-sys-color-on-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch__handle {
+    transition: none;
+  }
+}
