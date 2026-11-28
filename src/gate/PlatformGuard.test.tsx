@@ -33,7 +33,7 @@ describe('PlatformGuard', () => {
   it('shows a banner when the deployed platform is older than the pin', async () => {
     mocks.data = { version: '0.1.0' }
     render(<PlatformGuard db={db} />)
-    expect(await screen.findByRole('alert')).toHaveTextContent(/update your platform deploy/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/This Household's data setup is out of date\./)
   })
 
   it('offers the household setup guide as a button on the banner', async () => {
@@ -42,7 +42,7 @@ describe('PlatformGuard', () => {
     vi.stubGlobal('location', { ...window.location, assign })
     render(<PlatformGuard db={db} />)
     expectAlertBanner(await screen.findByRole('alert'))
-    fireEvent.click(screen.getByRole('button', { name: 'Open the household setup guide' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Setup guide' }))
     expect(assign).toHaveBeenCalledWith(HOUSEHOLD_SETUP_DOC_URL)
     expect(screen.queryByRole('link')).toBeNull()
     vi.unstubAllGlobals()
@@ -50,7 +50,7 @@ describe('PlatformGuard', () => {
 
   it('shows the banner when nothing has deployed meta/platform', async () => {
     render(<PlatformGuard db={db} />)
-    expect(await screen.findByRole('alert')).toHaveTextContent(/update your platform deploy/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/This Household's data setup is out of date\./)
   })
 })
 
