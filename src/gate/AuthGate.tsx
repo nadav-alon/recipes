@@ -24,7 +24,7 @@ type GateState =
   | { status: 'signed-out' }
   | { status: 'unclaimed'; user: AuthUser }
   | { status: 'non-member'; user: AuthUser }
-  | { status: 'unreachable'; user: AuthUser }
+  | { status: 'unreachable'; user: AuthUser; retrying: boolean }
   | { status: 'member'; user: AuthUser }
 
 /**
@@ -49,7 +49,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
         const member = await isHouseholdMember(client.db, user.uid)
         setIfCurrent(member ? { status: 'member', user } : { status: 'non-member', user })
       } catch {
-        setIfCurrent({ status: 'unreachable', user })
+        setIfCurrent({ status: 'unreachable', user, retrying: false })
       }
     },
     [client],
@@ -115,13 +115,16 @@ export function AuthGate({ client, children }: AuthGateProps) {
           <p>Check your connection and try again.</p>
           <Button
             variant="filled"
+            disabled={state.retrying}
+            aria-busy={state.retrying}
             onClick={() => {
-              setState({ status: 'checking' })
+              setState({ ...state, retrying: true })
               void resolveMembership(state.user)
             }}
           >
             Retry
           </Button>
+          {state.retrying && <ProgressIndicator label="Checking your Household" />}
           <SignOutButton onClick={signOut} />
         </CentredCard>
       )
