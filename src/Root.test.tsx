@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/preact'
+import { fireEvent, render, screen, within } from '@testing-library/preact'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -91,7 +91,7 @@ describe('Root and #config= links', () => {
     localStorage.setItem('data-platform:firebase-config', JSON.stringify(stored))
     history.replaceState(null, '', '/#config=!!!')
     render(<Root />)
-    expect(screen.getByRole('alert')).toHaveTextContent(/truncated or corrupted/)
+    expect(screen.getByRole('alert')).toHaveTextContent('That device transfer link is truncated or corrupted. The link was ignored.')
     expectAlertBanner(screen.getByRole('alert'))
     expect(location.hash).toBe('')
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
@@ -104,10 +104,13 @@ describe('Root and #config= links', () => {
     render(<Root />)
     expect(screen.getByRole('main')).toContainElement(screen.getByRole('heading', { name: 'Switch Household?' }))
     expect(screen.queryByRole('banner')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Switch to other' })).toHaveClass('ui-button')
+    const body = screen.getByText(/This link is for a different Household/)
+    expect(within(body).getByText('other', { selector: 'code' })).toBeInTheDocument()
+    expect(body).not.toHaveTextContent(/config|repoints/i)
+    expect(screen.getByRole('button', { name: 'Switch Household' })).toHaveClass('ui-button')
     expect(screen.getByRole('button', { name: 'Keep the current Household' })).toHaveClass('ui-button')
     expect(JSON.parse(localStorage.getItem('data-platform:firebase-config')!).projectId).toBe('p')
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to other' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Switch Household' }))
     expect(JSON.parse(localStorage.getItem('data-platform:firebase-config')!).projectId).toBe('other')
     expect(mocks.initFirebase).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'other' }),

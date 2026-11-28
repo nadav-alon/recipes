@@ -33,8 +33,8 @@ export function Root() {
     return (
       <CentredCard appName="Recipes" title="Switch Household?">
         <p>
-          This link carries the config of another Firebase project (<code>{proposed.projectId}</code>). Accepting it
-          also repoints the Catalogue on this device.
+          This link is for a different Household (<code>{proposed.projectId}</code>). Switching also switches the
+          Catalogue on this device.
         </p>
         <Button
           variant="filled"
@@ -43,7 +43,7 @@ export function Root() {
             setState({ config: proposed, error: null, proposed: null, kit })
           }}
         >
-          Switch to {proposed.projectId}
+          Switch Household
         </Button>
         <Button variant="tonal" onClick={() => setState({ config, error: null, proposed: null, kit })}>
           Keep the current Household

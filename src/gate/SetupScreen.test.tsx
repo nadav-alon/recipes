@@ -32,7 +32,12 @@ describe('SetupScreen', () => {
     expect(onConfigured).not.toHaveBeenCalled()
   })
 
-  it('shows an error carried in from a bad device-transfer link', () => {
+  it('names the link a device transfer link', () => {
+    render(<SetupScreen onConfigured={vi.fn()} />)
+    expect(screen.getByText(/open a device transfer link from the Catalogue/)).toBeInTheDocument()
+  })
+
+  it('shows an error carried in from a bad device transfer link', () => {
     render(<SetupScreen onConfigured={vi.fn()} initialError="That device transfer link is truncated or corrupted." />)
     expect(screen.getByRole('alert')).toHaveTextContent(/truncated or corrupted/)
   })

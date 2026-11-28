@@ -25,7 +25,7 @@ export type ConfigResolution = {
 const NOT_A_CONFIG = 'That is not a Firebase config.'
 
 /**
- * The config the Catalogue stored on this origin, or the one in a `#config=` device-transfer link,
+ * The config the Catalogue stored on this origin, or the one in a `#config=` device transfer link,
  * which is stored so the next load finds it. A link that fails to parse leaves the stored config
  * alone, and so does one that differs from it: that is returned as `proposed` until accepted.
  */
