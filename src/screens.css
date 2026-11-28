@@ -158,6 +158,11 @@ main.screen.sign-in .ui-button {
   overflow-wrap: anywhere;
 }
 
+/* The card's own link colour (.ui-centred-card__surface a) outranks the filled button's, which would paint the label in the button's fill. */
+.ui-centred-card__surface a.ui-button--filled {
+  color: var(--md-sys-color-on-primary);
+}
+
 /* A row's trailing cluster (an Ingredient's flag and action, a Wanted Recipe's tag and chevron, the Want to make switch) sits together at the row's end, a standard gap apart. */
 .trailing-cluster {
   display: flex;

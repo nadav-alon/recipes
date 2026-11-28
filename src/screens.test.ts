@@ -29,6 +29,12 @@ describe('pre-Household cards', () => {
   })
 })
 
+describe('filled button link on a pre-Household card', () => {
+  it('keeps the on-primary label colour over the card\'s link colour', () => {
+    expect(rule('\\.ui-centred-card__surface a\\.ui-button--filled')).toMatch(/color:\s*var\(--md-sys-color-on-primary\)/)
+  })
+})
+
 describe('Ingredient flag colours', () => {
   const flagRules = css.match(/\.ingredient-flag[^{]*\{[^}]*\}/g) ?? []
 
