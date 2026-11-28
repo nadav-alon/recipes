@@ -22,6 +22,7 @@ async function readDeployedPlatformVersion(db: Firestore): Promise<core.Semver |
  */
 export function PlatformGuard({ db }: { db: Firestore }) {
   const [check, setCheck] = useState<core.PlatformCheck | 'failed' | null>(null)
+  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -42,8 +43,10 @@ export function PlatformGuard({ db }: { db: Firestore }) {
   if (check === 'failed') {
     return <AlertBanner message="Couldn't check your platform version. Check your connection and reload." />
   }
+  if (dismissed) return null
   return (
     <AlertBanner
+      onDismiss={() => setDismissed(true)}
       message="This Household's data setup is out of date."
       action={{ label: 'Setup guide', onAction: () => window.location.assign(HOUSEHOLD_SETUP_DOC_URL) }}
     />

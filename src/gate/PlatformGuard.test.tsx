@@ -61,3 +61,15 @@ describe('PlatformGuard when the read fails', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't check your platform version/i)
   })
 })
+
+describe('PlatformGuard dismissal', () => {
+  it('hides the banner once dismissed, and shows it again on a fresh mount', async () => {
+    const first = render(<PlatformGuard db={db} />)
+    await screen.findByRole('alert')
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    first.unmount()
+    render(<PlatformGuard db={db} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/data setup is out of date/)
+  })
+})
