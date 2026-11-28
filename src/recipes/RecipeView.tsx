@@ -142,8 +142,8 @@ function IngredientLine({
       muted={status.kind === 'missing'}
       trailing={
         flagged !== null || action !== undefined ? (
-          <div class="ingredient-trailing">
-            {flagged !== null && <span class={`ingredient-flag ingredient-flag--${flagged.tone}`}>{flagged.text}</span>}
+          <div class="trailing-cluster">
+            {flagged !== null && <span class={`pill ingredient-flag ingredient-flag--${flagged.tone}`}>{flagged.text}</span>}
             {action}
           </div>
         ) : undefined
@@ -222,7 +222,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
           </Button>
         </TopAppBarActions>
         {failure !== null && <AlertBanner message={failure} />}
-        <label class="wanted-switch">
+        <label class="trailing-cluster">
           <input
             type="checkbox"
             role="switch"

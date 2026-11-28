@@ -158,17 +158,20 @@ main.screen.sign-in .ui-button {
   overflow-wrap: anywhere;
 }
 
-/* An Ingredient's flag and its action sit together at the row's end, apart from the amount and prep note. */
-.ingredient-trailing {
+/* A row's trailing cluster (an Ingredient's flag and action, a Wanted Recipe's tag and chevron, the Want to make switch) sits together at the row's end, a standard gap apart. */
+.trailing-cluster {
   display: flex;
   align-items: center;
   gap: var(--md-sys-spacing-2);
 }
 
-.ingredient-flag {
+/* The one pill shape: an Ingredient flag on the Recipe view and the Wanted tag on Home share it. */
+.pill {
+  display: inline-block;
   padding: 0 var(--md-sys-spacing-2);
   border-radius: var(--md-sys-shape-corner-extra-small);
   font-size: var(--md-sys-typescale-label-size);
+  line-height: 1.5;
 }
 
 .ingredient-flag--missing {
@@ -186,19 +189,10 @@ main.screen.sign-in .ui-button {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* The Recipe view's "Want to make" switch and the tag on a Wanted Recipe's row on Home. */
-.wanted-switch {
-  display: flex;
-  align-items: center;
-  gap: var(--md-sys-spacing-2);
-}
-
+/* The tag on a Wanted Recipe's row on Home. */
 .wanted-tag {
-  padding: 0 var(--md-sys-spacing-2);
-  border-radius: var(--md-sys-shape-corner-extra-small);
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
-  font-size: var(--md-sys-typescale-label-size);
 }
 
 .gate-progress {
