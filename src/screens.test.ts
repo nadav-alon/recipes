@@ -23,7 +23,7 @@ describe('screen layout', () => {
 })
 
 describe('pre-Household cards', () => {
-  it('keeps a button label on one line while the body wraps', () => {
+    expect(rule('\\.ui-centred-card \\.ui-button')).toMatch(/white-space:\s*nowrap/)
     expect(rule('\.ui-centred-card \.ui-button')).toMatch(/white-space:\s*nowrap/)
   })
 
