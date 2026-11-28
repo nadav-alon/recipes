@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/preact'
+import { fireEvent, render, screen, within } from '@testing-library/preact'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -105,7 +105,7 @@ describe('Root and #config= links', () => {
     expect(screen.getByRole('main')).toContainElement(screen.getByRole('heading', { name: 'Switch Household?' }))
     expect(screen.queryByRole('banner')).toBeNull()
     const body = screen.getByText(/This link is for a different Household/)
-    expect(body).toHaveTextContent('other')
+    expect(within(body).getByText('other', { selector: 'code' })).toBeInTheDocument()
     expect(body).not.toHaveTextContent(/config|repoints/i)
     expect(screen.getByRole('button', { name: 'Switch Household' })).toHaveClass('ui-button')
     expect(screen.getByRole('button', { name: 'Keep the current Household' })).toHaveClass('ui-button')

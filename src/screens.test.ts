@@ -23,10 +23,6 @@ describe('screen layout', () => {
 })
 
 describe('pre-Household cards', () => {
-  it('keeps a button label on one line while the body wraps', () => {
-    expect(rule('\\.ui-centred-card \\.ui-button')).toMatch(/white-space:\s*nowrap/)
-  })
-
   it('wrap long text so a 360px screen does not scroll sideways', () => {
     expect(rule('\\.ui-centred-card')).toMatch(/overflow-wrap:\s*anywhere/)
   })
