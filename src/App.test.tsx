@@ -667,3 +667,23 @@ describe('App Recipe view loading and Retry', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
   })
 })
+
+describe('App Edit Recipe loading and Retry', () => {
+  it('shows the Edit Recipe app bar with Back and a progressbar until the Recipes have arrived', () => {
+    location.hash = editRecipeHref(r1)
+    const recipeStore = { ...store(), watch: () => () => {} }
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Edit Recipe' })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+  })
+
+  it('Retry on a load failure shows the editor once the new watch delivers', async () => {
+    location.hash = editRecipeHref(r1)
+    const recipeStore = store()
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByLabelText('Title')).toHaveValue('Omelette')
+  })
+})

@@ -213,9 +213,9 @@ function useRecipeEntries(recipeStore: RecipeStore) {
 }
 
 /** A Recipe screen waiting for its data: the app bar with Back, and the progress indicator. */
-function Loading({ label }: { label: string }) {
+function Loading({ label, title = 'Recipe' }: { label: string; title?: string }) {
   return (
-    <TopAppBar title="Recipe">
+    <TopAppBar title={title}>
       <BackButton fallback={HOME_HREF} />
       <main class="screen screen--loading">
         <ProgressIndicator label={label} />
@@ -353,7 +353,7 @@ function EditScreen({
   const opened = useRef<RecipeEntry | null>(null)
 
   if (failed) return <LoadFailed onRetry={retry} />
-  if (entries === null) return null
+  if (entries === null) return <Loading label="Loading the Recipe" title="Edit Recipe" />
   opened.current ??= entries.find((e) => e.id === id) ?? null
   if (opened.current === null) return <RecipeNotFound />
   return (
