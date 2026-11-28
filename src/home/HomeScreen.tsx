@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'preact/hooks'
 import type { ItemsPort } from '../items/items-port.ts'
 import { useItemsById } from '../items/use-items-by-id.ts'
-import type { RecipeEntry, RecipeStore } from '../recipes/recipe-store.ts'
+import type { RecipeStore } from '../recipes/recipe-store.ts'
+import { useRecipeEntries } from '../recipes/use-recipe-entries.ts'
 import { isWanted } from '../recipes/makeability.ts'
 import { navigate, NEW_RECIPE_HREF, recipeHref } from '../routes.ts'
 import { TopAppBar, TopAppBarActions } from 'household-ui/shell/TopAppBar.tsx'
@@ -11,7 +11,7 @@ import { Fab } from 'household-ui/ui/Fab.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import ChevronRight from '~icons/material-symbols/chevron-right'
 import Add from '~icons/material-symbols/add'
-import { ProgressIndicator } from '../shell/ProgressIndicator.tsx'
+import { LoadingScreen } from '../shell/LoadingScreen.tsx'
 import { AccountAction } from '../gate/account.tsx'
 import { useWideViewport } from './use-wide-viewport.ts'
 import { homeSections, type ClassifiedEntry } from './home-sections.ts'
@@ -27,20 +27,9 @@ export interface HomeScreenProps {
  * Recipe is never judged against an Item list that has not loaded yet.
  */
 export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
-  const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
-  const [failed, setFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    setEntries(null)
-    return recipeStore.watch(setEntries, () => setFailed(true))
-  }, [recipeStore, attempt])
+  const { entries, failed, fail, retry, attempt } = useRecipeEntries(recipeStore)
   const wide = useWideViewport()
-  const items = useItemsById(itemsPort, () => setFailed(true), attempt)
-  const retry = () => {
-    setFailed(false)
-    setAttempt((n) => n + 1)
-  }
+  const items = useItemsById(itemsPort, fail, attempt)
 
   if (failed)
     return (
@@ -51,13 +40,7 @@ export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
       </TopAppBar>
     )
   if (entries === null || items === null)
-    return (
-      <TopAppBar title="Recipes">
-        <main class="screen screen--loading">
-          <ProgressIndicator label="Loading Recipes" />
-        </main>
-      </TopAppBar>
-    )
+    return <LoadingScreen title="Recipes" label="Loading Recipes" />
   const sections = homeSections(entries, items)
   const newRecipe = () => navigate(NEW_RECIPE_HREF)
 

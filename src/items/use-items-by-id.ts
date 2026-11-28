@@ -6,7 +6,7 @@ import type { ItemsPort } from './items-port.ts'
  * The Items at home by id, `null` until they have arrived; `onError` is called if watching them fails.
  * A changed `attempt` drops the Items and watches again, so the caller sees `null` until the new watch delivers.
  */
-export function useItemsById(itemsPort: ItemsPort, onError: () => void, attempt = 0): ItemsById | null {
+export function useItemsById(itemsPort: ItemsPort, onError: () => void, attempt: number): ItemsById | null {
   const [items, setItems] = useState<ItemsById | null>(null)
   useEffect(
     () => {

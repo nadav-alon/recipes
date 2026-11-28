@@ -5,7 +5,8 @@ import { AlertBanner } from 'household-ui/ui/AlertBanner.tsx'
 import { SnackbarHost } from 'household-ui/ui/Snackbar.tsx'
 import type { ItemsPort } from './items/items-port.ts'
 import { useItemsById } from './items/use-items-by-id.ts'
-import { ProgressIndicator } from './shell/ProgressIndicator.tsx'
+import { LoadingScreen } from './shell/LoadingScreen.tsx'
+import { useRecipeEntries } from './recipes/use-recipe-entries.ts'
 import { BackButton } from './shell/BackButton.tsx'
 import { RecipeEditor, type RecipeEditorProps } from './editor/RecipeEditor.tsx'
 import { HomeScreen } from './home/HomeScreen.tsx'
@@ -193,34 +194,12 @@ function HeldSavesNotice({
   )
 }
 
-/**
- * The Recipes as the store has them, `null` until they have arrived, and whether watching them failed.
- * `retry` clears the failure and the Recipes, and watches again; `attempt` counts the retries.
- */
-function useRecipeEntries(recipeStore: RecipeStore) {
-  const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
-  const [failed, setFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-  useEffect(() => {
-    setEntries(null)
-    return recipeStore.watch(setEntries, () => setFailed(true))
-  }, [recipeStore, attempt])
-  const retry = () => {
-    setFailed(false)
-    setAttempt((n) => n + 1)
-  }
-  return { entries, failed, fail: () => setFailed(true), retry, attempt }
-}
-
 /** A Recipe screen waiting for its data: the app bar with Back, and the progress indicator. */
-function Loading({ label, title = 'Recipe' }: { label: string; title?: string }) {
+function RecipeLoading({ label, title = 'Recipe' }: { label: string; title?: string }) {
   return (
-    <TopAppBar title={title}>
+    <LoadingScreen title={title} label={label}>
       <BackButton fallback={HOME_HREF} />
-      <main class="screen screen--loading">
-        <ProgressIndicator label={label} />
-      </main>
-    </TopAppBar>
+    </LoadingScreen>
   )
 }
 
@@ -306,7 +285,7 @@ function CatalogueReturnScreen({
       </main>
     )
   }
-  if (entries === null) return <Loading label="Loading the Recipe" />
+  if (entries === null) return <RecipeLoading label="Loading the Recipe" />
   if (entry === undefined) return <RecipeNotFound />
   return null
 }
@@ -316,7 +295,7 @@ function RecipeScreen({ id, recipeStore, itemsPort }: AppProps & { id: RecipeId 
   const items = useItemsById(itemsPort, fail, attempt)
 
   if (failed) return <LoadFailed onRetry={retry} />
-  if (entries === null || items === null) return <Loading label="Loading the Recipe" />
+  if (entries === null || items === null) return <RecipeLoading label="Loading the Recipe" />
   const entry = entries.find((e) => e.id === id)
   if (entry === undefined) return <RecipeNotFound />
   return (
@@ -353,7 +332,7 @@ function EditScreen({
   const opened = useRef<RecipeEntry | null>(null)
 
   if (failed) return <LoadFailed onRetry={retry} />
-  if (entries === null) return <Loading label="Loading the Recipe" title="Edit Recipe" />
+  if (entries === null) return <RecipeLoading label="Loading the Recipe" title="Edit Recipe" />
   opened.current ??= entries.find((e) => e.id === id) ?? null
   if (opened.current === null) return <RecipeNotFound />
   return (
