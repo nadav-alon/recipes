@@ -11,6 +11,7 @@ import { Fab } from 'household-ui/ui/Fab.tsx'
 import { ListRow } from 'household-ui/ui/ListRow.tsx'
 import ChevronRight from '~icons/material-symbols/chevron-right'
 import Add from '~icons/material-symbols/add'
+import { ProgressIndicator } from '../shell/ProgressIndicator.tsx'
 import { AccountAction } from '../gate/account.tsx'
 import { useWideViewport } from './use-wide-viewport.ts'
 import { homeSections, type ClassifiedEntry } from './home-sections.ts'
@@ -28,20 +29,35 @@ export interface HomeScreenProps {
 export function HomeScreen({ recipeStore, itemsPort }: HomeScreenProps) {
   const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
   const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
-  useEffect(() => recipeStore.watch(setEntries, () => setFailed(true)), [recipeStore])
+  useEffect(() => {
+    setEntries(null)
+    return recipeStore.watch(setEntries, () => setFailed(true))
+  }, [recipeStore, attempt])
   const wide = useWideViewport()
-  const items = useItemsById(itemsPort, () => setFailed(true))
+  const items = useItemsById(itemsPort, () => setFailed(true), attempt)
+  const retry = () => {
+    setFailed(false)
+    setAttempt((n) => n + 1)
+  }
 
   if (failed)
     return (
       <TopAppBar title="Recipes">
         <main class="screen">
-          <AlertBanner message="The Recipes could not be loaded." />
+          <AlertBanner message="The Recipes could not be loaded." action={{ label: 'Retry', onAction: retry }} />
         </main>
       </TopAppBar>
     )
-  if (entries === null || items === null) return null
+  if (entries === null || items === null)
+    return (
+      <TopAppBar title="Recipes">
+        <main class="screen screen--loading">
+          <ProgressIndicator label="Loading Recipes" />
+        </main>
+      </TopAppBar>
+    )
   const sections = homeSections(entries, items)
   const newRecipe = () => navigate(NEW_RECIPE_HREF)
 

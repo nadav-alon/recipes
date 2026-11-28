@@ -211,3 +211,9 @@ main.screen.sign-in .ui-button {
   place-items: center;
   min-block-size: 100dvh;
 }
+
+/* A screen waiting for its data: the progress indicator, centred in the body under the app bar. */
+.screen--loading {
+  display: grid;
+  place-items: center;
+}
