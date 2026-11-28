@@ -8,7 +8,7 @@ import { TextArea } from 'household-ui/ui/TextArea.tsx'
 
 export type SetupScreenProps = {
   onConfigured: (config: FirebaseWebConfig) => void
-  /** An error to show up front, e.g. from a device-transfer link that failed to parse. */
+  /** An error to show up front, e.g. from a device transfer link that failed to parse. */
   initialError?: string | null
 }
 
@@ -29,7 +29,7 @@ export function SetupScreen({ onConfigured, initialError = null }: SetupScreenPr
 
   return (
     <CentredCard appName="Recipes" title="Set up">
-      <p>Paste your Household's Firebase web config, or open a device-transfer link from the Catalogue.</p>
+      <p>Paste your Household's Firebase web config, or open a device transfer link from the Catalogue.</p>
       <form class="stack" onSubmit={handleSubmit}>
         <TextArea
           label="Firebase web config"

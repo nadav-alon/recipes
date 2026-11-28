@@ -91,7 +91,7 @@ describe('Root and #config= links', () => {
     localStorage.setItem('data-platform:firebase-config', JSON.stringify(stored))
     history.replaceState(null, '', '/#config=!!!')
     render(<Root />)
-    expect(screen.getByRole('alert')).toHaveTextContent(/truncated or corrupted/)
+    expect(screen.getByRole('alert')).toHaveTextContent('That device transfer link is truncated or corrupted. The link was ignored.')
     expectAlertBanner(screen.getByRole('alert'))
     expect(location.hash).toBe('')
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
