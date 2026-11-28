@@ -9,6 +9,7 @@ import { showSnackbar } from 'household-ui/ui/Snackbar.tsx'
 import RemoveShoppingCart from '~icons/material-symbols/remove-shopping-cart'
 import type { ItemsPort } from '../items/items-port.ts'
 import { BackButton } from '../shell/BackButton.tsx'
+import { Switch } from '../shell/Switch.tsx'
 import { HOME_HREF, addToCatalogueHref, navigate } from '../routes.ts'
 import type { RecipeId } from './recipe-store.ts'
 import { classifyIngredient, isBought, isWanted, type IngredientStatus, type ItemsById, type MissingReason } from './makeability.ts'
@@ -222,16 +223,7 @@ export function RecipeView({ recipeId, recipe, items, itemsPort, editHref, onSet
           </Button>
         </TopAppBarActions>
         {failure !== null && <AlertBanner message={failure} />}
-        <label class="trailing-cluster">
-          <input
-            type="checkbox"
-            role="switch"
-            checked={isWanted(recipe)}
-            disabled={wantedPending}
-            onChange={toggleWanted}
-          />
-          Want to make
-        </label>
+        <Switch label="Want to make" checked={isWanted(recipe)} disabled={wantedPending} onChange={toggleWanted} />
         {recipe.servings !== undefined && <p>Servings: {recipe.servings}</p>}
         {recipe.sourceUrl !== undefined && (
           <p>

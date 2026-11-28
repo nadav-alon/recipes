@@ -445,6 +445,13 @@ describe('RecipeView Want to make', () => {
     expect(calls).toEqual([true, false])
   })
 
+  it('asks for the Recipe to be Wanted when the label text is tapped', () => {
+    const calls: boolean[] = []
+    view({}, async (wanted) => void calls.push(wanted))
+    fireEvent.click(screen.getByText('Want to make'))
+    expect(calls).toEqual([true])
+  })
+
   it('disables the switch while a write is pending, so a quick second click sends nothing', async () => {
     const calls: boolean[] = []
     let settle = () => {}
