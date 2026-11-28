@@ -104,10 +104,13 @@ describe('Root and #config= links', () => {
     render(<Root />)
     expect(screen.getByRole('main')).toContainElement(screen.getByRole('heading', { name: 'Switch Household?' }))
     expect(screen.queryByRole('banner')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Switch to other' })).toHaveClass('ui-button')
+    const body = screen.getByText(/This link is for a different Household/)
+    expect(body).toHaveTextContent('other')
+    expect(body).not.toHaveTextContent(/config|repoints/i)
+    expect(screen.getByRole('button', { name: 'Switch Household' })).toHaveClass('ui-button')
     expect(screen.getByRole('button', { name: 'Keep the current Household' })).toHaveClass('ui-button')
     expect(JSON.parse(localStorage.getItem('data-platform:firebase-config')!).projectId).toBe('p')
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to other' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Switch Household' }))
     expect(JSON.parse(localStorage.getItem('data-platform:firebase-config')!).projectId).toBe('other')
     expect(mocks.initFirebase).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'other' }),
