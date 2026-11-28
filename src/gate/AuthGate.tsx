@@ -19,7 +19,11 @@ export type AuthGateProps = {
   children: ComponentChildren
 }
 
+/** Names the wait on the Household lookup, on the first check and on Retry alike. */
+const CHECKING_LABEL = 'Checking your Household'
+
 type GateState =
+  | { status: 'starting' }
   | { status: 'checking' }
   | { status: 'signed-out' }
   | { status: 'unclaimed'; user: AuthUser }
@@ -32,7 +36,7 @@ type GateState =
  * Household nor joins one: it sends a user who can't get in to the Catalogue.
  */
 export function AuthGate({ client, children }: AuthGateProps) {
-  const [state, setState] = useState<GateState>({ status: 'checking' })
+  const [state, setState] = useState<GateState>({ status: 'starting' })
   const auth = useMemo(() => authClient(client.app), [client])
   const signOut = useCallback(() => void auth.signOut(), [auth])
   /** Bumped on every lookup, sign-out and unmount, so only the latest lookup may set state. */
@@ -62,6 +66,8 @@ export function AuthGate({ client, children }: AuthGateProps) {
         setState({ status: 'signed-out' })
         return
       }
+      // A user is known: show the wait at once (also after a sign-in), not a live button.
+      setState((prev) => (prev.status === 'signed-out' || prev.status === 'starting' ? { status: 'checking' } : prev))
       void resolveMembership(user)
     })
     return () => {
@@ -71,10 +77,17 @@ export function AuthGate({ client, children }: AuthGateProps) {
   }, [auth, resolveMembership])
 
   switch (state.status) {
+    case 'starting':
+      return (
+        <main class="gate-progress">
+          <ProgressIndicator label="Loading" />
+        </main>
+      )
+
     case 'checking':
       return (
         <main class="gate-progress">
-          <ProgressIndicator label="Checking your Household" />
+          <ProgressIndicator label={CHECKING_LABEL} />
         </main>
       )
 
@@ -124,7 +137,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
           >
             Retry
           </Button>
-          {state.retrying && <ProgressIndicator label="Checking your Household" />}
+          {state.retrying && <ProgressIndicator label={CHECKING_LABEL} />}
           <SignOutButton onClick={signOut} />
         </CentredCard>
       )

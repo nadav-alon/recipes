@@ -123,12 +123,27 @@ describe('AuthGate', () => {
 })
 
 describe('AuthGate first membership check', () => {
-  it('shows a named progressbar, not an empty screen, while the check is pending', () => {
+  it('shows a named progressbar, not an empty screen, while the check is pending', async () => {
     mocks.householdExists.mockReturnValue(new Promise(() => {}))
     renderGate()
-    expect(screen.getByRole('progressbar', { name: 'Checking your Household' })).toBeInTheDocument()
     mocks.listener!(user)
-    expect(screen.getByRole('progressbar', { name: 'Checking your Household' })).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'Checking your Household' })).toBeInTheDocument()
+  })
+
+  it('does not claim to check the Household before anyone is known to be signed in', () => {
+    renderGate()
+    expect(screen.getByRole('progressbar', { name: 'Loading' })).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar', { name: 'Checking your Household' })).toBeNull()
+  })
+
+  it('shows the progressbar, not the Sign in screen, while the check after signing in is pending', async () => {
+    renderGate()
+    mocks.listener!(null)
+    await screen.findByRole('button', { name: /sign in with google/i })
+    mocks.householdExists.mockReturnValue(new Promise(() => {}))
+    mocks.listener!(user)
+    expect(await screen.findByRole('progressbar', { name: 'Checking your Household' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /sign in with google/i })).toBeNull()
   })
 })
 
