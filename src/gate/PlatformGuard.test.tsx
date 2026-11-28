@@ -17,6 +17,7 @@ import { HOUSEHOLD_SETUP_DOC_URL, PlatformGuard } from './PlatformGuard.tsx'
 import { expectAlertBanner } from '../test/alert-banner.ts'
 
 const db = {} as Firestore
+const OUTDATED_MESSAGE = /This Household's data setup is out of date\./
 
 beforeEach(() => {
   mocks.data = undefined
@@ -33,7 +34,7 @@ describe('PlatformGuard', () => {
   it('shows a banner when the deployed platform is older than the pin', async () => {
     mocks.data = { version: '0.1.0' }
     render(<PlatformGuard db={db} />)
-    expect(await screen.findByRole('alert')).toHaveTextContent(/update your platform deploy/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(OUTDATED_MESSAGE)
   })
 
   it('offers the household setup guide as a button on the banner', async () => {
@@ -42,7 +43,7 @@ describe('PlatformGuard', () => {
     vi.stubGlobal('location', { ...window.location, assign })
     render(<PlatformGuard db={db} />)
     expectAlertBanner(await screen.findByRole('alert'))
-    fireEvent.click(screen.getByRole('button', { name: 'Open the household setup guide' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Setup guide' }))
     expect(assign).toHaveBeenCalledWith(HOUSEHOLD_SETUP_DOC_URL)
     expect(screen.queryByRole('link')).toBeNull()
     vi.unstubAllGlobals()
@@ -50,7 +51,7 @@ describe('PlatformGuard', () => {
 
   it('shows the banner when nothing has deployed meta/platform', async () => {
     render(<PlatformGuard db={db} />)
-    expect(await screen.findByRole('alert')).toHaveTextContent(/update your platform deploy/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(OUTDATED_MESSAGE)
   })
 })
 
@@ -59,5 +60,21 @@ describe('PlatformGuard when the read fails', () => {
     mocks.fail = true
     render(<PlatformGuard db={db} />)
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't check your platform version/i)
+  })
+})
+
+describe('PlatformGuard dismissal', () => {
+  it.each([
+    ['no deployed version', undefined],
+    ['an outdated version', { version: '0.1.0' }],
+  ])('hides the banner once dismissed, and shows it again on a fresh mount, with %s', async (_name, data) => {
+    mocks.data = data
+    const first = render(<PlatformGuard db={db} />)
+    await screen.findByRole('alert')
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    first.unmount()
+    render(<PlatformGuard db={db} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(OUTDATED_MESSAGE)
   })
 })
