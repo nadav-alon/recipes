@@ -17,6 +17,7 @@ import { HOUSEHOLD_SETUP_DOC_URL, PlatformGuard } from './PlatformGuard.tsx'
 import { expectAlertBanner } from '../test/alert-banner.ts'
 
 const db = {} as Firestore
+const OUTDATED_MESSAGE = /This Household's data setup is out of date\./
 
 beforeEach(() => {
   mocks.data = undefined
@@ -33,7 +34,7 @@ describe('PlatformGuard', () => {
   it('shows a banner when the deployed platform is older than the pin', async () => {
     mocks.data = { version: '0.1.0' }
     render(<PlatformGuard db={db} />)
-    expect(await screen.findByRole('alert')).toHaveTextContent(/This Household's data setup is out of date\./)
+    expect(await screen.findByRole('alert')).toHaveTextContent(OUTDATED_MESSAGE)
   })
 
   it('offers the household setup guide as a button on the banner', async () => {
@@ -50,7 +51,7 @@ describe('PlatformGuard', () => {
 
   it('shows the banner when nothing has deployed meta/platform', async () => {
     render(<PlatformGuard db={db} />)
-    expect(await screen.findByRole('alert')).toHaveTextContent(/This Household's data setup is out of date\./)
+    expect(await screen.findByRole('alert')).toHaveTextContent(OUTDATED_MESSAGE)
   })
 })
 
@@ -70,6 +71,6 @@ describe('PlatformGuard dismissal', () => {
     expect(screen.queryByRole('alert')).toBeNull()
     first.unmount()
     render(<PlatformGuard db={db} />)
-    expect(await screen.findByRole('alert')).toHaveTextContent(/data setup is out of date/)
+    expect(await screen.findByRole('alert')).toHaveTextContent(OUTDATED_MESSAGE)
   })
 })
