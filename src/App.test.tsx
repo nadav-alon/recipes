@@ -622,3 +622,156 @@ describe('App Add to Catalogue from the Recipe view', () => {
     expect(entries[0].recipe.ingredients).toEqual([{ name: 'Chive', itemId: 'chives' }])
   })
 })
+
+describe('App Recipe view loading and Retry', () => {
+  it('shows the app bar with Back and a progressbar until the Recipes and the Items have arrived', () => {
+    location.hash = recipeHref(r1)
+    render(<App recipeStore={store()} itemsPort={fakeItemsPort([], { neverDelivers: true })} />)
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipe' })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Omelette' })).toBeNull()
+  })
+
+  it('Retry starts new watches, shows loading, then the Recipe when they deliver', async () => {
+    location.hash = recipeHref(r1)
+    const recipeStore = store()
+    const port = fakeItemsPort([])
+    render(<App recipeStore={recipeStore} itemsPort={port} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    vi.spyOn(port, 'watchItems').mockImplementationOnce(() => () => {})
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
+  })
+
+  it('shows the Recipe after Retry once the new watches deliver', async () => {
+    location.hash = recipeHref(r1)
+    const recipeStore = store()
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByRole('heading', { name: 'Omelette' })).toBeInTheDocument()
+  })
+
+  it('Retry after the Items watch failed watches both the Recipes and the Items again', async () => {
+    location.hash = recipeHref(r1)
+    const recipeStore = store()
+    const port = fakeItemsPort([])
+    render(<App recipeStore={recipeStore} itemsPort={port} />)
+    await act(() => port.failWatches(new Error('permission-denied')))
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+    const recipeWatch = vi.spyOn(recipeStore, 'watch')
+    const itemsWatch = vi.spyOn(port, 'watchItems')
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(recipeWatch).toHaveBeenCalledTimes(1)
+    expect(itemsWatch).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('heading', { name: 'Omelette' })).toBeInTheDocument()
+  })
+
+  it('shows the failure banner again when Retry fails again', async () => {
+    location.hash = recipeHref(r1)
+    const recipeStore = store()
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    vi.spyOn(recipeStore, 'watch').mockImplementation((_change, onError) => (onError?.(new Error('again')), () => {}))
+    await act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+})
+
+describe('App Edit Recipe loading and Retry', () => {
+  it('shows the Edit Recipe app bar with Back and a progressbar until the Recipes have arrived', () => {
+    location.hash = editRecipeHref(r1)
+    const recipeStore = { ...store(), watch: () => () => {} }
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Edit Recipe' })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+  })
+
+  it('Retry on a load failure shows the editor once the new watch delivers', async () => {
+    location.hash = editRecipeHref(r1)
+    const recipeStore = store()
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByLabelText('Title')).toHaveValue('Omelette')
+  })
+
+  it('Retry shows the loading state until the new watch delivers', async () => {
+    location.hash = editRecipeHref(r1)
+    const recipeStore = store()
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    vi.spyOn(recipeStore, 'watch').mockImplementationOnce(() => () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Edit Recipe' })).toBeInTheDocument()
+  })
+
+  it('shows the failure banner again when Retry fails again', async () => {
+    location.hash = editRecipeHref(r1)
+    const recipeStore = store()
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    vi.spyOn(recipeStore, 'watch').mockImplementation((_change, onError) => (onError?.(new Error('again')), () => {}))
+    await act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+})
+
+describe('App Catalogue return loading and Retry', () => {
+  const never = () => ({ ...store(), watch: () => () => {} })
+
+  it('shows the app bar with Back and a progressbar until the Recipes have arrived', () => {
+    location.hash = catalogueReturnHref(r1, 0, 'Egg')
+    render(<App recipeStore={never()} itemsPort={fakeItemsPort([])} />)
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipe' })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+  })
+
+  it('offers Retry on a load failure, and carries on to the Recipe once the new watch delivers', async () => {
+    location.hash = catalogueReturnHref(r1, 0, 'Egg')
+    const recipeStore = store()
+    const real = recipeStore.watch
+    vi.spyOn(recipeStore, 'watch').mockImplementationOnce((_change, onError) => (onError?.(new Error('denied')), () => {}))
+    vi.spyOn(recipeStore, 'watch').mockImplementation(real)
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+  })
+
+  it('Retry shows the loading state until the new watch delivers', async () => {
+    location.hash = catalogueReturnHref(r1, 0, 'Egg')
+    const recipeStore = store()
+    vi.spyOn(recipeStore, 'watch')
+      .mockImplementationOnce((_change, onError) => (onError?.(new Error('denied')), () => {}))
+      .mockImplementationOnce(() => () => {})
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+  })
+
+  it('shows the failure banner again when Retry fails again', async () => {
+    location.hash = catalogueReturnHref(r1, 0, 'Egg')
+    const recipeStore = store()
+    vi.spyOn(recipeStore, 'watch').mockImplementation((_change, onError) => (onError?.(new Error('denied')), () => {}))
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    await act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+})

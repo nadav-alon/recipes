@@ -265,3 +265,73 @@ describe('HomeScreen', () => {
     expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
   })
 })
+
+describe('HomeScreen loading and Retry', () => {
+  const store = () => fakeRecipeStore([entry('3', 'Bread', [{ name: 'flour', item: 'flour' }])])
+  const itemsPort = () => fakeItemsPort([item('flour', 'enough')])
+
+  it('shows the app bar and a progressbar until both the Recipes and the Items have arrived', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={fakeItemsPort([], { neverDelivers: true })} />)
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Makeable' })).toBeNull()
+  })
+
+  it('has no progressbar once both have arrived', () => {
+    render(<HomeScreen recipeStore={store()} itemsPort={itemsPort()} />)
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Makeable' })).toBeInTheDocument()
+  })
+
+  it('Retry starts new watches, shows loading, then the loaded screen when they deliver', async () => {
+    const recipeStore = store()
+    const port = itemsPort()
+    render(<HomeScreen recipeStore={recipeStore} itemsPort={port} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    const recipeWatch = vi.spyOn(recipeStore, 'watch')
+    const itemsWatch = vi.spyOn(port, 'watchItems')
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }))
+    expect(recipeWatch).toHaveBeenCalledTimes(1)
+    expect(itemsWatch).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Makeable' })).toBeInTheDocument()
+  })
+
+  it('Retry after the Items watch failed watches both the Recipes and the Items again', async () => {
+    const recipeStore = store()
+    const port = itemsPort()
+    render(<HomeScreen recipeStore={recipeStore} itemsPort={port} />)
+    await act(() => port.failWatches(new Error('permission-denied')))
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
+    const recipeWatch = vi.spyOn(recipeStore, 'watch')
+    const itemsWatch = vi.spyOn(port, 'watchItems')
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(recipeWatch).toHaveBeenCalledTimes(1)
+    expect(itemsWatch).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('heading', { name: 'Makeable' })).toBeInTheDocument()
+  })
+
+  it('shows the loading state after Retry until the new watches deliver', async () => {
+    const recipeStore = store()
+    const port = fakeItemsPort([item('flour', 'enough')])
+    const { rerender } = render(<HomeScreen recipeStore={recipeStore} itemsPort={port} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    vi.spyOn(port, 'watchItems').mockImplementation(() => () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    rerender(<HomeScreen recipeStore={recipeStore} itemsPort={port} />)
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Recipes' })).toBeInTheDocument()
+  })
+
+  it('shows the failure banner again when Retry fails again', async () => {
+    const recipeStore = store()
+    render(<HomeScreen recipeStore={recipeStore} itemsPort={itemsPort()} />)
+    await act(() => recipeStore.failWatches(new Error('permission-denied')))
+    vi.spyOn(recipeStore, 'watch').mockImplementation((_change, onError) => (onError?.(new Error('again')), () => {}))
+    await act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+})
