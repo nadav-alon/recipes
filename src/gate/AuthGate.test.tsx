@@ -122,6 +122,101 @@ describe('AuthGate', () => {
   })
 })
 
+describe('AuthGate first membership check', () => {
+  it('shows a named progressbar, not an empty screen, while the check is pending', async () => {
+    mocks.householdExists.mockReturnValue(new Promise(() => {}))
+    renderGate()
+    mocks.listener!(user)
+    expect(await screen.findByRole('progressbar', { name: 'Checking your Household' })).toBeInTheDocument()
+  })
+
+  it('does not claim to check the Household before anyone is known to be signed in', () => {
+    renderGate()
+    expect(screen.getByRole('progressbar', { name: 'Loading' })).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar', { name: 'Checking your Household' })).toBeNull()
+  })
+
+  it('shows the progressbar, not the Sign in screen, while the check after signing in is pending', async () => {
+    renderGate()
+    mocks.listener!(null)
+    await screen.findByRole('button', { name: /sign in with google/i })
+    mocks.householdExists.mockReturnValue(new Promise(() => {}))
+    mocks.listener!(user)
+    expect(await screen.findByRole('progressbar', { name: 'Checking your Household' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /sign in with google/i })).toBeNull()
+  })
+})
+
+describe('AuthGate Retry from the Unreachable card', () => {
+  async function unreachable() {
+    mocks.householdExists.mockRejectedValueOnce(new Error('offline'))
+    renderGate()
+    mocks.listener!(user)
+    return await screen.findByRole('button', { name: 'Retry' })
+  }
+
+  function pendingLookup() {
+    let settle!: (exists: boolean) => void
+    mocks.householdExists.mockReturnValueOnce(new Promise<boolean>((r) => (settle = r)))
+    return settle
+  }
+
+  it('keeps the card up with Retry disabled and busy until the lookup resolves', async () => {
+    const retry = await unreachable()
+    const settle = pendingLookup()
+    fireEvent.click(retry)
+    expect(screen.getByRole('heading', { name: /couldn't reach/i })).toBeInTheDocument()
+    const busy = screen.getByRole('button', { name: /retry/i })
+    expect(busy).toBeDisabled()
+    expect(busy).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    settle(true)
+    expect(await screen.findByText('the app')).toBeInTheDocument()
+  })
+
+  it('leaves Retry enabled when the retry fails again', async () => {
+    const retry = await unreachable()
+    mocks.householdExists.mockRejectedValueOnce(new Error('still offline'))
+    fireEvent.click(retry)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled())
+    expect(screen.getByRole('heading', { name: /couldn't reach/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).not.toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('moves to the Not a Member card when the retry finds a non-Member', async () => {
+    const retry = await unreachable()
+    mocks.isHouseholdMember.mockResolvedValue(false)
+    fireEvent.click(retry)
+    expect(await screen.findByRole('heading', { name: /not a member/i })).toBeInTheDocument()
+  })
+
+  it('keeps Sign out usable while busy, and a lookup resolving after sign-out changes nothing', async () => {
+    const retry = await unreachable()
+    const settle = pendingLookup()
+    fireEvent.click(retry)
+    const signOut = screen.getByRole('button', { name: 'Sign out' })
+    expect(signOut).toBeEnabled()
+    fireEvent.click(signOut)
+    expect(mocks.signOut).toHaveBeenCalledOnce()
+    mocks.listener!(null)
+    await screen.findByRole('button', { name: /sign in with google/i })
+    settle(true)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.queryByText('the app')).toBeNull()
+    expect(screen.getByRole('button', { name: /sign in with google/i })).toBeInTheDocument()
+  })
+
+  it('ignores a lookup that settles between the Sign out tap and the auth callback', async () => {
+    const retry = await unreachable()
+    const settle = pendingLookup()
+    fireEvent.click(retry)
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    settle(true)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.queryByText('the app')).toBeNull()
+  })
+})
+
 describe('AuthGate screens before a Household is open', () => {
   it.each([
     ['unclaimed', () => mocks.householdExists.mockResolvedValue(false), /not claimed/i],

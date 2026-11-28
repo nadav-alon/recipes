@@ -1,0 +1,33 @@
+.progress-indicator {
+  display: inline-block;
+  inline-size: 48px;
+  block-size: 48px;
+  color: var(--md-sys-color-primary);
+  animation: progress-indicator-spin 1.4s linear infinite;
+}
+
+.progress-indicator svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.progress-indicator__arc {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 80 120;
+}
+
+@keyframes progress-indicator-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-indicator {
+    animation: none;
+  }
+}

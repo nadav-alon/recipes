@@ -11,6 +11,7 @@ import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { CentredCard } from 'household-ui/ui/CentredCard.tsx'
 import { MemberContext, SignOutButton } from './account.tsx'
+import { ProgressIndicator } from '../shell/ProgressIndicator.tsx'
 import { catalogueUrl } from '../catalogue-url.ts'
 
 export type AuthGateProps = {
@@ -18,12 +19,16 @@ export type AuthGateProps = {
   children: ComponentChildren
 }
 
+/** Names the wait on the Household lookup, on the first check and on Retry alike. */
+const CHECKING_LABEL = 'Checking your Household'
+
 type GateState =
+  | { status: 'starting' }
   | { status: 'checking' }
   | { status: 'signed-out' }
   | { status: 'unclaimed'; user: AuthUser }
   | { status: 'non-member'; user: AuthUser }
-  | { status: 'unreachable'; user: AuthUser }
+  | { status: 'unreachable'; user: AuthUser; retrying: boolean }
   | { status: 'member'; user: AuthUser }
 
 /**
@@ -31,9 +36,12 @@ type GateState =
  * Household nor joins one: it sends a user who can't get in to the Catalogue.
  */
 export function AuthGate({ client, children }: AuthGateProps) {
-  const [state, setState] = useState<GateState>({ status: 'checking' })
+  const [state, setState] = useState<GateState>({ status: 'starting' })
   const auth = useMemo(() => authClient(client.app), [client])
-  const signOut = useCallback(() => void auth.signOut(), [auth])
+  const signOut = useCallback(() => {
+    generation.current++
+    void auth.signOut()
+  }, [auth])
   /** Bumped on every lookup, sign-out and unmount, so only the latest lookup may set state. */
   const generation = useRef(0)
 
@@ -48,7 +56,7 @@ export function AuthGate({ client, children }: AuthGateProps) {
         const member = await isHouseholdMember(client.db, user.uid)
         setIfCurrent(member ? { status: 'member', user } : { status: 'non-member', user })
       } catch {
-        setIfCurrent({ status: 'unreachable', user })
+        setIfCurrent({ status: 'unreachable', user, retrying: false })
       }
     },
     [client],
@@ -61,6 +69,8 @@ export function AuthGate({ client, children }: AuthGateProps) {
         setState({ status: 'signed-out' })
         return
       }
+      // A user is known: show the wait at once (also after a sign-in), not a live button.
+      setState((prev) => (prev.status === 'signed-out' || prev.status === 'starting' ? { status: 'checking' } : prev))
       void resolveMembership(user)
     })
     return () => {
@@ -70,8 +80,19 @@ export function AuthGate({ client, children }: AuthGateProps) {
   }, [auth, resolveMembership])
 
   switch (state.status) {
+    case 'starting':
+      return (
+        <main class="gate-progress">
+          <ProgressIndicator label="Loading" />
+        </main>
+      )
+
     case 'checking':
-      return null
+      return (
+        <main class="gate-progress">
+          <ProgressIndicator label={CHECKING_LABEL} />
+        </main>
+      )
 
     case 'signed-out':
       return (
@@ -110,13 +131,16 @@ export function AuthGate({ client, children }: AuthGateProps) {
           <p>Check your connection and try again.</p>
           <Button
             variant="filled"
+            disabled={state.retrying}
+            aria-busy={state.retrying}
             onClick={() => {
-              setState({ status: 'checking' })
+              setState({ ...state, retrying: true })
               void resolveMembership(state.user)
             }}
           >
             Retry
           </Button>
+          {state.retrying && <ProgressIndicator label={CHECKING_LABEL} />}
           <SignOutButton onClick={signOut} />
         </CentredCard>
       )
