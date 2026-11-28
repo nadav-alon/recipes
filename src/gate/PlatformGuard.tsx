@@ -18,7 +18,7 @@ async function readDeployedPlatformVersion(db: Firestore): Promise<core.Semver |
  * Compares the Household's deployed platform with the version this build is pinned to, and shows a
  * banner when it is outdated or missing, and a different one when the read itself fails (offline,
  * permission denied), since the version is then unknown. Renders nothing while the check is pending
- * or when it passes.
+ * or when it passes. The outdated banner can be dismissed; it stays hidden until the next mount.
  */
 export function PlatformGuard({ db }: { db: Firestore }) {
   const [check, setCheck] = useState<core.PlatformCheck | 'failed' | null>(null)
