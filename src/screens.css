@@ -206,3 +206,9 @@ main.screen.sign-in .ui-button {
   place-items: center;
   min-block-size: 100dvh;
 }
+
+/* A card's buttons keep their label on one line; only the body text wraps. */
+.ui-centred-card .ui-button {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
