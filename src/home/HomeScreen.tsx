@@ -94,7 +94,7 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
               headline={entry.recipe.title}
               supporting={showMissing ? missingLabel(classification) : undefined}
               trailing={
-                <span class="row-trailing">
+                <span class="trailing-cluster">
                   {isWanted(entry.recipe) && <span class="pill wanted-tag">Want to make</span>}
                   <ChevronRight aria-hidden="true" data-testid="recipe-row-chevron" />
                 </span>

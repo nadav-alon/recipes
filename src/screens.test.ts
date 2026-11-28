@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 const css = readFileSync('src/screens.css', 'utf8')
 const themeCss = readFileSync('src/theme.css', 'utf8')
+const rulesStarting = (selector: string) => [...css.matchAll(new RegExp(`${selector}[^{,]*\\{[^}]*\\}`, 'g'))].map((m) => m[0]).join('\n')
 const rule = (selector: string) => new RegExp(`${selector}\\s*\\{[^}]*\\}`).exec(css)?.[0] ?? ''
 
 describe('screen layout', () => {
@@ -132,11 +133,12 @@ describe('room for the floating New Recipe button', () => {
 describe('Pill', () => {
   it('takes its padding, corner radius and type size from one rule, with no copy on the flag or the Wanted tag', () => {
     const pill = rule('\\.pill')
-    expect(pill).toMatch(/padding:/)
+    expect(pill).toMatch(/padding:\s*0 var\(--md-sys-spacing-2\)/)
+    expect(pill).toMatch(/line-height:\s*1\.5/)
     expect(pill).toMatch(/border-radius:\s*var\(--md-sys-shape-corner-extra-small\)/)
     expect(pill).toMatch(/font-size:\s*var\(--md-sys-typescale-label-size\)/)
     for (const selector of ['\\.ingredient-flag', '\\.wanted-tag']) {
-      expect(rule(selector)).not.toMatch(/padding:|border-radius:|font-size:/)
+      expect(rulesStarting(selector)).not.toMatch(/padding:|border-radius:|font-size:|line-height:/)
     }
   })
 
@@ -152,8 +154,8 @@ describe('Pill', () => {
 
 describe('Home row trailing slot', () => {
   it('puts the standard spacing between the Wanted tag and the chevron', () => {
-    expect(rule('\\.row-trailing')).toMatch(/display:\s*flex/)
-    expect(rule('\\.row-trailing')).toMatch(/gap:\s*var\(--md-sys-spacing-2\)/)
-    expect(readFileSync('src/home/HomeScreen.tsx', 'utf8')).toMatch(/class="row-trailing"/)
+    expect(rule('\\.trailing-cluster')).toMatch(/display:\s*flex/)
+    expect(rule('\\.trailing-cluster')).toMatch(/gap:\s*var\(--md-sys-spacing-2\)/)
+    expect(readFileSync('src/home/HomeScreen.tsx', 'utf8')).toMatch(/class="trailing-cluster"/)
   })
 })
