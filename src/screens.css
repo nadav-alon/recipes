@@ -200,3 +200,9 @@ main.screen.sign-in .ui-button {
   color: var(--md-sys-color-on-secondary-container);
   font-size: var(--md-sys-typescale-label-size);
 }
+
+.gate-progress {
+  display: grid;
+  place-items: center;
+  min-block-size: 100dvh;
+}

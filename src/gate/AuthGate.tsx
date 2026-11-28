@@ -11,6 +11,7 @@ import { TopAppBar } from 'household-ui/shell/TopAppBar.tsx'
 import { Button } from 'household-ui/ui/Button.tsx'
 import { CentredCard } from 'household-ui/ui/CentredCard.tsx'
 import { MemberContext, SignOutButton } from './account.tsx'
+import { ProgressIndicator } from '../shell/ProgressIndicator.tsx'
 import { catalogueUrl } from '../catalogue-url.ts'
 
 export type AuthGateProps = {
@@ -71,7 +72,11 @@ export function AuthGate({ client, children }: AuthGateProps) {
 
   switch (state.status) {
     case 'checking':
-      return null
+      return (
+        <main class="gate-progress">
+          <ProgressIndicator label="Checking your Household" />
+        </main>
+      )
 
     case 'signed-out':
       return (

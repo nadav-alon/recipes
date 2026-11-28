@@ -122,6 +122,16 @@ describe('AuthGate', () => {
   })
 })
 
+describe('AuthGate first membership check', () => {
+  it('shows a named progressbar, not an empty screen, while the check is pending', () => {
+    mocks.householdExists.mockReturnValue(new Promise(() => {}))
+    renderGate()
+    expect(screen.getByRole('progressbar', { name: 'Checking your Household' })).toBeInTheDocument()
+    mocks.listener!(user)
+    expect(screen.getByRole('progressbar', { name: 'Checking your Household' })).toBeInTheDocument()
+  })
+})
+
 describe('AuthGate screens before a Household is open', () => {
   it.each([
     ['unclaimed', () => mocks.householdExists.mockResolvedValue(false), /not claimed/i],
