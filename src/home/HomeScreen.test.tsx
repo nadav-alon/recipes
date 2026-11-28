@@ -297,6 +297,20 @@ describe('HomeScreen loading and Retry', () => {
     expect(screen.getByRole('heading', { name: 'Makeable' })).toBeInTheDocument()
   })
 
+  it('Retry after the Items watch failed watches both the Recipes and the Items again', async () => {
+    const recipeStore = store()
+    const port = itemsPort()
+    render(<HomeScreen recipeStore={recipeStore} itemsPort={port} />)
+    await act(() => port.failWatches(new Error('permission-denied')))
+    expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
+    const recipeWatch = vi.spyOn(recipeStore, 'watch')
+    const itemsWatch = vi.spyOn(port, 'watchItems')
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(recipeWatch).toHaveBeenCalledTimes(1)
+    expect(itemsWatch).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('heading', { name: 'Makeable' })).toBeInTheDocument()
+  })
+
   it('shows the loading state after Retry until the new watches deliver', async () => {
     const recipeStore = store()
     const port = fakeItemsPort([item('flour', 'enough')])
