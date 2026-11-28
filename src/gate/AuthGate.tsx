@@ -38,7 +38,10 @@ type GateState =
 export function AuthGate({ client, children }: AuthGateProps) {
   const [state, setState] = useState<GateState>({ status: 'starting' })
   const auth = useMemo(() => authClient(client.app), [client])
-  const signOut = useCallback(() => void auth.signOut(), [auth])
+  const signOut = useCallback(() => {
+    generation.current++
+    void auth.signOut()
+  }, [auth])
   /** Bumped on every lookup, sign-out and unmount, so only the latest lookup may set state. */
   const generation = useRef(0)
 

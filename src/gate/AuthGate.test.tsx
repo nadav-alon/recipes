@@ -155,10 +155,15 @@ describe('AuthGate Retry from the Unreachable card', () => {
     return await screen.findByRole('button', { name: 'Retry' })
   }
 
-  it('keeps the card up with Retry disabled and busy until the lookup resolves', async () => {
-    const retry = await unreachable()
+  function pendingLookup() {
     let settle!: (exists: boolean) => void
     mocks.householdExists.mockReturnValueOnce(new Promise<boolean>((r) => (settle = r)))
+    return settle
+  }
+
+  it('keeps the card up with Retry disabled and busy until the lookup resolves', async () => {
+    const retry = await unreachable()
+    const settle = pendingLookup()
     fireEvent.click(retry)
     expect(screen.getByRole('heading', { name: /couldn't reach/i })).toBeInTheDocument()
     const busy = screen.getByRole('button', { name: /retry/i })
@@ -187,8 +192,7 @@ describe('AuthGate Retry from the Unreachable card', () => {
 
   it('keeps Sign out usable while busy, and a lookup resolving after sign-out changes nothing', async () => {
     const retry = await unreachable()
-    let settle!: (exists: boolean) => void
-    mocks.householdExists.mockReturnValueOnce(new Promise<boolean>((r) => (settle = r)))
+    const settle = pendingLookup()
     fireEvent.click(retry)
     const signOut = screen.getByRole('button', { name: 'Sign out' })
     expect(signOut).toBeEnabled()
@@ -200,6 +204,16 @@ describe('AuthGate Retry from the Unreachable card', () => {
     await new Promise((r) => setTimeout(r, 0))
     expect(screen.queryByText('the app')).toBeNull()
     expect(screen.getByRole('button', { name: /sign in with google/i })).toBeInTheDocument()
+  })
+
+  it('ignores a lookup that settles between the Sign out tap and the auth callback', async () => {
+    const retry = await unreachable()
+    const settle = pendingLookup()
+    fireEvent.click(retry)
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    settle(true)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.queryByText('the app')).toBeNull()
   })
 })
 
