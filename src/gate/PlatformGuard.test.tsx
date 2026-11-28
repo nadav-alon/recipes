@@ -64,7 +64,11 @@ describe('PlatformGuard when the read fails', () => {
 })
 
 describe('PlatformGuard dismissal', () => {
-  it('hides the banner once dismissed, and shows it again on a fresh mount', async () => {
+  it.each([
+    ['no deployed version', undefined],
+    ['an outdated version', { version: '0.1.0' }],
+  ])('hides the banner once dismissed, and shows it again on a fresh mount, with %s', async (_name, data) => {
+    mocks.data = data
     const first = render(<PlatformGuard db={db} />)
     await screen.findByRole('alert')
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
