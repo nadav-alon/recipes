@@ -306,7 +306,7 @@ function CatalogueReturnScreen({
       </main>
     )
   }
-  if (entries === null) return null
+  if (entries === null) return <Loading label="Loading the Recipe" />
   if (entry === undefined) return <RecipeNotFound />
   return null
 }

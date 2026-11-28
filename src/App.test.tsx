@@ -687,3 +687,25 @@ describe('App Edit Recipe loading and Retry', () => {
     expect(await screen.findByLabelText('Title')).toHaveValue('Omelette')
   })
 })
+
+describe('App Catalogue return loading and Retry', () => {
+  const never = () => ({ ...store(), watch: () => () => {} })
+
+  it('shows the app bar with Back and a progressbar until the Recipes have arrived', () => {
+    location.hash = catalogueReturnHref(r1, 0, 'Egg')
+    render(<App recipeStore={never()} itemsPort={fakeItemsPort([])} />)
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+  })
+
+  it('offers Retry on a load failure, and carries on to the Recipe once the new watch delivers', async () => {
+    location.hash = catalogueReturnHref(r1, 0, 'Egg')
+    const recipeStore = store()
+    const real = recipeStore.watch
+    vi.spyOn(recipeStore, 'watch').mockImplementationOnce((_change, onError) => (onError?.(new Error('denied')), () => {}))
+    vi.spyOn(recipeStore, 'watch').mockImplementation(real)
+    render(<App recipeStore={recipeStore} itemsPort={fakeItemsPort([])} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(location.hash).toBe(recipeHref(r1)))
+  })
+})
