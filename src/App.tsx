@@ -5,6 +5,7 @@ import { AlertBanner } from 'household-ui/ui/AlertBanner.tsx'
 import { SnackbarHost } from 'household-ui/ui/Snackbar.tsx'
 import type { ItemsPort } from './items/items-port.ts'
 import { useItemsById } from './items/use-items-by-id.ts'
+import { ProgressIndicator } from './shell/ProgressIndicator.tsx'
 import { BackButton } from './shell/BackButton.tsx'
 import { RecipeEditor, type RecipeEditorProps } from './editor/RecipeEditor.tsx'
 import { HomeScreen } from './home/HomeScreen.tsx'
@@ -192,20 +193,43 @@ function HeldSavesNotice({
   )
 }
 
-/** The Recipes as the store has them, `null` until they have arrived, and whether watching them failed. */
+/**
+ * The Recipes as the store has them, `null` until they have arrived, and whether watching them failed.
+ * `retry` clears the failure and the Recipes, and watches again; `attempt` counts the retries.
+ */
 function useRecipeEntries(recipeStore: RecipeStore) {
   const [entries, setEntries] = useState<readonly RecipeEntry[] | null>(null)
   const [failed, setFailed] = useState(false)
-  useEffect(() => recipeStore.watch(setEntries, () => setFailed(true)), [recipeStore])
-  return { entries, failed, fail: () => setFailed(true) }
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    setEntries(null)
+    return recipeStore.watch(setEntries, () => setFailed(true))
+  }, [recipeStore, attempt])
+  const retry = () => {
+    setFailed(false)
+    setAttempt((n) => n + 1)
+  }
+  return { entries, failed, fail: () => setFailed(true), retry, attempt }
 }
 
-function LoadFailed() {
+/** A Recipe screen waiting for its data: the app bar with Back, and the progress indicator. */
+function Loading({ label }: { label: string }) {
+  return (
+    <TopAppBar title="Recipe">
+      <BackButton fallback={HOME_HREF} />
+      <main class="screen screen--loading">
+        <ProgressIndicator label={label} />
+      </main>
+    </TopAppBar>
+  )
+}
+
+function LoadFailed({ onRetry }: { onRetry: () => void }) {
   return (
     <TopAppBar title="Recipe">
       <BackButton fallback={HOME_HREF} />
       <main class="screen">
-        <AlertBanner message="The Recipe could not be loaded." />
+        <AlertBanner message="The Recipe could not be loaded." action={{ label: 'Retry', onAction: onRetry }} />
       </main>
     </TopAppBar>
   )
@@ -240,7 +264,7 @@ function CatalogueReturnScreen({
   name: string
   recipeStore: RecipeStore
 }) {
-  const { entries, failed } = useRecipeEntries(recipeStore)
+  const { entries, failed, retry } = useRecipeEntries(recipeStore)
   const [notice, setNotice] = useState<string | null>(null)
   const handled = useRef(false)
   const entry = entries?.find((e) => e.id === id)
@@ -274,7 +298,7 @@ function CatalogueReturnScreen({
     )
   }, [entries, entry, back.href, id, ingredientIndex, name, recipeStore])
 
-  if (failed) return <LoadFailed />
+  if (failed) return <LoadFailed onRetry={retry} />
   if (notice !== null) {
     return (
       <main class="screen">
@@ -288,11 +312,11 @@ function CatalogueReturnScreen({
 }
 
 function RecipeScreen({ id, recipeStore, itemsPort }: AppProps & { id: RecipeId }) {
-  const { entries, failed, fail } = useRecipeEntries(recipeStore)
-  const items = useItemsById(itemsPort, fail)
+  const { entries, failed, fail, retry, attempt } = useRecipeEntries(recipeStore)
+  const items = useItemsById(itemsPort, fail, attempt)
 
-  if (failed) return <LoadFailed />
-  if (entries === null || items === null) return null
+  if (failed) return <LoadFailed onRetry={retry} />
+  if (entries === null || items === null) return <Loading label="Loading the Recipe" />
   const entry = entries.find((e) => e.id === id)
   if (entry === undefined) return <RecipeNotFound />
   return (
@@ -325,10 +349,10 @@ function EditScreen({
   onHeldCleared: () => void
   onSaveFailed: NonNullable<RecipeEditorProps['onSaveFailed']>
 }) {
-  const { entries, failed } = useRecipeEntries(recipeStore)
+  const { entries, failed, retry } = useRecipeEntries(recipeStore)
   const opened = useRef<RecipeEntry | null>(null)
 
-  if (failed) return <LoadFailed />
+  if (failed) return <LoadFailed onRetry={retry} />
   if (entries === null) return null
   opened.current ??= entries.find((e) => e.id === id) ?? null
   if (opened.current === null) return <RecipeNotFound />
