@@ -128,3 +128,24 @@ describe('room for the floating New Recipe button', () => {
     expect(css).toMatch(/@media not all and \(min-width: 45rem\)\s*\{\s*\.screen\s*\{[^}]*padding-bottom:\s*6rem/)
   })
 })
+
+describe('Pill', () => {
+  it('takes its padding, corner radius and type size from one rule, with no copy on the flag or the Wanted tag', () => {
+    const pill = rule('\\.pill')
+    expect(pill).toMatch(/padding:/)
+    expect(pill).toMatch(/border-radius:\s*var\(--md-sys-shape-corner-extra-small\)/)
+    expect(pill).toMatch(/font-size:\s*var\(--md-sys-typescale-label-size\)/)
+    for (const selector of ['\\.ingredient-flag', '\\.wanted-tag']) {
+      expect(rule(selector)).not.toMatch(/padding:|border-radius:|font-size:/)
+    }
+  })
+
+  it('is worn by both the Ingredient flag and the Wanted tag', () => {
+    expect(readFileSync('src/recipes/RecipeView.tsx', 'utf8')).toMatch(/class=\{`pill ingredient-flag /)
+    expect(readFileSync('src/home/HomeScreen.tsx', 'utf8')).toMatch(/class="pill wanted-tag"/)
+  })
+
+  it('keeps the Wanted tag in the secondary-container tone', () => {
+    expect(rule('\\.wanted-tag')).toMatch(/background:\s*var\(--md-sys-color-secondary-container\)[^}]*color:\s*var\(--md-sys-color-on-secondary-container\)/)
+  })
+})

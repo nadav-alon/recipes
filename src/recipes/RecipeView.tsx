@@ -143,7 +143,7 @@ function IngredientLine({
       trailing={
         flagged !== null || action !== undefined ? (
           <div class="ingredient-trailing">
-            {flagged !== null && <span class={`ingredient-flag ingredient-flag--${flagged.tone}`}>{flagged.text}</span>}
+            {flagged !== null && <span class={`pill ingredient-flag ingredient-flag--${flagged.tone}`}>{flagged.text}</span>}
             {action}
           </div>
         ) : undefined

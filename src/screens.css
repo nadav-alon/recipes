@@ -165,10 +165,13 @@ main.screen.sign-in .ui-button {
   gap: var(--md-sys-spacing-2);
 }
 
-.ingredient-flag {
+/* The one pill shape: an Ingredient flag on the Recipe view and the Wanted tag on Home share it. */
+.pill {
+  display: inline-block;
   padding: 0 var(--md-sys-spacing-2);
   border-radius: var(--md-sys-shape-corner-extra-small);
   font-size: var(--md-sys-typescale-label-size);
+  line-height: 1.5;
 }
 
 .ingredient-flag--missing {
@@ -194,11 +197,8 @@ main.screen.sign-in .ui-button {
 }
 
 .wanted-tag {
-  padding: 0 var(--md-sys-spacing-2);
-  border-radius: var(--md-sys-shape-corner-extra-small);
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
-  font-size: var(--md-sys-typescale-label-size);
 }
 
 .gate-progress {

@@ -95,7 +95,7 @@ function Section({ title, list, empty, showMissing = false }: SectionProps) {
               supporting={showMissing ? missingLabel(classification) : undefined}
               trailing={
                 <>
-                  {isWanted(entry.recipe) && <span class="wanted-tag">Want to make</span>}
+                  {isWanted(entry.recipe) && <span class="pill wanted-tag">Want to make</span>}
                   <ChevronRight aria-hidden="true" data-testid="recipe-row-chevron" />
                 </>
               }
