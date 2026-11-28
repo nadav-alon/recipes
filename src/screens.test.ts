@@ -27,6 +27,18 @@ describe('pre-Household cards', () => {
   it('wrap long text so a 360px screen does not scroll sideways', () => {
     expect(rule('\\.ui-centred-card')).toMatch(/overflow-wrap:\s*anywhere/)
   })
+
+  it('keeps the on-primary label colour over the card\'s link colour', () => {
+    const link = /\.ui-centred-card__surface a\.ui-button--filled[^{]*\{[^}]*\}/.exec(css)?.[0] ?? ''
+    expect(link).toMatch(/color:\s*var\(--md-sys-color-on-primary\)/)
+    for (const state of [':visited', ':hover', ':focus-visible']) expect(link, state).toContain(`a.ui-button--filled${state}`)
+  })
+
+  it('drops the underline and keeps the 48px target, like the Retry button', () => {
+    const link = /\.ui-centred-card__surface a\.ui-button--filled[^{]*\{[^}]*\}/.exec(css)?.[0] ?? ''
+    expect(link).toMatch(/text-decoration:\s*none/)
+    expect(link).toMatch(/min-height:\s*3rem/)
+  })
 })
 
 describe('Ingredient flag colours', () => {
